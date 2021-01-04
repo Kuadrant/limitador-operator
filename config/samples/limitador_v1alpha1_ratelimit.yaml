@@ -3,5 +3,10 @@ kind: RateLimit
 metadata:
   name: ratelimit-sample
 spec:
-  # Add fields here
-  foo: bar
+  namespace: test_namespace
+  max_value: 10
+  seconds: 60
+  conditions:
+    - "req.method == GET"
+  variables:
+    - user_id
