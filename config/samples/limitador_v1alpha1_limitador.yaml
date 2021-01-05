@@ -1,0 +1,7 @@
+apiVersion: limitador.3scale.net/v1alpha1
+kind: Limitador
+metadata:
+  name: limitador-sample
+spec:
+  replicas: 1
+  version: latest
