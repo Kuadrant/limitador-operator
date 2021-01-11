@@ -9,6 +9,13 @@ on:
       - '*'
 
 jobs:
+  docker-build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Docker image
+        run: make docker-build
   test:
     name: Test
     runs-on: ubuntu-latest
