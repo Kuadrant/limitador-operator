@@ -1,3 +1,6 @@
+# The "source" command used in the "test" target does not work with /bin/sh.
+SHELL := /bin/bash
+
 # Current Operator version
 VERSION ?= 0.0.1
 # Default bundle image tag
