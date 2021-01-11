@@ -9,6 +9,26 @@ rules:
 - apiGroups:
   - limitador.3scale.net
   resources:
+  - limitadors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - limitador.3scale.net
+  resources:
+  - limitadors/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - limitador.3scale.net
+  resources:
   - ratelimits
   verbs:
   - create
