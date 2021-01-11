@@ -40,6 +40,8 @@ type LimitadorReconciler struct {
 
 // +kubebuilder:rbac:groups=limitador.3scale.net,resources=limitadors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=limitador.3scale.net,resources=limitadors/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 
 func (r *LimitadorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("limitador", req.NamespacedName)
