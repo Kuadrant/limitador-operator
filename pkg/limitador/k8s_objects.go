@@ -15,6 +15,8 @@ const (
 	ServiceNamespace = "default"
 	Image            = "quay.io/3scale/limitador"
 	StatusEndpoint   = "/status"
+	ServiceHTTPPort  = 8080
+	ServiceGRPCPort  = 8081
 )
 
 func LimitadorService() *v1.Service {
@@ -33,13 +35,13 @@ func LimitadorService() *v1.Service {
 				{
 					Name:       "http",
 					Protocol:   v1.ProtocolTCP,
-					Port:       8080,
+					Port:       ServiceHTTPPort,
 					TargetPort: intstr.FromString("http"),
 				},
 				{
 					Name:       "grpc",
 					Protocol:   v1.ProtocolTCP,
-					Port:       8081,
+					Port:       ServiceGRPCPort,
 					TargetPort: intstr.FromString("grpc"),
 				},
 			},
@@ -88,12 +90,12 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
-									ContainerPort: 8080,
+									ContainerPort: ServiceHTTPPort,
 									Protocol:      v1.ProtocolTCP,
 								},
 								{
 									Name:          "grpc",
-									ContainerPort: 8081,
+									ContainerPort: ServiceGRPCPort,
 									Protocol:      v1.ProtocolTCP,
 								},
 							},
@@ -107,7 +109,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
-										Port:   intstr.FromInt(8080),
+										Port:   intstr.FromInt(ServiceHTTPPort),
 										Scheme: v1.URISchemeHTTP,
 									},
 								},
@@ -121,7 +123,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
-										Port:   intstr.FromInt(8080),
+										Port:   intstr.FromInt(ServiceHTTPPort),
 										Scheme: v1.URISchemeHTTP,
 									},
 								},
