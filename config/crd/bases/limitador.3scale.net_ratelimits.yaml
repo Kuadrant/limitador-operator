@@ -36,10 +36,26 @@ spec:
         spec:
           description: RateLimitSpec defines the desired state of RateLimit
           properties:
-            foo:
-              description: Foo is an example field of RateLimit. Edit RateLimit_types.go
-                to remove/update
+            conditions:
+              items:
+                type: string
+              type: array
+            max_value:
+              type: integer
+            namespace:
               type: string
+            seconds:
+              type: integer
+            variables:
+              items:
+                type: string
+              type: array
+          required:
+          - conditions
+          - max_value
+          - namespace
+          - seconds
+          - variables
           type: object
         status:
           description: RateLimitStatus defines the observed state of RateLimit

@@ -17,26 +17,20 @@ limitations under the License.
 package controllers
 
 import (
-	"context"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"testing"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/ghttp"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"net/url"
+	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"testing"
 
 	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -48,6 +42,7 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var mockedHTTPServer *ghttp.Server
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -55,6 +50,15 @@ func TestAPIs(t *testing.T) {
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
 		[]Reporter{printer.NewlineReporter{}})
+}
+
+// In the tests, this just points to our mocked HTTP server
+type TestLimitadorServiceDiscovery struct {
+	url url.URL
+}
+
+func (sd *TestLimitadorServiceDiscovery) URL(_ string) (*url.URL, error) {
+	return &sd.url, nil
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -90,6 +94,21 @@ var _ = BeforeSuite(func(done Done) {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	mockedHTTPServer = ghttp.NewServer()
+	mockedHTTPServerURL, err := url.Parse(mockedHTTPServer.URL())
+	Expect(err).ToNot(HaveOccurred())
+
+	// Set this to true so we don't have to specify all the requests, including
+	// the ones for example done for cleanup in AfterEach() functions.
+	mockedHTTPServer.SetAllowUnhandledRequests(true)
+
+	err = (&RateLimitReconciler{
+		Client:             k8sManager.GetClient(),
+		Log:                ctrl.Log.WithName("limitador"),
+		limitadorDiscovery: &TestLimitadorServiceDiscovery{url: *mockedHTTPServerURL},
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	go func() {
 		err = k8sManager.Start(ctrl.SetupSignalHandler())
 		Expect(err).ToNot(HaveOccurred())
@@ -105,169 +124,4 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
-})
-
-var _ = Describe("Limitador controller", func() {
-	const (
-		LimitadorName      = "limitador-test"
-		LimitadorNamespace = "default"
-		LimitadorReplicas  = 2
-		LimitadorImage     = "quay.io/3scale/limitador"
-		LimitadorVersion   = "0.3.0"
-
-		timeout  = time.Second * 10
-		interval = time.Millisecond * 250
-	)
-
-	replicas := LimitadorReplicas
-	version := LimitadorVersion
-	limitador := limitadorv1alpha1.Limitador{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Limitador",
-			APIVersion: "limitador.3scale.net/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      LimitadorName,
-			Namespace: LimitadorNamespace,
-		},
-		Spec: limitadorv1alpha1.LimitadorSpec{
-			Replicas: &replicas,
-			Version:  &version,
-		},
-	}
-
-	Context("Creating a new Limitador object", func() {
-		BeforeEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitador.DeepCopy())
-			Expect(err == nil || errors.IsNotFound(err))
-
-			Expect(k8sClient.Create(context.TODO(), limitador.DeepCopy())).Should(Succeed())
-		})
-
-		It("Should create a new deployment with the right number of replicas and version", func() {
-			createdLimitadorDeployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      LimitadorName,
-					},
-					&createdLimitadorDeployment)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(*createdLimitadorDeployment.Spec.Replicas).Should(
-				Equal((int32)(LimitadorReplicas)),
-			)
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
-				Equal(LimitadorImage + ":" + LimitadorVersion),
-			)
-		})
-
-		It("Should create a Limitador service", func() {
-			createdLimitadorService := v1.Service{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: "default",   // Hardcoded for now
-						Name:      "limitador", // Hardcoded for now
-					},
-					&createdLimitadorService)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-		})
-	})
-
-	Context("Deleting a Limitador object", func() {
-		BeforeEach(func() {
-			err := k8sClient.Create(context.TODO(), limitador.DeepCopy())
-			Expect(err == nil || errors.IsAlreadyExists(err))
-
-			Expect(k8sClient.Delete(context.TODO(), limitador.DeepCopy())).Should(Succeed())
-		})
-
-		It("Should delete the limitador deployment", func() {
-			createdLimitadorDeployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      LimitadorName,
-					},
-					&createdLimitadorDeployment)
-
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-
-		It("Should delete the limitador service", func() {
-			createdLimitadorService := v1.Service{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: "default",   // Hardcoded for now
-						Name:      "limitador", // Hardcoded for now
-					},
-					&createdLimitadorService)
-
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-	})
-
-	Context("Updating a limitador object", func() {
-		BeforeEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitador.DeepCopy())
-			Expect(err == nil || errors.IsNotFound(err))
-
-			Expect(k8sClient.Create(context.TODO(), limitador.DeepCopy())).Should(Succeed())
-		})
-
-		It("Should modify the limitador deployment", func() {
-			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      LimitadorName,
-					},
-					&updatedLimitador)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			replicas = LimitadorReplicas + 1
-			updatedLimitador.Spec.Replicas = &replicas
-			version = "latest"
-			updatedLimitador.Spec.Version = &version
-
-			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
-			updatedLimitadorDeployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      LimitadorName,
-					},
-					&updatedLimitadorDeployment)
-
-				if err != nil {
-					return false
-				}
-
-				correctReplicas := *updatedLimitadorDeployment.Spec.Replicas == LimitadorReplicas+1
-				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == LimitadorImage+":latest"
-
-				return correctReplicas && correctImage
-			}, timeout, interval).Should(BeTrue())
-		})
-	})
 })

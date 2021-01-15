@@ -28,8 +28,11 @@ type RateLimitSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of RateLimit. Edit RateLimit_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Conditions []string `json:"conditions"`
+	MaxValue   int      `json:"max_value"`
+	Namespace  string   `json:"namespace"`
+	Seconds    int      `json:"seconds"`
+	Variables  []string `json:"variables"`
 }
 
 // RateLimitStatus defines the observed state of RateLimit

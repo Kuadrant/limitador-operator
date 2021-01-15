@@ -67,14 +67,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.RateLimitReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("RateLimit"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	rateLimitReconciler := controllers.NewRateLimitReconciler(
+		mgr.GetClient(),
+		ctrl.Log.WithName("controllers").WithName("RateLimit"),
+		mgr.GetScheme(),
+	)
+	if err = rateLimitReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RateLimit")
 		os.Exit(1)
 	}
+
 	if err = (&controllers.LimitadorReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Limitador"),
