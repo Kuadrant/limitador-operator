@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,6 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
+
+	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
+	"github.com/3scale/limitador-operator/pkg/limitador"
 )
 
 var _ = Describe("Limitador controller", func() {
@@ -28,11 +30,11 @@ var _ = Describe("Limitador controller", func() {
 
 	replicas := LimitadorReplicas
 	version := LimitadorVersion
-	newLimitador := func() limitadorv1alpha1.Limitador {
+	newLimitador := func() *limitadorv1alpha1.Limitador {
 		// The name can't start with a number.
 		name := "a" + string(uuid.NewUUID())
 
-		return limitadorv1alpha1.Limitador{
+		return &limitadorv1alpha1.Limitador{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Limitador",
 				APIVersion: "limitador.3scale.net/v1alpha1",
@@ -51,14 +53,14 @@ var _ = Describe("Limitador controller", func() {
 	deletePropagationPolicy := client.PropagationPolicy(metav1.DeletePropagationForeground)
 
 	Context("Creating a new Limitador object", func() {
-		var limitadorObj limitadorv1alpha1.Limitador
+		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
-			err := k8sClient.Delete(context.TODO(), limitadorObj.DeepCopy(), deletePropagationPolicy)
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
 			Expect(err == nil || errors.IsNotFound(err))
 
-			Expect(k8sClient.Create(context.TODO(), limitadorObj.DeepCopy())).Should(Succeed())
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
 		It("Should create a new deployment with the right number of replicas and version", func() {
@@ -90,7 +92,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      "limitador", // Hardcoded for now
+						Name:      limitador.ServiceName, // Hardcoded for now
 					},
 					&createdLimitadorService)
 
@@ -99,55 +101,15 @@ var _ = Describe("Limitador controller", func() {
 		})
 	})
 
-	Context("Deleting a Limitador object", func() {
-		var limitadorObj limitadorv1alpha1.Limitador
-
-		BeforeEach(func() {
-			limitadorObj = newLimitador()
-			Expect(k8sClient.Create(context.TODO(), limitadorObj.DeepCopy())).Should(Succeed())
-			Expect(k8sClient.Delete(context.TODO(), limitadorObj.DeepCopy(), deletePropagationPolicy)).Should(Succeed())
-		})
-
-		It("Should delete the limitador deployment", func() {
-			createdLimitadorDeployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&createdLimitadorDeployment)
-
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-
-		It("Should delete the limitador service", func() {
-			createdLimitadorService := v1.Service{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      "limitador", // Hardcoded for now
-					},
-					&createdLimitadorService)
-
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-	})
-
 	Context("Updating a limitador object", func() {
-		var limitadorObj limitadorv1alpha1.Limitador
+		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
-			err := k8sClient.Delete(context.TODO(), limitadorObj.DeepCopy(), deletePropagationPolicy)
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
 			Expect(err == nil || errors.IsNotFound(err))
 
-			Expect(k8sClient.Create(context.TODO(), limitadorObj.DeepCopy())).Should(Succeed())
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
 		It("Should modify the limitador deployment", func() {

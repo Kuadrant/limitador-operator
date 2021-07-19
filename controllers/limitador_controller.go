@@ -45,8 +45,8 @@ func (r *LimitadorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("limitador", req.NamespacedName)
 
 	// Delete Limitador deployment and service if needed
-	limitadorObj := limitadorv1alpha1.Limitador{}
-	if err := r.Get(context.TODO(), req.NamespacedName, &limitadorObj); err != nil {
+	limitadorObj := &limitadorv1alpha1.Limitador{}
+	if err := r.Get(context.TODO(), req.NamespacedName, limitadorObj); err != nil {
 		if errors.IsNotFound(err) {
 			// The deployment and the service should be deleted automatically
 			// because they have an owner ref to Limitador
@@ -58,17 +58,19 @@ func (r *LimitadorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if limitadorObj.GetDeletionTimestamp() != nil { // Marked to be deleted
+		reqLogger.V(1).Info("marked to be deleted")
 		return ctrl.Result{}, nil
 	}
 
-	if err := r.ensureLimitadorServiceExists(&limitadorObj); err != nil {
+	err := r.ensureLimitadorServiceExists(limitadorObj)
+	reqLogger.V(1).Info("reconcile service", "error", err)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	desiredDeployment := limitador.LimitadorDeployment(&limitadorObj)
-
-	if err := r.reconcileDeployment(desiredDeployment); err != nil {
-		reqLogger.Error(err, "Failed to update Limitador deployment.")
+	err = r.reconcileDeployment(limitador.LimitadorDeployment(limitadorObj))
+	reqLogger.V(1).Info("reconcile deployment", "error", err)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
