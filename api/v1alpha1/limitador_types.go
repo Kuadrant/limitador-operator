@@ -41,8 +41,8 @@ type LimitadorStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 
 // Limitador is the Schema for the limitadors API
 type Limitador struct {
@@ -53,7 +53,7 @@ type Limitador struct {
 	Status LimitadorStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // LimitadorList contains a list of Limitador
 type LimitadorList struct {

@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the limitador v1alpha1 API group
-// +kubebuilder:object:generate=true
-// +groupName=limitador.3scale.net
+//+kubebuilder:object:generate=true
+//+groupName=limitador.3scale.net
 package v1alpha1
 
 import (

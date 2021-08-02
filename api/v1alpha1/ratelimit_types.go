@@ -41,8 +41,8 @@ type RateLimitStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 
 // RateLimit is the Schema for the ratelimits API
 type RateLimit struct {
@@ -53,7 +53,7 @@ type RateLimit struct {
 	Status RateLimitStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // RateLimitList contains a list of RateLimit
 type RateLimitList struct {

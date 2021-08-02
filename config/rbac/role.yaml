@@ -43,6 +43,12 @@ rules:
 - apiGroups:
   - limitador.3scale.net
   resources:
+  - limitadors/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - limitador.3scale.net
+  resources:
   - limitadors/status
   verbs:
   - get
@@ -60,6 +66,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - limitador.3scale.net
+  resources:
+  - ratelimits/finalizers
+  verbs:
+  - update
 - apiGroups:
   - limitador.3scale.net
   resources:

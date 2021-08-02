@@ -18,20 +18,20 @@ package controllers
 
 import (
 	"context"
-	"github.com/3scale/limitador-operator/pkg/helpers"
-	"github.com/3scale/limitador-operator/pkg/limitador"
+	"net/url"
+	"strconv"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"net/url"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"strconv"
 
 	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
+	"github.com/3scale/limitador-operator/pkg/helpers"
+	"github.com/3scale/limitador-operator/pkg/limitador"
+	"github.com/3scale/limitador-operator/pkg/reconcilers"
 )
 
 const rateLimitFinalizer = "finalizer.ratelimit.limitador.3scale.net"
@@ -44,7 +44,7 @@ type LimitadorServiceDiscovery interface {
 
 type defaultLimitadorServiceDiscovery struct{}
 
-func (LimitadorServiceDiscovery *defaultLimitadorServiceDiscovery) URL(namespace string) (*url.URL, error) {
+func (d *defaultLimitadorServiceDiscovery) URL(namespace string) (*url.URL, error) {
 	serviceUrl := "http://" + limitador.ServiceName + "." + namespace + ".svc.cluster.local:" +
 		strconv.Itoa(limitador.ServiceHTTPPort)
 
@@ -53,32 +53,29 @@ func (LimitadorServiceDiscovery *defaultLimitadorServiceDiscovery) URL(namespace
 
 // RateLimitReconciler reconciles a RateLimit object
 type RateLimitReconciler struct {
-	client.Client
-	Log                logr.Logger
-	Scheme             *runtime.Scheme
-	limitadorDiscovery LimitadorServiceDiscovery
+	*reconcilers.BaseReconciler
+	LimitadorDiscovery LimitadorServiceDiscovery
 }
 
-func NewRateLimitReconciler(kubeClient client.Client, logger logr.Logger, scheme *runtime.Scheme) RateLimitReconciler {
-	limitadorServiceDiscovery := defaultLimitadorServiceDiscovery{}
+//+kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits/finalizers,verbs=update
 
-	return RateLimitReconciler{
-		Client:             kubeClient,
-		Log:                logger,
-		Scheme:             scheme,
-		limitadorDiscovery: &limitadorServiceDiscovery,
-	}
-}
-
-// +kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits/status,verbs=get;update;patch
-
-func (r *RateLimitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	reqLogger := r.Log.WithValues("ratelimit", req.NamespacedName)
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the RateLimit object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
+func (r *RateLimitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	reqLogger := r.Logger().WithValues("ratelimit", req.NamespacedName)
+	reqLogger.V(1).Info("Reconciling RateLimit")
 
 	limit := &limitadorv1alpha1.RateLimit{}
-	if err := r.Get(context.TODO(), req.NamespacedName, limit); err != nil {
+	if err := r.Client().Get(ctx, req.NamespacedName, limit); err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -97,7 +94,7 @@ func (r *RateLimitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Remove finalizer. Once all finalizers have been removed, the
 			// object will be deleted.
 			controllerutil.RemoveFinalizer(limit, rateLimitFinalizer)
-			if err := r.Update(context.TODO(), limit); err != nil {
+			if err := r.Client().Update(ctx, limit); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -105,7 +102,7 @@ func (r *RateLimitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	if err := r.ensureFinalizerIsAdded(limit, reqLogger); err != nil {
+	if err := r.ensureFinalizerIsAdded(ctx, limit, reqLogger); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -117,6 +114,7 @@ func (r *RateLimitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *RateLimitReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.RateLimit{}).
@@ -140,7 +138,7 @@ func (r *RateLimitReconciler) updateLimitPredicate() predicate.Predicate {
 
 			// The namespace should be the same in the old and the new version,
 			// so we can use either.
-			limitadorUrl, err := r.limitadorDiscovery.URL(newVersion.Namespace)
+			limitadorUrl, err := r.limitadorDiscovery().URL(newVersion.Namespace)
 			if err != nil {
 				return false
 			}
@@ -159,7 +157,7 @@ func (r *RateLimitReconciler) updateLimitPredicate() predicate.Predicate {
 }
 
 func (r *RateLimitReconciler) createLimitInLimitador(limit *limitadorv1alpha1.RateLimit) error {
-	limitadorUrl, err := r.limitadorDiscovery.URL(limit.Namespace)
+	limitadorUrl, err := r.limitadorDiscovery().URL(limit.Namespace)
 	if err != nil {
 		return err
 	}
@@ -168,7 +166,7 @@ func (r *RateLimitReconciler) createLimitInLimitador(limit *limitadorv1alpha1.Ra
 	return limitadorClient.CreateLimit(&limit.Spec)
 }
 
-func (r *RateLimitReconciler) ensureFinalizerIsAdded(limit *limitadorv1alpha1.RateLimit, reqLogger logr.Logger) error {
+func (r *RateLimitReconciler) ensureFinalizerIsAdded(ctx context.Context, limit *limitadorv1alpha1.RateLimit, reqLogger logr.Logger) error {
 	numberOfFinalizers := len(limit.GetFinalizers())
 	controllerutil.AddFinalizer(limit, rateLimitFinalizer)
 	if numberOfFinalizers == len(limit.GetFinalizers()) {
@@ -176,7 +174,7 @@ func (r *RateLimitReconciler) ensureFinalizerIsAdded(limit *limitadorv1alpha1.Ra
 		return nil
 	}
 
-	if err := r.Update(context.TODO(), limit); err != nil {
+	if err := r.Client().Update(ctx, limit); err != nil {
 		reqLogger.Error(err, "Failed to update the rate limit with finalizer")
 		return err
 	}
@@ -185,11 +183,19 @@ func (r *RateLimitReconciler) ensureFinalizerIsAdded(limit *limitadorv1alpha1.Ra
 }
 
 func (r *RateLimitReconciler) finalizeRateLimit(rateLimit *limitadorv1alpha1.RateLimit) error {
-	limitadorUrl, err := r.limitadorDiscovery.URL(rateLimit.Namespace)
+	limitadorUrl, err := r.limitadorDiscovery().URL(rateLimit.Namespace)
 	if err != nil {
 		return err
 	}
 
 	limitadorClient := limitador.NewClient(*limitadorUrl)
 	return limitadorClient.DeleteLimit(&rateLimit.Spec)
+}
+
+func (r *RateLimitReconciler) limitadorDiscovery() LimitadorServiceDiscovery {
+	if r.LimitadorDiscovery == nil {
+		r.LimitadorDiscovery = &defaultLimitadorServiceDiscovery{}
+	}
+
+	return r.LimitadorDiscovery
 }
