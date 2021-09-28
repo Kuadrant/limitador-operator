@@ -30,9 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
-	"github.com/3scale/limitador-operator/controllers"
-	"github.com/3scale/limitador-operator/pkg/reconcilers"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	"github.com/kuadrant/limitador-operator/controllers"
+	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -71,7 +71,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "3745a16e.3scale.net",
+		LeaderElectionID:       "3745a16e.kuadrant.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

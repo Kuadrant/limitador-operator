@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/3scale/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 )
 
 // MutateFn is a function which mutates the existing object into it's desired state.

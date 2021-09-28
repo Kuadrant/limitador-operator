@@ -1,0 +1,43 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: limitador-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions: {}
+  description: The Limitador operator installs and maintains limitador instances as well as rate limit objects.
+  displayName: Limitador
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - api
+  - rate-limit
+  links:
+  - name: Limitador Operator
+    url: https://limitador-operator.domain
+  maintainers:
+  - email: eastizle@redhat.com
+    name: eguzki
+  maturity: alpha
+  provider:
+    name: Red Hat
+    url: https://github.com/Kuadrant/limitador-operator
+  version: 0.0.0

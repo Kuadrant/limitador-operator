@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
 var _ = Describe("RateLimit controller", func() {
@@ -30,7 +30,7 @@ var _ = Describe("RateLimit controller", func() {
 		return limitadorv1alpha1.RateLimit{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "RateLimit",
-				APIVersion: "limitador.3scale.net/v1alpha1",
+				APIVersion: "limitador.kuadrant.io/v1alpha1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,

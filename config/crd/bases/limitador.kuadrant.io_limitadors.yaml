@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: limitadors.limitador.3scale.net
+  name: limitadors.limitador.kuadrant.io
 spec:
-  group: limitador.3scale.net
+  group: limitador.kuadrant.io
   names:
     kind: Limitador
     listKind: LimitadorList

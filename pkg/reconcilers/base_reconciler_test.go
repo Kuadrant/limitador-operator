@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/3scale/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 )
 
 var (

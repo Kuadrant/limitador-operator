@@ -28,13 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
-	"github.com/3scale/limitador-operator/pkg/helpers"
-	"github.com/3scale/limitador-operator/pkg/limitador"
-	"github.com/3scale/limitador-operator/pkg/reconcilers"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/limitador"
+	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 )
 
-const rateLimitFinalizer = "finalizer.ratelimit.limitador.3scale.net"
+const rateLimitFinalizer = "finalizer.ratelimit.limitador.kuadrant.io"
 
 // Assumes that there's only one Limitador per namespace. We might want to
 // change this in the future.
@@ -57,9 +57,9 @@ type RateLimitReconciler struct {
 	LimitadorDiscovery LimitadorServiceDiscovery
 }
 
-//+kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=limitador.3scale.net,resources=ratelimits/finalizers,verbs=update
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=ratelimits,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=ratelimits/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=ratelimits/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

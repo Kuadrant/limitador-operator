@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: ratelimits.limitador.3scale.net
+  name: ratelimits.limitador.kuadrant.io
 spec:
-  group: limitador.3scale.net
+  group: limitador.kuadrant.io
   names:
     kind: RateLimit
     listKind: RateLimitList

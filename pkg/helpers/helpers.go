@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DeleteTagAnnotation = "limitador.3scale.net/delete"
+	DeleteTagAnnotation = "limitador.kuadrant.io/delete"
 )
 
 func Contains(list []string, s string) bool {

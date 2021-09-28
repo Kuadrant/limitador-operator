@@ -5,7 +5,7 @@ metadata:
   name: ratelimit-editor-role
 rules:
 - apiGroups:
-  - limitador.3scale.net
+  - limitador.kuadrant.io
   resources:
   - ratelimits
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - limitador.3scale.net
+  - limitador.kuadrant.io
   resources:
   - ratelimits/status
   verbs:
