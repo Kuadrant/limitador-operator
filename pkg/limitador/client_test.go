@@ -1,7 +1,7 @@
 package limitador
 
 import (
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/util/json"

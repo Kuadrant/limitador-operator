@@ -1,7 +1,7 @@
 package limitador
 
 import (
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

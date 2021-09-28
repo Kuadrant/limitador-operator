@@ -33,8 +33,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
-	"github.com/3scale/limitador-operator/pkg/reconcilers"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
 )
 

@@ -8,4 +8,4 @@ webhook:
   port: 9443
 leaderElection:
   leaderElect: true
-  resourceName: 3745a16e.3scale.net
+  resourceName: 3745a16e.kuadrant.io

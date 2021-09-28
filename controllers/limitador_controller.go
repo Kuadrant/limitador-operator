@@ -25,9 +25,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	limitadorv1alpha1 "github.com/3scale/limitador-operator/api/v1alpha1"
-	"github.com/3scale/limitador-operator/pkg/limitador"
-	"github.com/3scale/limitador-operator/pkg/reconcilers"
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	"github.com/kuadrant/limitador-operator/pkg/limitador"
+	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 )
 
 // LimitadorReconciler reconciles a Limitador object
@@ -35,9 +35,9 @@ type LimitadorReconciler struct {
 	*reconcilers.BaseReconciler
 }
 
-//+kubebuilder:rbac:groups=limitador.3scale.net,resources=limitadors,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=limitador.3scale.net,resources=limitadors/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=limitador.3scale.net,resources=limitadors/finalizers,verbs=update
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 

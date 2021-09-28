@@ -1,4 +1,4 @@
-module github.com/3scale/limitador-operator
+module github.com/kuadrant/limitador-operator
 
 go 1.15
 
