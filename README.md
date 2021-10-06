@@ -13,7 +13,7 @@ The Operator to manage [Limitador](https://github.com/Kuadrant/limitador) deploy
 
 ### Limitador CRD
 
-[Limitador v1alpha1 API reference](api/alphav1/limitador_types.go)
+[Limitador v1alpha1 API reference](api/v1alpha1/limitador_types.go)
 
 Example:
 
@@ -30,7 +30,7 @@ spec:
 
 ### RateLimit
 
-[RateLimit v1alpha1 API reference](api/alphav1/ratelimit_types.go)
+[RateLimit v1alpha1 API reference](api/v1alpha1/ratelimit_types.go)
 
 Example:
 
