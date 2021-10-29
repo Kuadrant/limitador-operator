@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,9 +42,10 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 
-func (r *LimitadorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := r.Logger().WithValues("limitador", req.NamespacedName)
-	reqLogger.V(1).Info("Reconciling Limitador")
+func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := r.Logger().WithValues("limitador", req.NamespacedName)
+	logger.V(1).Info("Reconciling Limitador")
+	ctx := logr.NewContext(eventCtx, logger)
 
 	// Delete Limitador deployment and service if needed
 	limitadorObj := &limitadorv1alpha1.Limitador{}
@@ -52,27 +54,27 @@ func (r *LimitadorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// The deployment and the service should be deleted automatically
 			// because they have an owner ref to Limitador
 			return ctrl.Result{}, nil
-		} else {
-			reqLogger.Error(err, "Failed to get Limitador object.")
-			return ctrl.Result{}, err
 		}
+
+		logger.Error(err, "Failed to get Limitador object.")
+		return ctrl.Result{}, err
 	}
 
 	if limitadorObj.GetDeletionTimestamp() != nil { // Marked to be deleted
-		reqLogger.V(1).Info("marked to be deleted")
+		logger.V(1).Info("marked to be deleted")
 		return ctrl.Result{}, nil
 	}
 
 	limitadorService := limitador.LimitadorService(limitadorObj)
 	err := r.ReconcileService(ctx, limitadorService, reconcilers.CreateOnlyMutator)
-	reqLogger.V(1).Info("reconcile service", "error", err)
+	logger.V(1).Info("reconcile service", "error", err)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	deployment := limitador.LimitadorDeployment(limitadorObj)
 	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
-	reqLogger.V(1).Info("reconcile deployment", "error", err)
+	logger.V(1).Info("reconcile deployment", "error", err)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

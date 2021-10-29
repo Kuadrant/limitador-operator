@@ -70,9 +70,10 @@ type RateLimitReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
-func (r *RateLimitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := r.Logger().WithValues("ratelimit", req.NamespacedName)
-	reqLogger.V(1).Info("Reconciling RateLimit")
+func (r *RateLimitReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := r.Logger().WithValues("ratelimit", req.NamespacedName)
+	logger.V(1).Info("Reconciling RateLimit")
+	ctx := logr.NewContext(eventCtx, logger)
 
 	limit := &limitadorv1alpha1.RateLimit{}
 	if err := r.Client().Get(ctx, req.NamespacedName, limit); err != nil {
@@ -80,7 +81,7 @@ func (r *RateLimitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, nil
 		}
 
-		reqLogger.Error(err, "Failed to get RateLimit object.")
+		logger.Error(err, "Failed to get RateLimit object.")
 		return ctrl.Result{}, err
 	}
 
@@ -102,12 +103,12 @@ func (r *RateLimitReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	if err := r.ensureFinalizerIsAdded(ctx, limit, reqLogger); err != nil {
+	if err := r.ensureFinalizerIsAdded(ctx, limit); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if err := r.createLimitInLimitador(limit); err != nil {
-		reqLogger.Error(err, "Failed to create rate limit in Limitador.")
+		logger.Error(err, "Failed to create rate limit in Limitador.")
 		return ctrl.Result{}, err
 	}
 
@@ -166,7 +167,8 @@ func (r *RateLimitReconciler) createLimitInLimitador(limit *limitadorv1alpha1.Ra
 	return limitadorClient.CreateLimit(&limit.Spec)
 }
 
-func (r *RateLimitReconciler) ensureFinalizerIsAdded(ctx context.Context, limit *limitadorv1alpha1.RateLimit, reqLogger logr.Logger) error {
+func (r *RateLimitReconciler) ensureFinalizerIsAdded(ctx context.Context, limit *limitadorv1alpha1.RateLimit) error {
+	logger := logr.FromContext(ctx)
 	numberOfFinalizers := len(limit.GetFinalizers())
 	controllerutil.AddFinalizer(limit, rateLimitFinalizer)
 	if numberOfFinalizers == len(limit.GetFinalizers()) {
@@ -175,7 +177,7 @@ func (r *RateLimitReconciler) ensureFinalizerIsAdded(ctx context.Context, limit 
 	}
 
 	if err := r.Client().Update(ctx, limit); err != nil {
-		reqLogger.Error(err, "Failed to update the rate limit with finalizer")
+		logger.Error(err, "Failed to update the rate limit with finalizer")
 		return err
 	}
 

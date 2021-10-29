@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,4 +42,13 @@ func IsObjectTaggedToDelete(obj client.Object) bool {
 
 	annotation, ok := annotations[DeleteTagAnnotation]
 	return ok && annotation == "true"
+}
+
+func FetchEnv(key string, def string) string {
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		return def
+	}
+
+	return val
 }
