@@ -18,27 +18,31 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"runtime"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	"k8s.io/apimachinery/pkg/runtime"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/controllers"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/log"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme   = k8sruntime.NewScheme()
+	logLevel = helpers.FetchEnv("LOG_LEVEL", "info")
+	logMode  = helpers.FetchEnv("LOG_MODE", "production")
 )
 
 func init() {
@@ -46,9 +50,27 @@ func init() {
 
 	utilruntime.Must(limitadorv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	logger := log.NewLogger(
+		log.SetLevel(log.ToLevel(logLevel)),
+		log.SetMode(log.ToMode(logMode)),
+		log.WriteTo(os.Stdout),
+	)
+	log.SetLogger(logger)
+}
+
+func printControllerMetaInfo() {
+	setupLog := log.Log
+
+	setupLog.Info(fmt.Sprintf("go version: %s", runtime.Version()))
+	setupLog.Info(fmt.Sprintf("go os/arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	setupLog.Info("base logger", "log level", logLevel, "log mode", logMode)
 }
 
 func main() {
+	printControllerMetaInfo()
+	setupLog := log.Log
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -57,13 +79,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -80,7 +96,7 @@ func main() {
 
 	rateLimitBaseReconciler := reconcilers.NewBaseReconciler(
 		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
-		ctrl.Log.WithName("controllers").WithName("ratelimit"),
+		log.Log.WithName("ratelimit"),
 		mgr.GetEventRecorderFor("RateLimit"),
 	)
 
@@ -93,7 +109,7 @@ func main() {
 
 	limitadorBaseReconciler := reconcilers.NewBaseReconciler(
 		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
-		ctrl.Log.WithName("controllers").WithName("limitador"),
+		log.Log.WithName("limitador"),
 		mgr.GetEventRecorderFor("Limitador"),
 	)
 

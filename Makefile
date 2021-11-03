@@ -93,6 +93,8 @@ test: manifests generate fmt vet ## Run tests.
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
+run: export LOG_LEVEL = debug
+run: export LOG_MODE = development
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
@@ -144,7 +146,7 @@ local-setup: local-cleanup local-setup-kind docker-build ## Deploy operator in l
 .PHONY: local-dev-setup
 local-dev-setup: local-cleanup local-setup-kind install run ## Run operator locally in local kind cluster
 
-.PHONY: local-cleanup 
+.PHONY: local-cleanup
 local-cleanup: kind ## Clean up local kind cluster
 	$(KIND) delete cluster --name $(KIND_CLUSTER_NAME)
 

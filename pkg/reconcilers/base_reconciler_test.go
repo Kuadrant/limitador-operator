@@ -1,5 +1,3 @@
-// +build unit
-
 /*
 Copyright 2021 Red Hat, Inc.
 
@@ -21,8 +19,10 @@ package reconcilers
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,16 +30,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/log"
 )
 
-var (
-	LOGTEST = ctrl.Log.WithName("test_base_reconcilers")
-)
+func TestMain(m *testing.M) {
+	logger := log.NewLogger(
+		log.SetLevel(log.DebugLevel),
+		log.SetMode(log.ModeDev),
+		log.WriteTo(os.Stdout),
+	).WithName("test_base_reconcilers")
+	log.SetLogger(logger)
+	os.Exit(m.Run())
+}
 
 func TestCreateOnlyMutator(t *testing.T) {
 	desired := &v1.ConfigMap{}
@@ -53,6 +59,9 @@ func TestBaseReconcilerCreate(t *testing.T) {
 	var (
 		namespace = "operator-unittest"
 	)
+	logger := log.Log.WithName("base_test")
+	baseCtx := context.Background()
+	ctx := logr.NewContext(baseCtx, logger)
 
 	s := scheme.Scheme
 	err := appsv1.AddToScheme(s)
@@ -68,7 +77,7 @@ func TestBaseReconcilerCreate(t *testing.T) {
 	clientAPIReader := fake.NewFakeClient(objs...)
 	recorder := record.NewFakeRecorder(10000)
 
-	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, LOGTEST, recorder)
+	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, logger, recorder)
 
 	desiredConfigmap := &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -84,7 +93,7 @@ func TestBaseReconcilerCreate(t *testing.T) {
 		},
 	}
 
-	err = baseReconciler.ReconcileResource(context.TODO(), &v1.ConfigMap{}, desiredConfigmap, CreateOnlyMutator)
+	err = baseReconciler.ReconcileResource(ctx, &v1.ConfigMap{}, desiredConfigmap, CreateOnlyMutator)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,6 +113,9 @@ func TestBaseReconcilerUpdateNeeded(t *testing.T) {
 		name      = "myConfigmap"
 		namespace = "operator-unittest"
 	)
+	logger := log.Log.WithName("base_test")
+	baseCtx := context.Background()
+	ctx := logr.NewContext(baseCtx, logger)
 
 	s := runtime.NewScheme()
 	err := appsv1.AddToScheme(s)
@@ -133,7 +145,7 @@ func TestBaseReconcilerUpdateNeeded(t *testing.T) {
 	clientAPIReader := fake.NewFakeClient(objs...)
 	recorder := record.NewFakeRecorder(10000)
 
-	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, LOGTEST, recorder)
+	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, logger, recorder)
 
 	desiredConfigmap := &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -161,7 +173,7 @@ func TestBaseReconcilerUpdateNeeded(t *testing.T) {
 		return true, nil
 	}
 
-	err = baseReconciler.ReconcileResource(context.TODO(), &v1.ConfigMap{}, desiredConfigmap, customMutator)
+	err = baseReconciler.ReconcileResource(ctx, &v1.ConfigMap{}, desiredConfigmap, customMutator)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,6 +200,9 @@ func TestBaseReconcilerDelete(t *testing.T) {
 		resourceName = "example-resource"
 		namespace    = "operator-unittest"
 	)
+	logger := log.Log.WithName("base_test")
+	baseCtx := context.Background()
+	ctx := logr.NewContext(baseCtx, logger)
 
 	s := runtime.NewScheme()
 	err := appsv1.AddToScheme(s)
@@ -217,7 +232,7 @@ func TestBaseReconcilerDelete(t *testing.T) {
 	clientAPIReader := fake.NewFakeClient(objs...)
 	recorder := record.NewFakeRecorder(10000)
 
-	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, LOGTEST, recorder)
+	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, logger, recorder)
 
 	desired := &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -234,7 +249,7 @@ func TestBaseReconcilerDelete(t *testing.T) {
 	}
 	helpers.TagObjectToDelete(desired)
 
-	err = baseReconciler.ReconcileResource(context.TODO(), &v1.ConfigMap{}, desired, CreateOnlyMutator)
+	err = baseReconciler.ReconcileResource(ctx, &v1.ConfigMap{}, desired, CreateOnlyMutator)
 	if err != nil {
 		t.Fatal(err)
 	}

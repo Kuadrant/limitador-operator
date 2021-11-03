@@ -7,10 +7,10 @@ import (
 	"net/url"
 
 	"k8s.io/apimachinery/pkg/util/json"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/log"
 )
 
 type Client struct {
@@ -20,7 +20,7 @@ type Client struct {
 
 func NewClient(url url.URL) Client {
 	var transport http.RoundTripper
-	if ctrl.Log.V(1).Enabled() {
+	if log.Log.V(1).Enabled() {
 		transport = &helpers.VerboseTransport{}
 	}
 
