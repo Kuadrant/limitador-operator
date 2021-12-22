@@ -1,0 +1,254 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "limitador.kuadrant.io/v1alpha1",
+          "kind": "Limitador",
+          "metadata": {
+            "name": "limitador-sample"
+          },
+          "spec": {
+            "replicas": 1,
+            "version": "latest"
+          }
+        },
+        {
+          "apiVersion": "limitador.kuadrant.io/v1alpha1",
+          "kind": "RateLimit",
+          "metadata": {
+            "name": "ratelimit-sample"
+          },
+          "spec": {
+            "conditions": [
+              "req.method == GET"
+            ],
+            "max_value": 10,
+            "namespace": "test_namespace",
+            "seconds": 60,
+            "variables": [
+              "user_id"
+            ]
+          }
+        }
+      ]
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+  name: limitador-operator.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - kind: Limitador
+      name: limitadors.limitador.kuadrant.io
+      version: v1alpha1
+    - kind: RateLimit
+      name: ratelimits.limitador.kuadrant.io
+      version: v1alpha1
+  description: The Limitador operator installs and maintains limitador instances as
+    well as rate limit objects.
+  displayName: Limitador
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - limitador.kuadrant.io
+          resources:
+          - limitadors
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - limitador.kuadrant.io
+          resources:
+          - limitadors/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - limitador.kuadrant.io
+          resources:
+          - limitadors/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - limitador.kuadrant.io
+          resources:
+          - ratelimits
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - limitador.kuadrant.io
+          resources:
+          - ratelimits/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - limitador.kuadrant.io
+          resources:
+          - ratelimits/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: limitador-operator-controller-manager
+      deployments:
+      - name: limitador-operator-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=10
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                resources: {}
+              - args:
+                - --health-probe-bind-address=:8081
+                - --metrics-bind-address=127.0.0.1:8080
+                - --leader-elect
+                command:
+                - /manager
+                image: quay.io/kuadrant/limitador-operator:latest
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources:
+                  limits:
+                    cpu: 100m
+                    memory: 30Mi
+                  requests:
+                    cpu: 100m
+                    memory: 20Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: limitador-operator-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          - coordination.k8s.io
+          resources:
+          - configmaps
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: limitador-operator-controller-manager
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - api
+  - rate-limit
+  links:
+  - name: Limitador Operator
+    url: https://limitador-operator.domain
+  maintainers:
+  - email: eastizle@redhat.com
+    name: eguzki
+  maturity: alpha
+  provider:
+    name: Red Hat
+    url: https://github.com/Kuadrant/limitador-operator
+  version: 0.0.1
