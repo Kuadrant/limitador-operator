@@ -24,19 +24,26 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+# Address of the container registry
+REGISTRY = quay.io
+
+# Organization in container resgistry
+ORG ?= kuadrant
+
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # quay.io/kuadrant/limitador-operator-bundle:$VERSION and quay.io/kuadrant/limitador-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= quay.io/kuadrant/limitador-operator
+IMAGE_TAG_BASE ?= $(REGISTRY)/$(ORG)/limitador-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/kuadrant/limitador-operator:latest
+DEFAULT_IMG ?= $(IMAGE_TAG_BASE):latest
+IMG ?= $(DEFAULT_IMG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.22
 
@@ -149,6 +156,15 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+DEPLOYMENT_DIR = $(PROJECT_DIR)/config/deploy
+.PHONY: deploy-manifest
+deploy-manifest:
+	mkdir -p $(DEPLOYMENT_DIR)
+	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG) ;\
+	cd $(PROJECT_DIR) && $(KUSTOMIZE) build config/default >> $(DEPLOYMENT_DIR)/manfiests.yaml
+	# clean up
+	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=${DEFAULT_IMG}
 
 OPERATOR_SDK = $(shell pwd)/bin/operator-sdk
 OPERATOR_SDK_VERSION = v1.15.0
