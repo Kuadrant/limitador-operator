@@ -1,0 +1,10 @@
+# Adds namespace to all resources.
+namespace: limitador-operator
+
+# Value of this field is prepended to the
+# names of all resources, e.g. a deployment named
+namePrefix: limitador-operator
+
+bases:
+- ../crd
+- ../rbac
