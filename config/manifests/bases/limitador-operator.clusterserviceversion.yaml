@@ -9,7 +9,8 @@ metadata:
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions: {}
-  description: The Limitador operator installs and maintains limitador instances as well as rate limit objects.
+  description: The Limitador operator installs and maintains limitador instances as
+    well as rate limit objects.
   displayName: Limitador
   icon:
   - base64data: ""

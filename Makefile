@@ -1,6 +1,3 @@
-# The "source" command used in the "test" target does not work with /bin/sh.
-SHELL := /bin/bash
-
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -9,10 +6,10 @@ SHELL := /bin/bash
 VERSION ?= 0.0.1
 
 # CHANNELS define the bundle channels used in the bundle.
-# Add a new line here if you would like to change its default config. (E.g CHANNELS = "preview,fast,stable")
+# Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
-# - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=preview,fast,stable)
-# - use environment variables to overwrite this value (e.g export CHANNELS="preview,fast,stable")
+# - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
+# - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
@@ -31,17 +28,17 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# kuadrant.io/limitador-operator-bundle:$VERSION and kuadrant.io/limitador-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= https://quay.io/repository/3scale/limitador-operator
+# quay.io/kuadrant/limitador-operator-bundle:$VERSION and quay.io/kuadrant/limitador-operator-catalog:$VERSION.
+IMAGE_TAG_BASE ?= quay.io/kuadrant/limitador-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
+IMG ?= quay.io/kuadrant/limitador-operator:latest
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.22
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -49,6 +46,12 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
 
 all: build
 
@@ -66,12 +69,12 @@ all: build
 # http://linuxcommand.org/lc3_adv_awk.php
 
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Development
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -82,11 +85,8 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ## Run tests.
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+test: manifests generate fmt vet envtest ## Run tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build
 
@@ -98,7 +98,7 @@ run: export LOG_MODE = development
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-docker-build: test ## Build docker image with the manager.
+docker-build: ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
@@ -122,37 +122,15 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
-KIND = $(shell pwd)/bin/kind
-kind: ## Download kind locally if necessary
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.10.0)
-
-KIND_CLUSTER_NAME = limitador-local
-
-.PHONY: local-setup
-local-setup: local-cleanup local-setup-kind docker-build ## Deploy operator in local kind cluster
-	@echo "Deploying Limitador control plane"
-	$(KIND) load docker-image ${IMG} --name ${KIND_CLUSTER_NAME}
-	make deploy
-	kubectl -n limitador-operator-system patch deployment limitador-operator-controller-manager -p '{"spec": {"template": {"spec":{"containers":[{"name": "manager","image":"${IMG}", "imagePullPolicy":"IfNotPresent"}]}}}}'
-	@echo "Wait for all deployments to be up"
-	kubectl -n limitador-operator-system wait --timeout=300s --for=condition=Available deployments --all
-
-.PHONY: local-dev-setup
-local-dev-setup: local-cleanup local-setup-kind install run ## Run operator locally in local kind cluster
-
-.PHONY: local-cleanup
-local-cleanup: kind ## Clean up local kind cluster
-	$(KIND) delete cluster --name $(KIND_CLUSTER_NAME)
-
-.PHONY: local-setup-kind
-local-setup-kind: kind ## Create kind cluster
-	$(KIND) create cluster --name $(KIND_CLUSTER_NAME)
+ENVTEST = $(shell pwd)/bin/setup-envtest
+envtest: ## Download envtest-setup locally if necessary.
+	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -168,12 +146,17 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
+OPERATOR_SDK = $(shell pwd)/bin/operator-sdk
+OPERATOR_SDK_VERSION = v1.15.0
+operator-sdk: ## Download operator-sdk locally if necessary.
+	./utils/install-operator-sdk.sh $(OPERATOR_SDK) $(OPERATOR_SDK_VERSION)
+
 .PHONY: bundle
-bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
-	operator-sdk generate kustomize manifests -q
+bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-	operator-sdk bundle validate ./bundle
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
@@ -223,3 +206,33 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+##@ Misc
+
+## Miscellaneous Custom targets
+
+KIND = $(shell pwd)/bin/kind
+kind: ## Download kind locally if necessary
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.11.1)
+
+KIND_CLUSTER_NAME = limitador-local
+
+.PHONY: local-setup
+local-setup: local-cleanup local-setup-kind docker-build ## Deploy operator in local kind cluster
+	@echo "Deploying Limitador control plane"
+	$(KIND) load docker-image ${IMG} --name ${KIND_CLUSTER_NAME}
+	make deploy
+	kubectl -n limitador-operator-system patch deployment limitador-operator-controller-manager -p '{"spec": {"template": {"spec":{"containers":[{"name": "manager","image":"${IMG}", "imagePullPolicy":"IfNotPresent"}]}}}}'
+	@echo "Wait for all deployments to be up"
+	kubectl -n limitador-operator-system wait --timeout=300s --for=condition=Available deployments --all
+
+.PHONY: local-dev-setup
+local-dev-setup: local-cleanup local-setup-kind install run ## Run operator locally in local kind cluster
+
+.PHONY: local-cleanup
+local-cleanup: kind ## Clean up local kind cluster
+	$(KIND) delete cluster --name $(KIND_CLUSTER_NAME)
+
+.PHONY: local-setup-kind
+local-setup-kind: kind ## Create kind cluster
+	$(KIND) create cluster --name $(KIND_CLUSTER_NAME)
