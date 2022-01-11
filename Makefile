@@ -24,19 +24,26 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+# Address of the container registry
+REGISTRY = quay.io
+
+# Organization in container resgistry
+ORG ?= kuadrant
+
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # quay.io/kuadrant/limitador-operator-bundle:$VERSION and quay.io/kuadrant/limitador-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= quay.io/kuadrant/limitador-operator
+IMAGE_TAG_BASE ?= $(REGISTRY)/$(ORG)/limitador-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/kuadrant/limitador-operator:latest
+DEFAULT_IMG ?= $(IMAGE_TAG_BASE):latest
+IMG ?= $(DEFAULT_IMG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.22
 
@@ -71,10 +78,15 @@ all: build
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+# Operator manifests (RBAC & CRD)
+OPERATOR_MANIFESTS ?= $(PROJECT_DIR)/config/install/manifests.yaml
+
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases && \
+	$(KUSTOMIZE) build config/install > $(OPERATOR_MANIFESTS)
+	$(MAKE) deploy-manifest
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -145,6 +157,16 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+DEPLOYMENT_DIR = $(PROJECT_DIR)/config/deploy
+.PHONY: deploy-manifest
+deploy-manifest:
+	mkdir -p $(DEPLOYMENT_DIR)
+	rm $(DEPLOYMENT_DIR)/manfiests.yaml || true
+	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG) ;\
+	cd $(PROJECT_DIR) && $(KUSTOMIZE) build config/default >> $(DEPLOYMENT_DIR)/manfiests.yaml
+	# clean up
+	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=${DEFAULT_IMG}
 
 OPERATOR_SDK = $(shell pwd)/bin/operator-sdk
 OPERATOR_SDK_VERSION = v1.15.0
@@ -236,3 +258,13 @@ local-cleanup: kind ## Clean up local kind cluster
 .PHONY: local-setup-kind
 local-setup-kind: kind ## Create kind cluster
 	$(KIND) create cluster --name $(KIND_CLUSTER_NAME)
+
+##@ Verify
+
+## Targets to verify actions that generate/modify code have been executed and output committed
+
+.PHONY: verify-manifests
+verify-manifests: manifests ## Verify manifests update.
+	git diff --exit-code ./config
+	[ -z "$$(git ls-files --other --exclude-standard --directory --no-empty-directory ./config)" ]
+
