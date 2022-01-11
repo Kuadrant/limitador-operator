@@ -86,6 +86,7 @@ OPERATOR_MANIFESTS ?= $(PROJECT_DIR)/config/install/manifests.yaml
 manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases && \
 	$(KUSTOMIZE) build config/install > $(OPERATOR_MANIFESTS)
+	$(MAKE) deploy-manifest
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -161,6 +162,7 @@ DEPLOYMENT_DIR = $(PROJECT_DIR)/config/deploy
 .PHONY: deploy-manifest
 deploy-manifest:
 	mkdir -p $(DEPLOYMENT_DIR)
+	rm $(DEPLOYMENT_DIR)/manfiests.yaml || true
 	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG) ;\
 	cd $(PROJECT_DIR) && $(KUSTOMIZE) build config/default >> $(DEPLOYMENT_DIR)/manfiests.yaml
 	# clean up
@@ -256,3 +258,13 @@ local-cleanup: kind ## Clean up local kind cluster
 .PHONY: local-setup-kind
 local-setup-kind: kind ## Create kind cluster
 	$(KIND) create cluster --name $(KIND_CLUSTER_NAME)
+
+##@ Verify
+
+## Targets to verify actions that generate/modify code have been executed and output committed
+
+.PHONY: verify-manifests
+verify-manifests: manifests ## Verify manifests update.
+	git diff --exit-code ./config
+	[ -z "$$(git ls-files --other --exclude-standard --directory --no-empty-directory ./config)" ]
+
