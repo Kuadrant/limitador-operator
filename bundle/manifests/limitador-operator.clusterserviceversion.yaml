@@ -37,7 +37,7 @@ metadata:
     capabilities: Basic Install
     operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: limitador-operator.v0.0.1
+  name: limitador-operator.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -251,4 +251,4 @@ spec:
   provider:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator
-  version: 0.0.1
+  version: 0.0.0
