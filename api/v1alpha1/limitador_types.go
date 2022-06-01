@@ -33,6 +33,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	Version *string `json:"version,omitempty"`
+
+	// +optional
+	Service Service `json:"service,omitempty"`
 }
 
 // LimitadorStatus defines the observed state of Limitador
@@ -60,6 +63,20 @@ type LimitadorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Limitador `json:"items"`
+}
+
+type Service struct {
+	// +optional
+	Name *string `json:"name,omitempty"`
+	// +optional
+	Ports Ports `json:"ports,omitempty"`
+}
+
+type Ports struct {
+	// +optional
+	GRPC *int32 `json:"grpc,omitempty"`
+	// +optional
+	HTTP *int32 `json:"http,omitempty"`
 }
 
 func init() {
