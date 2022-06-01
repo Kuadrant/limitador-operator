@@ -43,6 +43,20 @@ spec:
             properties:
               replicas:
                 type: integer
+              service:
+                properties:
+                  name:
+                    type: string
+                  ports:
+                    properties:
+                      grpc:
+                        format: int32
+                        type: integer
+                      http:
+                        format: int32
+                        type: integer
+                    type: object
+                type: object
               version:
                 type: string
             type: object
