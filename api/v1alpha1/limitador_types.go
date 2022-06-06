@@ -42,6 +42,8 @@ type LimitadorSpec struct {
 type LimitadorStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	ServiceURL string `json:"service-url,omitempty"`
 }
 
 //+kubebuilder:object:root=true
