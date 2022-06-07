@@ -58,7 +58,7 @@ type TestLimitadorServiceDiscovery struct {
 	url url.URL
 }
 
-func (sd *TestLimitadorServiceDiscovery) URL(_ string) (*url.URL, error) {
+func (sd *TestLimitadorServiceDiscovery) URL(_ *limitadorv1alpha1.RateLimit) (*url.URL, error) {
 	return &sd.url, nil
 }
 
