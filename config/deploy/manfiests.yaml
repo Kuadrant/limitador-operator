@@ -118,6 +118,13 @@ spec:
                 items:
                   type: string
                 type: array
+              limitador-ref:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
               max_value:
                 type: integer
               namespace:
