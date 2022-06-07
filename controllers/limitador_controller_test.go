@@ -15,22 +15,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
-	"github.com/kuadrant/limitador-operator/pkg/limitador"
 )
 
 var _ = Describe("Limitador controller", func() {
 	const (
-		LimitadorNamespace = "default"
-		LimitadorReplicas  = 2
-		LimitadorImage     = "quay.io/3scale/limitador"
-		LimitadorVersion   = "0.3.0"
+		LimitadorNamespace   = "default"
+		LimitadorReplicas    = 2
+		LimitadorImage       = "quay.io/3scale/limitador"
+		LimitadorVersion     = "0.3.0"
+		LimitadorServiceName = "limitador-service"
+		LimitadorHttpPort    = 8000
+		LimitadorGttpPort    = 8001
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
 	)
 
+	serviceName := LimitadorServiceName
+	httpPort := int32(LimitadorHttpPort)
+	grpcPort := int32(LimitadorGttpPort)
+
 	replicas := LimitadorReplicas
 	version := LimitadorVersion
+	ports := limitadorv1alpha1.Ports{
+		GRPC: &grpcPort,
+		HTTP: &httpPort,
+	}
 	newLimitador := func() *limitadorv1alpha1.Limitador {
 		// The name can't start with a number.
 		name := "a" + string(uuid.NewUUID())
@@ -47,6 +57,10 @@ var _ = Describe("Limitador controller", func() {
 			Spec: limitadorv1alpha1.LimitadorSpec{
 				Replicas: &replicas,
 				Version:  &version,
+				Service: limitadorv1alpha1.Service{
+					Name:  &serviceName,
+					Ports: ports,
+				},
 			},
 		}
 	}
@@ -93,12 +107,26 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitador.ServiceName, // Hardcoded for now
+						Name:      LimitadorServiceName,
 					},
 					&createdLimitadorService)
-
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
+		})
+		It("Should build the correct Status", func() {
+			// Now checking only the ServiceURL, a more thorough test coming in the future when we have more fields
+			createdLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() string {
+				k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&createdLimitador)
+				return createdLimitador.Status.ServiceURL
+			}, timeout, interval).Should(Equal("http://limitador-service.default.svc.cluster.local:8000"))
+
 		})
 	})
 

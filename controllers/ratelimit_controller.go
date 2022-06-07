@@ -45,8 +45,8 @@ type LimitadorServiceDiscovery interface {
 type defaultLimitadorServiceDiscovery struct{}
 
 func (d *defaultLimitadorServiceDiscovery) URL(namespace string) (*url.URL, error) {
-	serviceUrl := "http://" + limitador.ServiceName + "." + namespace + ".svc.cluster.local:" +
-		strconv.Itoa(limitador.ServiceHTTPPort)
+	serviceUrl := "http://" + limitador.DefaultServiceName + "." + namespace + ".svc.cluster.local:" +
+		strconv.Itoa(limitador.DefaultServiceHTTPPort)
 
 	return url.Parse(serviceUrl)
 }
