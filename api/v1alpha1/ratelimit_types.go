@@ -33,6 +33,8 @@ type RateLimitSpec struct {
 	Namespace  string   `json:"namespace"`
 	Seconds    int      `json:"seconds"`
 	Variables  []string `json:"variables"`
+	// +optional
+	LimitadorRef NamespacedName `json:"limitador-ref,omitempty"`
 }
 
 // RateLimitStatus defines the observed state of RateLimit
@@ -60,6 +62,11 @@ type RateLimitList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []RateLimit `json:"items"`
+}
+
+type NamespacedName struct {
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name,omitempty"`
 }
 
 func init() {
