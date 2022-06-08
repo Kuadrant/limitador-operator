@@ -111,9 +111,9 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 
 func buildServiceUrl(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return "http://" +
-		helpers.GetValueOrDefault(*limitadorObj.Spec.Service.Name, limitador.DefaultServiceName).(string) + "." +
+		limitadorObj.Name + "." +
 		limitadorObj.Namespace + ".svc.cluster.local:" +
-		strconv.Itoa(int(helpers.GetValueOrDefault(*limitadorObj.Spec.Service.Ports.HTTP, limitador.DefaultServiceName).(int32)))
+		strconv.Itoa(int(helpers.GetValueOrDefault(*limitadorObj.Spec.Listener.HTTP.Port, limitador.DefaultServiceHTTPPort).(int32)))
 }
 
 func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, error) {

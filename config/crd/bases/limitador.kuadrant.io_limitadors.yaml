@@ -36,22 +36,23 @@ spec:
           spec:
             description: LimitadorSpec defines the desired state of Limitador
             properties:
-              replicas:
-                type: integer
-              service:
+              listener:
                 properties:
-                  name:
-                    type: string
-                  ports:
+                  grpc:
                     properties:
-                      grpc:
+                      port:
                         format: int32
                         type: integer
-                      http:
+                    type: object
+                  http:
+                    properties:
+                      port:
                         format: int32
                         type: integer
                     type: object
                 type: object
+              replicas:
+                type: integer
               version:
                 type: string
             type: object

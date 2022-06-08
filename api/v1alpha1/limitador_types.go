@@ -35,7 +35,7 @@ type LimitadorSpec struct {
 	Version *string `json:"version,omitempty"`
 
 	// +optional
-	Service Service `json:"service,omitempty"`
+	Listener Listener `json:"listener,omitempty"`
 }
 
 // LimitadorStatus defines the observed state of Limitador
@@ -67,18 +67,17 @@ type LimitadorList struct {
 	Items           []Limitador `json:"items"`
 }
 
-type Service struct {
+type Listener struct {
 	// +optional
-	Name *string `json:"name,omitempty"`
+	HTTP TransportProtocol `json:"http,omitempty"`
 	// +optional
-	Ports Ports `json:"ports,omitempty"`
+	GRPC TransportProtocol `json:"grpc,omitempty"`
 }
 
-type Ports struct {
+type TransportProtocol struct {
 	// +optional
-	GRPC *int32 `json:"grpc,omitempty"`
-	// +optional
-	HTTP *int32 `json:"http,omitempty"`
+	Port *int32 `json:"port,omitempty"`
+	// We could describe TLS within this type
 }
 
 func init() {

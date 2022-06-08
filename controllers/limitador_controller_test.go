@@ -31,16 +31,13 @@ var _ = Describe("Limitador controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	serviceName := LimitadorServiceName
-	httpPort := int32(LimitadorHttpPort)
-	grpcPort := int32(LimitadorGttpPort)
+	httpPortNumber := int32(LimitadorHttpPort)
+	grpcPortNumber := int32(LimitadorGttpPort)
 
 	replicas := LimitadorReplicas
 	version := LimitadorVersion
-	ports := limitadorv1alpha1.Ports{
-		GRPC: &grpcPort,
-		HTTP: &httpPort,
-	}
+	httpPort := limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
+	grpcPort := limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
 	newLimitador := func() *limitadorv1alpha1.Limitador {
 		// The name can't start with a number.
 		name := "a" + string(uuid.NewUUID())
@@ -57,9 +54,9 @@ var _ = Describe("Limitador controller", func() {
 			Spec: limitadorv1alpha1.LimitadorSpec{
 				Replicas: &replicas,
 				Version:  &version,
-				Service: limitadorv1alpha1.Service{
-					Name:  &serviceName,
-					Ports: ports,
+				Listener: limitadorv1alpha1.Listener{
+					HTTP: httpPort,
+					GRPC: grpcPort,
 				},
 			},
 		}
@@ -107,7 +104,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      LimitadorServiceName,
+						Name:      limitadorObj.Name,
 					},
 					&createdLimitadorService)
 				return err == nil
@@ -125,7 +122,7 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&createdLimitador)
 				return createdLimitador.Status.ServiceURL
-			}, timeout, interval).Should(Equal("http://limitador-service.default.svc.cluster.local:8000"))
+			}, timeout, interval).Should(Equal("http://" + limitadorObj.Name + ".default.svc.cluster.local:8000"))
 
 		})
 	})

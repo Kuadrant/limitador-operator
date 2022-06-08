@@ -12,7 +12,6 @@ import (
 const (
 	DefaultVersion         = "latest"
 	DefaultReplicas        = 1
-	DefaultServiceName     = "limitador"
 	Image                  = "quay.io/3scale/limitador"
 	StatusEndpoint         = "/status"
 	DefaultServiceHTTPPort = 8080
@@ -26,7 +25,7 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            helpers.GetValueOrDefault(*limitador.Spec.Service.Name, DefaultServiceName).(string),
+			Name:            limitador.Name,
 			Namespace:       limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
 			Labels:          labels(),
 			OwnerReferences: []metav1.OwnerReference{ownerRefToLimitador(limitador)},
@@ -36,13 +35,13 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 				{
 					Name:       "http",
 					Protocol:   v1.ProtocolTCP,
-					Port:       helpers.GetValueOrDefault(*limitador.Spec.Service.Ports.HTTP, DefaultServiceHTTPPort).(int32),
+					Port:       helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32),
 					TargetPort: intstr.FromString("http"),
 				},
 				{
 					Name:       "grpc",
 					Protocol:   v1.ProtocolTCP,
-					Port:       helpers.GetValueOrDefault(*limitador.Spec.Service.Ports.GRPC, DefaultServiceGRPCPort).(int32),
+					Port:       helpers.GetValueOrDefault(*limitador.Spec.Listener.GRPC.Port, DefaultServiceGRPCPort).(int32),
 					TargetPort: intstr.FromString("grpc"),
 				},
 			},
@@ -92,12 +91,12 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
-									ContainerPort: helpers.GetValueOrDefault(*limitador.Spec.Service.Ports.HTTP, DefaultServiceHTTPPort).(int32),
+									ContainerPort: helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32),
 									Protocol:      v1.ProtocolTCP,
 								},
 								{
 									Name:          "grpc",
-									ContainerPort: helpers.GetValueOrDefault(*limitador.Spec.Service.Ports.GRPC, DefaultServiceGRPCPort).(int32),
+									ContainerPort: helpers.GetValueOrDefault(*limitador.Spec.Listener.GRPC.Port, DefaultServiceGRPCPort).(int32),
 									Protocol:      v1.ProtocolTCP,
 								},
 							},
@@ -111,7 +110,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
-										Port:   intstr.FromInt(int(helpers.GetValueOrDefault(*limitador.Spec.Service.Ports.HTTP, DefaultServiceHTTPPort).(int32))),
+										Port:   intstr.FromInt(int(helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32))),
 										Scheme: v1.URISchemeHTTP,
 									},
 								},
@@ -125,7 +124,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
-										Port:   intstr.FromInt(int(helpers.GetValueOrDefault(*limitador.Spec.Service.Ports.HTTP, DefaultServiceHTTPPort).(int32))),
+										Port:   intstr.FromInt(int(helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32))),
 										Scheme: v1.URISchemeHTTP,
 									},
 								},
