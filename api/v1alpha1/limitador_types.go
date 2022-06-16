@@ -33,12 +33,17 @@ type LimitadorSpec struct {
 
 	// +optional
 	Version *string `json:"version,omitempty"`
+
+	// +optional
+	Listener *Listener `json:"listener,omitempty"`
 }
 
 // LimitadorStatus defines the observed state of Limitador
 type LimitadorStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	ServiceURL string `json:"service-url,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -60,6 +65,19 @@ type LimitadorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Limitador `json:"items"`
+}
+
+type Listener struct {
+	// +optional
+	HTTP TransportProtocol `json:"http,omitempty"`
+	// +optional
+	GRPC TransportProtocol `json:"grpc,omitempty"`
+}
+
+type TransportProtocol struct {
+	// +optional
+	Port *int32 `json:"port,omitempty"`
+	// We could describe TLS within this type
 }
 
 func init() {

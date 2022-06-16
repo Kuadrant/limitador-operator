@@ -52,3 +52,10 @@ func FetchEnv(key string, def string) string {
 
 	return val
 }
+
+func GetValueOrDefault(expectedValue interface{}, defaultValue interface{}) interface{} {
+	if expectedValue != nil {
+		return expectedValue
+	}
+	return defaultValue
+}

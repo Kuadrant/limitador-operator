@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -79,6 +81,11 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	// Reconcile Status
+	if err = r.reconcileStatus(ctx, limitadorObj); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -87,6 +94,26 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.Limitador{}).
 		Complete(r)
+}
+
+func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	logger := logr.FromContext(ctx)
+	// Simple enough now, we could implement a thorough check like with RateLimit with ObservedGeneration in the future
+	builtServiceUrl := buildServiceUrl(limitadorObj)
+	if builtServiceUrl != limitadorObj.Status.ServiceURL {
+		logger.V(1).Info("Updating the Status", "Name", limitadorObj.Name)
+		limitadorObj.Status.ServiceURL = builtServiceUrl
+		return r.Client().Status().Update(ctx, limitadorObj)
+
+	}
+	return nil
+}
+
+func buildServiceUrl(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return "http://" +
+		limitadorObj.Name + "." +
+		limitadorObj.Namespace + ".svc.cluster.local:" +
+		strconv.Itoa(int(helpers.GetValueOrDefault(*limitadorObj.Spec.Listener.HTTP.Port, limitador.DefaultServiceHTTPPort).(int32)))
 }
 
 func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, error) {

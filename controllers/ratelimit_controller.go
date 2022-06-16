@@ -18,12 +18,12 @@ package controllers
 
 import (
 	"context"
-	"net/url"
-	"strconv"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"net/url"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -34,21 +34,32 @@ import (
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 )
 
-const rateLimitFinalizer = "finalizer.ratelimit.limitador.kuadrant.io"
+const (
+	rateLimitFinalizer   = "finalizer.ratelimit.limitador.kuadrant.io"
+	DefaultLimitadorName = "limitador"
+)
 
 // Assumes that there's only one Limitador per namespace. We might want to
 // change this in the future.
 type LimitadorServiceDiscovery interface {
-	URL(namespace string) (*url.URL, error)
+	URL(*limitadorv1alpha1.RateLimit) (*url.URL, error)
 }
 
-type defaultLimitadorServiceDiscovery struct{}
+type defaultLimitadorServiceDiscovery struct {
+	client.Client
+}
 
-func (d *defaultLimitadorServiceDiscovery) URL(namespace string) (*url.URL, error) {
-	serviceUrl := "http://" + limitador.ServiceName + "." + namespace + ".svc.cluster.local:" +
-		strconv.Itoa(limitador.ServiceHTTPPort)
-
-	return url.Parse(serviceUrl)
+func (d *defaultLimitadorServiceDiscovery) URL(limit *limitadorv1alpha1.RateLimit) (*url.URL, error) {
+	limitadorNamespacedName := helpers.GetValueOrDefault(limit.Spec.LimitadorRef,
+		types.NamespacedName{
+			Namespace: DefaultLimitadorName,
+			Name:      limit.Namespace,
+		}).(types.NamespacedName)
+	var limitador limitadorv1alpha1.Limitador
+	if err := d.Get(context.Background(), limitadorNamespacedName, &limitador); err != nil {
+		return nil, err
+	}
+	return url.Parse(limitador.Status.ServiceURL)
 }
 
 // RateLimitReconciler reconciles a RateLimit object
@@ -60,6 +71,8 @@ type RateLimitReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=ratelimits,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=ratelimits/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=ratelimits/finalizers,verbs=update
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors,verbs=get;list;watch
+//+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -139,7 +152,7 @@ func (r *RateLimitReconciler) updateLimitPredicate() predicate.Predicate {
 
 			// The namespace should be the same in the old and the new version,
 			// so we can use either.
-			limitadorUrl, err := r.limitadorDiscovery().URL(newVersion.Namespace)
+			limitadorUrl, err := r.limitadorDiscovery().URL(newVersion)
 			if err != nil {
 				return false
 			}
@@ -158,7 +171,7 @@ func (r *RateLimitReconciler) updateLimitPredicate() predicate.Predicate {
 }
 
 func (r *RateLimitReconciler) createLimitInLimitador(limit *limitadorv1alpha1.RateLimit) error {
-	limitadorUrl, err := r.limitadorDiscovery().URL(limit.Namespace)
+	limitadorUrl, err := r.limitadorDiscovery().URL(limit)
 	if err != nil {
 		return err
 	}
@@ -185,7 +198,7 @@ func (r *RateLimitReconciler) ensureFinalizerIsAdded(ctx context.Context, limit 
 }
 
 func (r *RateLimitReconciler) finalizeRateLimit(rateLimit *limitadorv1alpha1.RateLimit) error {
-	limitadorUrl, err := r.limitadorDiscovery().URL(rateLimit.Namespace)
+	limitadorUrl, err := r.limitadorDiscovery().URL(rateLimit)
 	if err != nil {
 		return err
 	}
