@@ -54,7 +54,7 @@ var _ = Describe("Limitador controller", func() {
 			Spec: limitadorv1alpha1.LimitadorSpec{
 				Replicas: &replicas,
 				Version:  &version,
-				Listener: limitadorv1alpha1.Listener{
+				Listener: &limitadorv1alpha1.Listener{
 					HTTP: httpPort,
 					GRPC: grpcPort,
 				},

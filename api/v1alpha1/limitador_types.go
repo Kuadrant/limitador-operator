@@ -35,7 +35,7 @@ type LimitadorSpec struct {
 	Version *string `json:"version,omitempty"`
 
 	// +optional
-	Listener Listener `json:"listener,omitempty"`
+	Listener *Listener `json:"listener,omitempty"`
 }
 
 // LimitadorStatus defines the observed state of Limitador
