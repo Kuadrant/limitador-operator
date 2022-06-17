@@ -19,13 +19,12 @@ import (
 
 var _ = Describe("Limitador controller", func() {
 	const (
-		LimitadorNamespace   = "default"
-		LimitadorReplicas    = 2
-		LimitadorImage       = "quay.io/3scale/limitador"
-		LimitadorVersion     = "0.3.0"
-		LimitadorServiceName = "limitador-service"
-		LimitadorHttpPort    = 8000
-		LimitadorGttpPort    = 8001
+		LimitadorNamespace = "default"
+		LimitadorReplicas  = 2
+		LimitadorImage     = "quay.io/3scale/limitador"
+		LimitadorVersion   = "0.3.0"
+		LimitadorHttpPort  = 8000
+		LimitadorGttpPort  = 8001
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
@@ -38,6 +37,24 @@ var _ = Describe("Limitador controller", func() {
 	version := LimitadorVersion
 	httpPort := limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 	grpcPort := limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
+
+	limits := []limitadorv1alpha1.RateLimit{
+		{
+			Conditions: []string{"req.method == GET"},
+			MaxValue:   10,
+			Namespace:  "test-namespace",
+			Seconds:    60,
+			Variables:  []string{"user_id"},
+		},
+		{
+			Conditions: []string{"req.method == POST"},
+			MaxValue:   5,
+			Namespace:  "test-namespace",
+			Seconds:    60,
+			Variables:  []string{"user_id"},
+		},
+	}
+
 	newLimitador := func() *limitadorv1alpha1.Limitador {
 		// The name can't start with a number.
 		name := "a" + string(uuid.NewUUID())
@@ -58,6 +75,7 @@ var _ = Describe("Limitador controller", func() {
 					HTTP: httpPort,
 					GRPC: grpcPort,
 				},
+				Limits: limits,
 			},
 		}
 	}
