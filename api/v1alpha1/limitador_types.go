@@ -36,6 +36,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	Listener *Listener `json:"listener,omitempty"`
+
+	// +optional
+	Limits []RateLimit `json:"limits,omitempty"`
 }
 
 // LimitadorStatus defines the observed state of Limitador
@@ -78,6 +81,15 @@ type TransportProtocol struct {
 	// +optional
 	Port *int32 `json:"port,omitempty"`
 	// We could describe TLS within this type
+}
+
+// RateLimit defines the desired Limitador limit
+type RateLimit struct {
+	Conditions []string `json:"conditions"`
+	MaxValue   int      `json:"max_value"`
+	Namespace  string   `json:"namespace"`
+	Seconds    int      `json:"seconds"`
+	Variables  []string `json:"variables"`
 }
 
 func init() {
