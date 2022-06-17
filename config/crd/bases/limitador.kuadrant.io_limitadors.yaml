@@ -36,6 +36,32 @@ spec:
           spec:
             description: LimitadorSpec defines the desired state of Limitador
             properties:
+              limits:
+                items:
+                  description: RateLimit defines the desired Limitador limit
+                  properties:
+                    conditions:
+                      items:
+                        type: string
+                      type: array
+                    max_value:
+                      type: integer
+                    namespace:
+                      type: string
+                    seconds:
+                      type: integer
+                    variables:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - conditions
+                  - max_value
+                  - namespace
+                  - seconds
+                  - variables
+                  type: object
+                type: array
               listener:
                 properties:
                   grpc:
