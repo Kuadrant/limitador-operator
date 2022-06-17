@@ -94,32 +94,11 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	rateLimitBaseReconciler := reconcilers.NewBaseReconciler(
-		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
-		ctrl.Log.WithName("controllers").WithName("ratelimit"),
-		mgr.GetEventRecorderFor("RateLimit"),
-	)
-
 	limitadorBaseReconciler := reconcilers.NewBaseReconciler(
 		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
 		ctrl.Log.WithName("controllers").WithName("limitador"),
 		mgr.GetEventRecorderFor("Limitador"),
 	)
-
-	mockedHTTPServer = ghttp.NewServer()
-	mockedHTTPServerURL, err := url.Parse(mockedHTTPServer.URL())
-	Expect(err).ToNot(HaveOccurred())
-
-	// Set this to true so we don't have to specify all the requests, including
-	// the ones for example done for cleanup in AfterEach() functions.
-	mockedHTTPServer.SetAllowUnhandledRequests(true)
-
-	// Register reconcilers
-	err = (&RateLimitReconciler{
-		BaseReconciler:     rateLimitBaseReconciler,
-		LimitadorDiscovery: &TestLimitadorServiceDiscovery{url: *mockedHTTPServerURL},
-	}).SetupWithManager(mgr)
-	Expect(err).ToNot(HaveOccurred())
 
 	err = (&LimitadorReconciler{
 		BaseReconciler: limitadorBaseReconciler,
