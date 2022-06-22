@@ -1,21 +1,31 @@
 package limitador
 
 import (
+	"crypto/md5"
+	"fmt"
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/yaml"
 )
 
 const (
-	DefaultVersion         = "latest"
-	DefaultReplicas        = 1
-	Image                  = "quay.io/3scale/limitador"
-	StatusEndpoint         = "/status"
-	DefaultServiceHTTPPort = 8080
-	DefaultServiceGRPCPort = 8081
+	DefaultVersion             = "latest"
+	DefaultReplicas            = 1
+	Image                      = "quay.io/3scale/limitador"
+	StatusEndpoint             = "/status"
+	DefaultServiceHTTPPort     = 8080
+	DefaultServiceGRPCPort     = 8081
+	EnvLimitadorConfigFileName = "LIMITADOR_CONFIG_FILE_NAME"
+	LimitadorCMHash            = "hash"
+	LimitadorCMNamePrefix      = "limitador-"
+)
+
+var (
+	LimitadorConfigFileName = helpers.FetchEnv(EnvLimitadorConfigFileName, "limitador-config.yaml")
 )
 
 func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
@@ -141,6 +151,25 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 			},
 		},
 	}
+}
+
+func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, error) {
+	limitsMarshalled, marshallErr := yaml.Marshal(limitador.Spec.Limits)
+	if marshallErr != nil {
+		return nil, marshallErr
+	}
+
+	return &v1.ConfigMap{
+		Data: map[string]string{
+			LimitadorConfigFileName: string(limitsMarshalled),
+			LimitadorCMHash:         fmt.Sprintf("%x", md5.Sum(limitsMarshalled)),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      LimitadorCMNamePrefix + limitador.Name,
+			Namespace: limitador.Namespace,
+			Labels:    map[string]string{"app": "limitador"},
+		},
+	}, nil
 }
 
 func labels() map[string]string {

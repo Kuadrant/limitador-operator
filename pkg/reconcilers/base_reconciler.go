@@ -18,7 +18,6 @@ package reconcilers
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -142,6 +141,10 @@ func (b *BaseReconciler) ReconcileService(ctx context.Context, desired *corev1.S
 
 func (b *BaseReconciler) ReconcileDeployment(ctx context.Context, desired *appsv1.Deployment, mutatefn MutateFn) error {
 	return b.ReconcileResource(ctx, &appsv1.Deployment{}, desired, mutatefn)
+}
+
+func (b *BaseReconciler) ReconcileConfigMap(ctx context.Context, desired *corev1.ConfigMap, mutatefn MutateFn) error {
+	return b.ReconcileResource(ctx, &corev1.ConfigMap{}, desired, mutatefn)
 }
 
 func (b *BaseReconciler) GetResource(ctx context.Context, objKey types.NamespacedName, obj client.Object) error {
