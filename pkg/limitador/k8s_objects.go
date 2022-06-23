@@ -21,7 +21,9 @@ const (
 	DefaultServiceGRPCPort     = 8081
 	EnvLimitadorConfigFileName = "LIMITADOR_CONFIG_FILE_NAME"
 	LimitadorCMHash            = "hash"
-	LimitadorCMNamePrefix      = "limitador-"
+	LimitsCMNamePrefix         = "limits-config-"
+	LimitadorCMMountPath       = "/"
+	LimitadorLimitsFileEnv     = "LIMITS_FILE"
 )
 
 var (
@@ -115,6 +117,10 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 									Name:  "RUST_LOG",
 									Value: "info",
 								},
+								{
+									Name:  LimitadorLimitsFileEnv,
+									Value: LimitadorCMMountPath + LimitadorConfigFileName,
+								},
 							},
 							LivenessProbe: &v1.Probe{
 								Handler: v1.Handler{
@@ -144,7 +150,25 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								SuccessThreshold:    1,
 								FailureThreshold:    3,
 							},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "config-file",
+									MountPath: LimitadorCMMountPath,
+								},
+							},
 							ImagePullPolicy: v1.PullIfNotPresent,
+						},
+					},
+					Volumes: []v1.Volume{
+						{
+							Name: "config-file",
+							VolumeSource: v1.VolumeSource{
+								ConfigMap: &v1.ConfigMapVolumeSource{
+									LocalObjectReference: v1.LocalObjectReference{
+										Name: LimitsCMNamePrefix + limitador.Name,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -165,7 +189,7 @@ func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, err
 			LimitadorCMHash:         fmt.Sprintf("%x", md5.Sum(limitsMarshalled)),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      LimitadorCMNamePrefix + limitador.Name,
+			Name:      LimitsCMNamePrefix + limitador.Name,
 			Namespace: limitador.Namespace,
 			Labels:    map[string]string{"app": "limitador"},
 		},

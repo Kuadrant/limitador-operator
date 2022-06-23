@@ -94,7 +94,7 @@ var _ = Describe("Limitador controller", func() {
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
-		It("Should create a new deployment with the right number of replicas and version", func() {
+		It("Should create a new deployment with the right number of replicas, version and config file", func() {
 			createdLimitadorDeployment := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -113,6 +113,15 @@ var _ = Describe("Limitador controller", func() {
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
 				Equal(LimitadorImage + ":" + LimitadorVersion),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Env[1]).Should(
+				Equal(v1.EnvVar{Name: "LIMITS_FILE", Value: "/limitador-config.yaml", ValueFrom: nil}),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).Should(
+				Equal("/"),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
+				Equal(limitador.LimitsCMNamePrefix + limitadorObj.Name),
 			)
 		})
 
@@ -151,7 +160,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitador.LimitadorCMNamePrefix + limitadorObj.Name,
+						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
 					},
 					&createdConfigMap)
 
@@ -250,7 +259,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitador.LimitadorCMNamePrefix + limitadorObj.Name,
+						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
 					},
 					&updatedLimitadorConfigMap)
 
