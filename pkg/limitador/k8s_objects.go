@@ -13,21 +13,17 @@ import (
 )
 
 const (
-	DefaultVersion             = "latest"
-	DefaultReplicas            = 1
-	Image                      = "quay.io/3scale/limitador"
-	StatusEndpoint             = "/status"
-	DefaultServiceHTTPPort     = 8080
-	DefaultServiceGRPCPort     = 8081
-	EnvLimitadorConfigFileName = "LIMITADOR_CONFIG_FILE_NAME"
-	LimitadorCMHash            = "hash"
-	LimitsCMNamePrefix         = "limits-config-"
-	LimitadorCMMountPath       = "/"
-	LimitadorLimitsFileEnv     = "LIMITS_FILE"
-)
-
-var (
-	LimitadorConfigFileName = helpers.FetchEnv(EnvLimitadorConfigFileName, "limitador-config.yaml")
+	DefaultVersion          = "latest"
+	DefaultReplicas         = 1
+	Image                   = "quay.io/3scale/limitador"
+	StatusEndpoint          = "/status"
+	DefaultServiceHTTPPort  = 8080
+	DefaultServiceGRPCPort  = 8081
+	LimitadorConfigFileName = "limitador-config.yaml"
+	LimitadorCMHash         = "hash"
+	LimitsCMNamePrefix      = "limits-config-"
+	LimitadorCMMountPath    = "/home/limitador/etc/"
+	LimitadorLimitsFileEnv  = "LIMITS_FILE"
 )
 
 func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {

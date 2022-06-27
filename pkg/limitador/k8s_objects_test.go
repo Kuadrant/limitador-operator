@@ -12,10 +12,10 @@ func TestConstants(t *testing.T) {
 	assert.Check(t, "/status" == StatusEndpoint)
 	assert.Check(t, 8080 == DefaultServiceHTTPPort)
 	assert.Check(t, 8081 == DefaultServiceGRPCPort)
-	assert.Check(t, "LIMITADOR_CONFIG_FILE_NAME" == EnvLimitadorConfigFileName)
+	assert.Check(t, "limitador-config.yaml" == LimitadorConfigFileName)
 	assert.Check(t, "hash" == LimitadorCMHash)
 	assert.Check(t, "limits-config-" == LimitsCMNamePrefix)
-	assert.Check(t, "/" == LimitadorCMMountPath)
+	assert.Check(t, "/home/limitador/etc/" == LimitadorCMMountPath)
 	assert.Check(t, "LIMITS_FILE" == LimitadorLimitsFileEnv)
 }
 

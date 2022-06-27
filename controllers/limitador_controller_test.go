@@ -115,10 +115,10 @@ var _ = Describe("Limitador controller", func() {
 				Equal(LimitadorImage + ":" + LimitadorVersion),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Env[1]).Should(
-				Equal(v1.EnvVar{Name: "LIMITS_FILE", Value: "/limitador-config.yaml", ValueFrom: nil}),
+				Equal(v1.EnvVar{Name: "LIMITS_FILE", Value: "/home/limitador/etc/limitador-config.yaml", ValueFrom: nil}),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).Should(
-				Equal("/"),
+				Equal("/home/limitador/etc/"),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
 				Equal(limitador.LimitsCMNamePrefix + limitadorObj.Name),
@@ -267,11 +267,11 @@ var _ = Describe("Limitador controller", func() {
 					return false
 				}
 
-				correctHash := updatedLimitadorConfigMap.Data[limitador.LimitadorCMHash] == "69b3eab828208274d4200aedc6fd8b19"
-				correctLimits := updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName] == "- conditions:\n  - req.method == GET\n  max_value: 100\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"
-
-				return correctHash && correctLimits
+				return true
 			}, timeout, interval).Should(BeTrue())
+			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorCMHash]).Should(Equal("69b3eab828208274d4200aedc6fd8b19"))
+			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]).Should(Equal("- conditions:\n  - req.method == GET\n  max_value: 100\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"))
+
 		})
 	})
 })
