@@ -11,6 +11,25 @@ metadata:
             "name": "limitador-sample"
           },
           "spec": {
+            "limits": [
+              {
+                "conditions": [
+                  "get-toy == yes"
+                ],
+                "max_value": 2,
+                "namespace": "toystore-app",
+                "seconds": 30,
+                "variables": []
+              }
+            ],
+            "listener": {
+              "grpc": {
+                "port": 8081
+              },
+              "http": {
+                "port": 8080
+              }
+            },
             "replicas": 1,
             "version": "latest"
           }
@@ -59,6 +78,17 @@ spec:
     spec:
       clusterPermissions:
       - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
+          - watch
         - apiGroups:
           - apps
           resources:

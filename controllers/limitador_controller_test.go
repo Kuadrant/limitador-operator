@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/kuadrant/limitador-operator/pkg/limitador"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -93,7 +94,7 @@ var _ = Describe("Limitador controller", func() {
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
-		It("Should create a new deployment with the right number of replicas and version", func() {
+		It("Should create a new deployment with the right number of replicas, version and config file", func() {
 			createdLimitadorDeployment := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -112,6 +113,15 @@ var _ = Describe("Limitador controller", func() {
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
 				Equal(LimitadorImage + ":" + LimitadorVersion),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Env[1]).Should(
+				Equal(v1.EnvVar{Name: "LIMITS_FILE", Value: "/home/limitador/etc/limitador-config.yaml", ValueFrom: nil}),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).Should(
+				Equal("/home/limitador/etc/"),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
+				Equal(limitador.LimitsCMNamePrefix + limitadorObj.Name),
 			)
 		})
 
@@ -142,6 +152,27 @@ var _ = Describe("Limitador controller", func() {
 				return createdLimitador.Status.ServiceURL
 			}, timeout, interval).Should(Equal("http://" + limitadorObj.Name + ".default.svc.cluster.local:8000"))
 
+		})
+		It("Should create a ConfigMap with the correct limits and hash", func() {
+			createdConfigMap := v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
+					},
+					&createdConfigMap)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(createdConfigMap.Data[limitador.LimitadorCMHash]).Should(
+				Equal("a00c9940ae6bb8de702633ce453e6a97"),
+			)
+			Expect(createdConfigMap.Data[limitador.LimitadorConfigFileName]).Should(
+				Equal("- conditions:\n  - req.method == GET\n  max_value: 10\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n- conditions:\n  - req.method == POST\n  max_value: 5\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"),
+			)
 		})
 	})
 
@@ -195,6 +226,52 @@ var _ = Describe("Limitador controller", func() {
 
 				return correctReplicas && correctImage
 			}, timeout, interval).Should(BeTrue())
+		})
+		It("Should modify the ConfigMap accordingly", func() {
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			limits := []limitadorv1alpha1.RateLimit{
+				{
+					Conditions: []string{"req.method == GET"},
+					MaxValue:   100,
+					Namespace:  "test-namespace",
+					Seconds:    60,
+					Variables:  []string{"user_id"},
+				},
+			}
+			updatedLimitador.Spec.Limits = limits
+
+			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+			updatedLimitadorConfigMap := v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
+					},
+					&updatedLimitadorConfigMap)
+
+				if err != nil {
+					return false
+				}
+
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorCMHash]).Should(Equal("69b3eab828208274d4200aedc6fd8b19"))
+			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]).Should(Equal("- conditions:\n  - req.method == GET\n  max_value: 100\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"))
+
 		})
 	})
 })
