@@ -94,19 +94,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	rateLimitBaseReconciler := reconcilers.NewBaseReconciler(
-		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
-		log.Log.WithName("ratelimit"),
-		mgr.GetEventRecorderFor("RateLimit"),
-	)
-
-	if err = (&controllers.RateLimitReconciler{
-		BaseReconciler: rateLimitBaseReconciler,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create RateLimit controller")
-		os.Exit(1)
-	}
-
 	limitadorBaseReconciler := reconcilers.NewBaseReconciler(
 		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
 		log.Log.WithName("limitador"),

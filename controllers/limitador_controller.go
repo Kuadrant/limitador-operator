@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	v1 "k8s.io/api/core/v1"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -43,6 +44,7 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;delete
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
@@ -86,6 +88,17 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	// Reconcile Limits ConfigMap
+	limitsConfigMap, err := limitador.LimitsConfigMap(limitadorObj)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
+	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -114,6 +127,30 @@ func buildServiceUrl(limitadorObj *limitadorv1alpha1.Limitador) string {
 		limitadorObj.Name + "." +
 		limitadorObj.Namespace + ".svc.cluster.local:" +
 		strconv.Itoa(int(helpers.GetValueOrDefault(*limitadorObj.Spec.Listener.HTTP.Port, limitador.DefaultServiceHTTPPort).(int32)))
+}
+
+func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
+	existing, ok := existingObj.(*v1.ConfigMap)
+	if !ok {
+		return false, fmt.Errorf("%T is not a *v1.ConfigMap", existingObj)
+	}
+	desired, ok := desiredObj.(*v1.ConfigMap)
+	if !ok {
+		return false, fmt.Errorf("%T is not a *v1.ConfigMap", desiredObj)
+	}
+
+	updated := false
+
+	if existing.Data[limitador.LimitadorCMHash] != desired.Data[limitador.LimitadorCMHash] {
+		for k, v := range map[string]string{
+			limitador.LimitadorCMHash:         desired.Data[limitador.LimitadorCMHash],
+			limitador.LimitadorConfigFileName: string(desired.Data[limitador.LimitadorConfigFileName]),
+		} {
+			existing.Data[k] = v
+		}
+		updated = true
+	}
+	return updated, nil
 }
 
 func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, error) {
