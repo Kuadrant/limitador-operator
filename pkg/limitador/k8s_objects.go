@@ -172,7 +172,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 }
 
 func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, error) {
-	limitsMarshalled, marshallErr := yaml.Marshal(limitador.Spec.Limits)
+	limitsMarshalled, marshallErr := yaml.Marshal(limitador.Limits())
 	if marshallErr != nil {
 		return nil, marshallErr
 	}

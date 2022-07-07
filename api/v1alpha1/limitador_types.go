@@ -86,6 +86,14 @@ func (l *Limitador) HTTPPort() int32 {
 	return *l.Spec.Listener.HTTP.Port
 }
 
+func (l *Limitador) Limits() []RateLimit {
+	if l.Spec.Limits == nil {
+		return make([]RateLimit, 0)
+	}
+
+	return l.Spec.Limits
+}
+
 //+kubebuilder:object:root=true
 
 // LimitadorList contains a list of Limitador
