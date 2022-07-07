@@ -33,24 +33,6 @@ metadata:
             "replicas": 1,
             "version": "latest"
           }
-        },
-        {
-          "apiVersion": "limitador.kuadrant.io/v1alpha1",
-          "kind": "RateLimit",
-          "metadata": {
-            "name": "ratelimit-sample"
-          },
-          "spec": {
-            "conditions": [
-              "req.method == GET"
-            ],
-            "max_value": 10,
-            "namespace": "test_namespace",
-            "seconds": 60,
-            "variables": [
-              "user_id"
-            ]
-          }
         }
       ]
     capabilities: Basic Install
@@ -64,9 +46,6 @@ spec:
     owned:
     - kind: Limitador
       name: limitadors.limitador.kuadrant.io
-      version: v1alpha1
-    - kind: RateLimit
-      name: ratelimits.limitador.kuadrant.io
       version: v1alpha1
   description: The Limitador operator installs and maintains limitador instances as
     well as rate limit objects.
