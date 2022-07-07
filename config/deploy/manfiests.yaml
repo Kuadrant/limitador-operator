@@ -285,34 +285,6 @@ rules:
   - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: limitador-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: limitador-operator-proxy-role
-rules:
-- apiGroups:
-  - authentication.k8s.io
-  resources:
-  - tokenreviews
-  verbs:
-  - create
-- apiGroups:
-  - authorization.k8s.io
-  resources:
-  - subjectaccessreviews
-  verbs:
-  - create
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: limitador-operator-leader-election-rolebinding
@@ -339,19 +311,6 @@ subjects:
   name: limitador-operator-controller-manager
   namespace: limitador-operator-system
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: limitador-operator-proxy-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: limitador-operator-proxy-role
-subjects:
-- kind: ServiceAccount
-  name: limitador-operator-controller-manager
-  namespace: limitador-operator-system
----
 apiVersion: v1
 data:
   controller_manager_config.yaml: |
@@ -360,7 +319,7 @@ data:
     health:
       healthProbeBindAddress: :8081
     metrics:
-      bindAddress: 127.0.0.1:8080
+      bindAddress: :8080
     webhook:
       port: 9443
     leaderElection:
@@ -380,9 +339,9 @@ metadata:
   namespace: limitador-operator-system
 spec:
   ports:
-  - name: https
-    port: 8443
-    targetPort: https
+  - name: metrics
+    port: 8080
+    targetPort: metrics
   selector:
     control-plane: controller-manager
 ---
@@ -405,18 +364,6 @@ spec:
     spec:
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-      - args:
-        - --health-probe-bind-address=:8081
-        - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
         command:
         - /manager
@@ -428,6 +375,9 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
+        ports:
+        - containerPort: 8080
+          name: metrics
         readinessProbe:
           httpGet:
             path: /readyz
