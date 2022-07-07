@@ -3,8 +3,8 @@ package limitador
 import (
 	"crypto/md5"
 	"fmt"
+
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
-	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,8 +17,6 @@ const (
 	DefaultReplicas         = 1
 	Image                   = "quay.io/3scale/limitador"
 	StatusEndpoint          = "/status"
-	DefaultServiceHTTPPort  = 8080
-	DefaultServiceGRPCPort  = 8081
 	LimitadorConfigFileName = "limitador-config.yaml"
 	LimitadorCMHash         = "hash"
 	LimitsCMNamePrefix      = "limits-config-"
@@ -43,13 +41,13 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 				{
 					Name:       "http",
 					Protocol:   v1.ProtocolTCP,
-					Port:       helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32),
+					Port:       limitador.HTTPPort(),
 					TargetPort: intstr.FromString("http"),
 				},
 				{
 					Name:       "grpc",
 					Protocol:   v1.ProtocolTCP,
-					Port:       helpers.GetValueOrDefault(*limitador.Spec.Listener.GRPC.Port, DefaultServiceGRPCPort).(int32),
+					Port:       limitador.GRPCPort(),
 					TargetPort: intstr.FromString("grpc"),
 				},
 			},
@@ -99,12 +97,12 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
-									ContainerPort: helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32),
+									ContainerPort: limitador.HTTPPort(),
 									Protocol:      v1.ProtocolTCP,
 								},
 								{
 									Name:          "grpc",
-									ContainerPort: helpers.GetValueOrDefault(*limitador.Spec.Listener.GRPC.Port, DefaultServiceGRPCPort).(int32),
+									ContainerPort: limitador.GRPCPort(),
 									Protocol:      v1.ProtocolTCP,
 								},
 							},
@@ -122,7 +120,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
-										Port:   intstr.FromInt(int(helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32))),
+										Port:   intstr.FromInt(int(limitador.HTTPPort())),
 										Scheme: v1.URISchemeHTTP,
 									},
 								},
@@ -136,7 +134,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 								Handler: v1.Handler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
-										Port:   intstr.FromInt(int(helpers.GetValueOrDefault(*limitador.Spec.Listener.HTTP.Port, DefaultServiceHTTPPort).(int32))),
+										Port:   intstr.FromInt(int(limitador.HTTPPort())),
 										Scheme: v1.URISchemeHTTP,
 									},
 								},

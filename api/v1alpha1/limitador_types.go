@@ -20,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	DefaultServiceHTTPPort int32 = 8080
+	DefaultServiceGRPCPort int32 = 8081
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -61,6 +66,26 @@ type Limitador struct {
 	Status LimitadorStatus `json:"status,omitempty"`
 }
 
+func (l *Limitador) GRPCPort() int32 {
+	if l.Spec.Listener == nil ||
+		l.Spec.Listener.GRPC == nil ||
+		l.Spec.Listener.GRPC.Port == nil {
+		return DefaultServiceGRPCPort
+	}
+
+	return *l.Spec.Listener.GRPC.Port
+}
+
+func (l *Limitador) HTTPPort() int32 {
+	if l.Spec.Listener == nil ||
+		l.Spec.Listener.HTTP == nil ||
+		l.Spec.Listener.HTTP.Port == nil {
+		return DefaultServiceHTTPPort
+	}
+
+	return *l.Spec.Listener.HTTP.Port
+}
+
 //+kubebuilder:object:root=true
 
 // LimitadorList contains a list of Limitador
@@ -72,9 +97,9 @@ type LimitadorList struct {
 
 type Listener struct {
 	// +optional
-	HTTP TransportProtocol `json:"http,omitempty"`
+	HTTP *TransportProtocol `json:"http,omitempty"`
 	// +optional
-	GRPC TransportProtocol `json:"grpc,omitempty"`
+	GRPC *TransportProtocol `json:"grpc,omitempty"`
 }
 
 type TransportProtocol struct {

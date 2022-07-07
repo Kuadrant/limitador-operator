@@ -2,8 +2,9 @@ package controllers
 
 import (
 	"context"
-	"github.com/kuadrant/limitador-operator/pkg/limitador"
 	"time"
+
+	"github.com/kuadrant/limitador-operator/pkg/limitador"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -36,8 +37,8 @@ var _ = Describe("Limitador controller", func() {
 
 	replicas := LimitadorReplicas
 	version := LimitadorVersion
-	httpPort := limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
-	grpcPort := limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
+	httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
+	grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
 
 	limits := []limitadorv1alpha1.RateLimit{
 		{
@@ -82,6 +83,38 @@ var _ = Describe("Limitador controller", func() {
 	}
 
 	deletePropagationPolicy := client.PropagationPolicy(metav1.DeletePropagationForeground)
+
+	Context("Creating a new empty Limitador object", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = newLimitador()
+			limitadorObj.Spec = limitadorv1alpha1.LimitadorSpec{}
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		It("Should create a Limitador service with default ports", func() {
+			createdLimitadorService := v1.Service{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&createdLimitadorService)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(len(createdLimitadorService.Spec.Ports)).Should(Equal(2))
+			Expect(createdLimitadorService.Spec.Ports[0].Name).Should(Equal("http"))
+			Expect(createdLimitadorService.Spec.Ports[0].Port).Should(Equal(limitadorv1alpha1.DefaultServiceHTTPPort))
+			Expect(createdLimitadorService.Spec.Ports[1].Name).Should(Equal("grpc"))
+			Expect(createdLimitadorService.Spec.Ports[1].Port).Should(Equal(limitadorv1alpha1.DefaultServiceGRPCPort))
+		})
+	})
 
 	Context("Creating a new Limitador object", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador

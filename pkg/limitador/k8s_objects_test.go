@@ -1,8 +1,9 @@
 package limitador
 
 import (
-	"gotest.tools/assert"
 	"testing"
+
+	"gotest.tools/assert"
 )
 
 func TestConstants(t *testing.T) {
@@ -10,8 +11,6 @@ func TestConstants(t *testing.T) {
 	assert.Check(t, 1 == DefaultReplicas)
 	assert.Check(t, "quay.io/3scale/limitador" == Image)
 	assert.Check(t, "/status" == StatusEndpoint)
-	assert.Check(t, 8080 == DefaultServiceHTTPPort)
-	assert.Check(t, 8081 == DefaultServiceGRPCPort)
 	assert.Check(t, "limitador-config.yaml" == LimitadorConfigFileName)
 	assert.Check(t, "hash" == LimitadorCMHash)
 	assert.Check(t, "limits-config-" == LimitsCMNamePrefix)
