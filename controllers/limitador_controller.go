@@ -19,9 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/kuadrant/limitador-operator/pkg/helpers"
-	v1 "k8s.io/api/core/v1"
 	"strconv"
+
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -126,7 +126,7 @@ func buildServiceUrl(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return "http://" +
 		limitadorObj.Name + "." +
 		limitadorObj.Namespace + ".svc.cluster.local:" +
-		strconv.Itoa(int(helpers.GetValueOrDefault(*limitadorObj.Spec.Listener.HTTP.Port, limitador.DefaultServiceHTTPPort).(int32)))
+		strconv.Itoa(int(limitadorObj.HTTPPort()))
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
