@@ -17,14 +17,13 @@ limitations under the License.
 package controllers
 
 import (
-	"github.com/onsi/gomega/gexec"
-	"net/url"
 	"path/filepath"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 	"github.com/onsi/gomega/ghttp"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,15 +50,6 @@ func TestAPIs(t *testing.T) {
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
 		[]Reporter{printer.NewlineReporter{}})
-}
-
-// In the tests, this just points to our mocked HTTP server
-type TestLimitadorServiceDiscovery struct {
-	url url.URL
-}
-
-func (sd *TestLimitadorServiceDiscovery) URL(_ *limitadorv1alpha1.RateLimit) (*url.URL, error) {
-	return &sd.url, nil
 }
 
 var _ = BeforeSuite(func() {
