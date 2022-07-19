@@ -6,6 +6,7 @@ import (
 
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,8 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
 var _ = Describe("Limitador controller", func() {
@@ -171,19 +170,25 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 		})
+
 		It("Should build the correct Status", func() {
-			// Now checking only the ServiceURL, a more thorough test coming in the future when we have more fields
 			createdLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() string {
+			Eventually(func() limitadorv1alpha1.LimitadorService {
 				k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: limitadorObj.Namespace,
 						Name:      limitadorObj.Name,
 					},
 					&createdLimitador)
-				return createdLimitador.Status.ServiceURL
-			}, timeout, interval).Should(Equal("http://" + limitadorObj.Name + ".default.svc.cluster.local:8000"))
+				return createdLimitador.Status.Service
+			}, timeout, interval).Should(Equal(limitadorv1alpha1.LimitadorService{
+				Host: limitadorObj.Name + ".default.svc.cluster.local",
+				Ports: limitadorv1alpha1.Ports{
+					GRPC: grpcPortNumber,
+					HTTP: httpPortNumber,
+				},
+			}))
 
 		})
 		It("Should create a ConfigMap with the correct limits and hash", func() {
