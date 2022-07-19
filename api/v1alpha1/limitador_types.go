@@ -23,6 +23,13 @@ import (
 const (
 	DefaultServiceHTTPPort int32 = 8080
 	DefaultServiceGRPCPort int32 = 8081
+
+	// Status conditions
+	StatusConditionReady string = "Ready"
+
+	// Status reasons
+	StatusReasonInstanceRunning   string = "LimitadorInstanceRunning"
+	StatusReasonServiceNotRunning string = "LimitadorInstanceNotRunning"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -44,14 +51,6 @@ type LimitadorSpec struct {
 
 	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
-}
-
-// LimitadorStatus defines the observed state of Limitador
-type LimitadorStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	ServiceURL string `json:"service-url,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -123,6 +122,34 @@ type RateLimit struct {
 	Namespace  string   `json:"namespace"`
 	Seconds    int      `json:"seconds"`
 	Variables  []string `json:"variables"`
+}
+
+// LimitadorStatus defines the observed state of Limitador
+type LimitadorStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	Service LimitadorService `json:"service,omitempty"`
+}
+
+type LimitadorService struct {
+	Host  string `json:"host,omitempty"`
+	Ports Ports  `json:"ports,omitempty"`
+}
+
+type Ports struct {
+	HTTP int32 `json:"http,omitempty"`
+	GRPC int32 `json:"grpc,omitempty"`
+}
+
+func (s *LimitadorStatus) Ready() bool {
+	for _, condition := range s.Conditions {
+		if condition.Type == StatusConditionReady {
+			return condition.Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func init() {
