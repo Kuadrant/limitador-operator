@@ -19,9 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strconv"
-
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -83,11 +82,6 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile Status
-	if err = r.reconcileStatus(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Reconcile Limits ConfigMap
 	limitsConfigMap, err := limitador.LimitsConfigMap(limitadorObj)
 	if err != nil {
@@ -97,6 +91,16 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Reconcile Status
+	if err := r.reconcileStatus(ctx, limitadorObj); err != nil {
+		switch err.Error() {
+		case "resource not ready":
+			return ctrl.Result{Requeue: true}, nil
+		default:
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -109,24 +113,111 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (err error) {
 	logger := logr.FromContext(ctx)
-	// Simple enough now, we could implement a thorough check like with RateLimit with ObservedGeneration in the future
-	builtServiceUrl := buildServiceUrl(limitadorObj)
-	if builtServiceUrl != limitadorObj.Status.ServiceURL {
-		logger.V(1).Info("Updating the Status", "Name", limitadorObj.Name)
-		limitadorObj.Status.ServiceURL = builtServiceUrl
-		return r.Client().Status().Update(ctx, limitadorObj)
 
+	isLimitadorRunning := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
+	changed := updateStatusReady(limitadorObj, isLimitadorRunning)
+
+	changed = updateStatusService(limitadorObj) || changed
+
+	if !limitadorObj.Status.Ready() {
+		err = fmt.Errorf("resource not ready")
 	}
-	return nil
+
+	if !changed {
+		logger.V(1).Info("resource status did not change")
+		return // to save an update request
+	}
+
+	logger.V(1).Info("resource status changed", "limitador/status", limitadorObj.Status)
+
+	if updateErr := r.Client().Status().Update(ctx, limitadorObj); updateErr != nil {
+		logger.Error(updateErr, "failed to update the resource")
+		err = updateErr
+		return
+	}
+
+	logger.Info("status updated", "Name", limitadorObj.Name)
+	return
 }
 
-func buildServiceUrl(limitadorObj *limitadorv1alpha1.Limitador) string {
-	return "http://" +
-		limitadorObj.Name + "." +
-		limitadorObj.Namespace + ".svc.cluster.local:" +
-		strconv.Itoa(int(limitadorObj.HTTPPort()))
+func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) bool {
+	logger := logr.FromContext(ctx)
+	limitadorInstance := &appsv1.Deployment{}
+	limitadorInstanceNamespacedName := client.ObjectKey{ // Its deployment is built after the same name and namespace
+		Namespace: limitadorObj.Namespace,
+		Name:      limitadorObj.Name,
+	}
+	if err := r.Client().Get(ctx, limitadorInstanceNamespacedName, limitadorInstance); err != nil {
+		logger.Error(err, "Failed to get Limitador Instance.")
+		return false
+	}
+
+	return limitadorInstance.Status.ReadyReplicas >= 1
+}
+
+func updateStatusService(limitadorObj *limitadorv1alpha1.Limitador) (changed bool) {
+	changed = false
+	serviceHost := buildServiceHost(limitadorObj)
+	if serviceHost != limitadorObj.Status.Service.Host {
+		limitadorObj.Status.Service.Host = serviceHost
+		limitadorObj.Status.Service.Ports.GRPC = limitadorObj.GRPCPort()
+		limitadorObj.Status.Service.Ports.HTTP = limitadorObj.HTTPPort()
+		changed = true
+	}
+	return
+}
+
+func updateStatusReady(limitadorObj *limitadorv1alpha1.Limitador, ready bool) (changed bool) {
+	status := metav1.ConditionFalse
+	reason := limitadorv1alpha1.StatusReasonServiceNotRunning
+	message := "There's no Limitador Pod running"
+
+	if ready {
+		status = metav1.ConditionTrue
+		reason = limitadorv1alpha1.StatusReasonInstanceRunning
+		message = ""
+	}
+	limitadorObj.Status.Conditions, changed = updateStatusConditions(limitadorObj.Status.Conditions, metav1.Condition{
+		Type:    limitadorv1alpha1.StatusConditionReady,
+		Status:  status,
+		Reason:  reason,
+		Message: message,
+	})
+
+	return
+}
+
+func updateStatusConditions(currentConditions []metav1.Condition, newCondition metav1.Condition) ([]metav1.Condition, bool) {
+	newCondition.LastTransitionTime = metav1.Now()
+
+	if currentConditions == nil {
+		return []metav1.Condition{newCondition}, true
+	}
+
+	for i, condition := range currentConditions {
+		if condition.Type == newCondition.Type {
+			if condition.Status == newCondition.Status {
+				if condition.Reason == newCondition.Reason && condition.Message == newCondition.Message {
+					return currentConditions, false
+				}
+
+				newCondition.LastTransitionTime = condition.LastTransitionTime
+			}
+
+			res := make([]metav1.Condition, len(currentConditions))
+			copy(res, currentConditions)
+			res[i] = newCondition
+			return res, true
+		}
+	}
+
+	return append(currentConditions, newCondition), true
+}
+
+func buildServiceHost(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("%s.%s.svc.cluster.local", limitadorObj.Name, limitadorObj.Namespace)
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
