@@ -190,6 +190,10 @@ func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, err
 	}, nil
 }
 
+func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
 func labels() map[string]string {
 	return map[string]string{"app": "limitador"}
 }
