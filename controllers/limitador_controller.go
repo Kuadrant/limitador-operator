@@ -217,7 +217,7 @@ func updateStatusConditions(currentConditions []metav1.Condition, newCondition m
 }
 
 func buildServiceHost(limitadorObj *limitadorv1alpha1.Limitador) string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", limitadorObj.Name, limitadorObj.Namespace)
+	return fmt.Sprintf("%s.%s.svc.cluster.local", limitador.ServiceName(limitadorObj), limitadorObj.Namespace)
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
