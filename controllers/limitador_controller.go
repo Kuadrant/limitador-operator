@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
@@ -95,12 +97,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 
 	// Reconcile Status
 	if err := r.reconcileStatus(ctx, limitadorObj); err != nil {
-		switch err.Error() {
-		case "resource not ready":
-			return ctrl.Result{Requeue: true}, nil
-		default:
-			return ctrl.Result{}, err
-		}
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -110,6 +107,10 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.Limitador{}).
+		Watches(
+			&source.Kind{Type: &appsv1.Deployment{}},
+			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &limitadorv1alpha1.Limitador{}},
+		).
 		Complete(r)
 }
 
