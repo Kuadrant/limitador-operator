@@ -117,7 +117,10 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (err error) {
 	logger := logr.FromContext(ctx)
 
-	isLimitadorRunning := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
+	isLimitadorRunning, err := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
+	if err != nil {
+		return err
+	}
 	changed := updateStatusReady(limitadorObj, isLimitadorRunning)
 
 	changed = updateStatusService(limitadorObj) || changed
@@ -143,7 +146,7 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 	return
 }
 
-func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) bool {
+func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (bool, error) {
 	logger := logr.FromContext(ctx)
 	limitadorInstance := &appsv1.Deployment{}
 	limitadorInstanceNamespacedName := client.ObjectKey{ // Its deployment is built after the same name and namespace
@@ -152,10 +155,13 @@ func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Contex
 	}
 	if err := r.Client().Get(ctx, limitadorInstanceNamespacedName, limitadorInstance); err != nil {
 		logger.Error(err, "Failed to get Limitador Instance.")
-		return false
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	return limitadorInstance.Status.ReadyReplicas >= 1
+	return limitadorInstance.Status.ReadyReplicas >= 1, nil
 }
 
 func updateStatusService(limitadorObj *limitadorv1alpha1.Limitador) (changed bool) {
