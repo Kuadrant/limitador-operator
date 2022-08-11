@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
@@ -95,12 +97,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 
 	// Reconcile Status
 	if err := r.reconcileStatus(ctx, limitadorObj); err != nil {
-		switch err.Error() {
-		case "resource not ready":
-			return ctrl.Result{Requeue: true}, nil
-		default:
-			return ctrl.Result{}, err
-		}
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -110,13 +107,20 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.Limitador{}).
+		Watches(
+			&source.Kind{Type: &appsv1.Deployment{}},
+			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &limitadorv1alpha1.Limitador{}},
+		).
 		Complete(r)
 }
 
 func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (err error) {
 	logger := logr.FromContext(ctx)
 
-	isLimitadorRunning := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
+	isLimitadorRunning, err := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
+	if err != nil {
+		return err
+	}
 	changed := updateStatusReady(limitadorObj, isLimitadorRunning)
 
 	changed = updateStatusService(limitadorObj) || changed
@@ -142,7 +146,7 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 	return
 }
 
-func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) bool {
+func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (bool, error) {
 	logger := logr.FromContext(ctx)
 	limitadorInstance := &appsv1.Deployment{}
 	limitadorInstanceNamespacedName := client.ObjectKey{ // Its deployment is built after the same name and namespace
@@ -151,10 +155,13 @@ func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Contex
 	}
 	if err := r.Client().Get(ctx, limitadorInstanceNamespacedName, limitadorInstance); err != nil {
 		logger.Error(err, "Failed to get Limitador Instance.")
-		return false
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	return limitadorInstance.Status.ReadyReplicas >= 1
+	return limitadorInstance.Status.ReadyReplicas >= 1, nil
 }
 
 func updateStatusService(limitadorObj *limitadorv1alpha1.Limitador) (changed bool) {
@@ -217,7 +224,7 @@ func updateStatusConditions(currentConditions []metav1.Condition, newCondition m
 }
 
 func buildServiceHost(limitadorObj *limitadorv1alpha1.Limitador) string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", limitadorObj.Name, limitadorObj.Namespace)
+	return fmt.Sprintf("%s.%s.svc.cluster.local", limitador.ServiceName(limitadorObj), limitadorObj.Namespace)
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {

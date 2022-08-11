@@ -183,7 +183,7 @@ var _ = Describe("Limitador controller", func() {
 					&createdLimitador)
 				return createdLimitador.Status.Service
 			}, timeout, interval).Should(Equal(limitadorv1alpha1.LimitadorService{
-				Host: limitadorObj.Name + ".default.svc.cluster.local",
+				Host: "limitador-" + limitadorObj.Name + ".default.svc.cluster.local",
 				Ports: limitadorv1alpha1.Ports{
 					GRPC: grpcPortNumber,
 					HTTP: httpPortNumber,
