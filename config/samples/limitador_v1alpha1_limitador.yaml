@@ -3,8 +3,6 @@ kind: Limitador
 metadata:
   name: limitador-sample
 spec:
-  replicas: 1
-  version: latest
   listener:
     http:
       port: 8080

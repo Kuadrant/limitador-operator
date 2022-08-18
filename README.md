@@ -9,7 +9,6 @@ The Operator to manage [Limitador](https://github.com/Kuadrant/limitador) deploy
 ## CustomResourceDefinitions
 
 * [Limitador](#limitador), which defines a desired Limitador deployment.
-* [RateLimit](#ratelimit), which declaratively specifies rate limit configurations.
 
 ### Limitador CRD
 
@@ -24,30 +23,17 @@ kind: Limitador
 metadata:
   name: limitador-sample
 spec:
-  replicas: 1
-  version: "0.4.0"
-```
-
-### RateLimit
-
-[RateLimit v1alpha1 API reference](api/v1alpha1/ratelimit_types.go)
-
-Example:
-
-```yaml
----
-apiVersion: limitador.kuadrant.io/v1alpha1
-kind: RateLimit
-metadata:
-  name: ratelimit-sample
-spec:
-  namespace: test_namespace
-  max_value: 10
-  seconds: 60
-  conditions:
-    - "req.method == GET"
-  variables:
-    - user_id
+  listener:
+    http:
+      port: 8080
+    grpc:
+      port: 8081
+  limits:
+    - conditions: ["get-toy == yes"]
+      max_value: 2
+      namespace: toystore-app
+      seconds: 30
+      variables: []
 ```
 
 ## Licensing

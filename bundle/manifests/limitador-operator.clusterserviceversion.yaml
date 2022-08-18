@@ -29,9 +29,7 @@ metadata:
               "http": {
                 "port": 8080
               }
-            },
-            "replicas": 1,
-            "version": "latest"
+            }
           }
         }
       ]
