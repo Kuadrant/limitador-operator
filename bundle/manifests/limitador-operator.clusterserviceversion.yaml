@@ -135,6 +135,9 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
+                env:
+                - name: RELATED_IMAGE_LIMITADOR
+                  value: quay.io/3scale/limitador:latest
                 image: quay.io/kuadrant/limitador-operator:latest
                 livenessProbe:
                   httpGet:
@@ -212,4 +215,7 @@ spec:
   provider:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator
+  relatedImages:
+  - image: quay.io/3scale/limitador:latest
+    name: limitador
   version: 0.0.0
