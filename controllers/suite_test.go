@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"github.com/onsi/gomega/ghttp"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +41,6 @@ import (
 
 var k8sClient client.Client
 var testEnv *envtest.Environment
-var mockedHTTPServer *ghttp.Server
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)

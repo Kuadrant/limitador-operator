@@ -20,7 +20,7 @@ func TestConstants(t *testing.T) {
 	assert.Check(t, "LIMITS_FILE" == LimitadorLimitsFileEnv)
 }
 
-//TODO: Test individual k8s objects.
+// TODO: Test individual k8s objects.
 func newTestLimitadorObj(name, namespace string, limits []limitadorv1alpha1.RateLimit) *limitadorv1alpha1.Limitador {
 	var (
 		replicas = 1
