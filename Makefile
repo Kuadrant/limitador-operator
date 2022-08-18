@@ -272,7 +272,7 @@ local-cleanup: kind ## Clean up local kind cluster
 
 .PHONY: local-setup-kind
 local-setup-kind: kind ## Create kind cluster
-	$(KIND) create cluster --name $(KIND_CLUSTER_NAME)
+	$(KIND) create cluster --name $(KIND_CLUSTER_NAME) --config utils/kind-cluster.yaml
 
 ##@ Verify
 
