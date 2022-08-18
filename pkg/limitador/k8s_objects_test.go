@@ -9,9 +9,8 @@ import (
 )
 
 func TestConstants(t *testing.T) {
-	assert.Check(t, "latest" == DefaultVersion)
 	assert.Check(t, 1 == DefaultReplicas)
-	assert.Check(t, "quay.io/3scale/limitador" == Image)
+	assert.Check(t, "quay.io/3scale/limitador" == LimitadorRepository)
 	assert.Check(t, "/status" == StatusEndpoint)
 	assert.Check(t, "limitador-config.yaml" == LimitadorConfigFileName)
 	assert.Check(t, "hash" == LimitadorCMHash)
@@ -47,7 +46,6 @@ func newTestLimitadorObj(name, namespace string, limits []limitadorv1alpha1.Rate
 			Limits: limits,
 		},
 	}
-
 }
 
 func TestServiceName(t *testing.T) {

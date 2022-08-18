@@ -29,6 +29,9 @@ spec:
         - /manager
         args:
         - --leader-elect
+        env:
+        - name: RELATED_IMAGE_LIMITADOR
+          value: "quay.io/3scale/limitador:latest"
         image: controller:latest
         name: manager
         securityContext:

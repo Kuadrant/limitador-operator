@@ -372,6 +372,9 @@ spec:
         - --leader-elect
         command:
         - /manager
+        env:
+        - name: RELATED_IMAGE_LIMITADOR
+          value: quay.io/3scale/limitador:latest
         image: quay.io/kuadrant/limitador-operator:latest
         livenessProbe:
           httpGet:
