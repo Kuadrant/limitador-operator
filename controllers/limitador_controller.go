@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -27,8 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
@@ -107,14 +106,11 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.Limitador{}).
-		Watches(
-			&source.Kind{Type: &appsv1.Deployment{}},
-			&handler.EnqueueRequestForOwner{IsController: true, OwnerType: &limitadorv1alpha1.Limitador{}},
-		).
+		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
 
-func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (err error) {
+func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
 	logger := logr.FromContext(ctx)
 
 	isLimitadorRunning, err := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
@@ -125,25 +121,20 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 
 	changed = updateStatusService(limitadorObj) || changed
 
-	if !limitadorObj.Status.Ready() {
-		err = fmt.Errorf("resource not ready")
-	}
-
 	if !changed {
 		logger.V(1).Info("resource status did not change")
-		return // to save an update request
+		return nil // to save an update request
 	}
 
 	logger.V(1).Info("resource status changed", "limitador/status", limitadorObj.Status)
 
 	if updateErr := r.Client().Status().Update(ctx, limitadorObj); updateErr != nil {
 		logger.Error(updateErr, "failed to update the resource")
-		err = updateErr
-		return
+		return updateErr
 	}
 
 	logger.Info("status updated", "Name", limitadorObj.Name)
-	return
+	return nil
 }
 
 func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (bool, error) {

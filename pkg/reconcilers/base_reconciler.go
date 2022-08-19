@@ -96,8 +96,10 @@ func (b *BaseReconciler) EventRecorder() record.EventRecorder {
 // with the existing state inside the passed in callback MutateFn.
 //
 // obj: Object of the same type as the 'desired' object.
-//            Used to read the resource from the kubernetes cluster.
-//            Could be zero-valued initialized object.
+//
+//	Used to read the resource from the kubernetes cluster.
+//	Could be zero-valued initialized object.
+//
 // desired: Object representing the desired state
 //
 // It returns an error.
@@ -177,7 +179,7 @@ func (b *BaseReconciler) UpdateResourceStatus(ctx context.Context, obj client.Ob
 	return b.Client().Status().Update(ctx, obj)
 }
 
-//SetOwnerReference sets owner as a Controller OwnerReference on owned
+// SetOwnerReference sets owner as a Controller OwnerReference on owned
 func (b *BaseReconciler) SetOwnerReference(owner, obj client.Object) error {
 	err := controllerutil.SetControllerReference(owner, obj, b.Scheme())
 	if err != nil {
@@ -190,7 +192,7 @@ func (b *BaseReconciler) SetOwnerReference(owner, obj client.Object) error {
 	return err
 }
 
-//EnsureOwnerReference sets owner as a Controller OwnerReference on owned
+// EnsureOwnerReference sets owner as a Controller OwnerReference on owned
 // returns boolean to notify when the object has been updated
 func (b *BaseReconciler) EnsureOwnerReference(owner, obj client.Object) (bool, error) {
 	changed := false

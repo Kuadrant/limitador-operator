@@ -24,15 +24,15 @@ var _ = Describe("Limitador controller", func() {
 		LimitadorReplicas  = 2
 		LimitadorImage     = "quay.io/3scale/limitador"
 		LimitadorVersion   = "0.3.0"
-		LimitadorHttpPort  = 8000
-		LimitadorGttpPort  = 8001
+		LimitadorHTTPPort  = 8000
+		LimitadorGRPCPort  = 8001
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
 	)
 
-	httpPortNumber := int32(LimitadorHttpPort)
-	grpcPortNumber := int32(LimitadorGttpPort)
+	httpPortNumber := int32(LimitadorHTTPPort)
+	grpcPortNumber := int32(LimitadorGRPCPort)
 
 	replicas := LimitadorReplicas
 	version := LimitadorVersion
@@ -174,13 +174,16 @@ var _ = Describe("Limitador controller", func() {
 		It("Should build the correct Status", func() {
 			createdLimitador := limitadorv1alpha1.Limitador{}
 			Eventually(func() limitadorv1alpha1.LimitadorService {
-				k8sClient.Get(
+				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: limitadorObj.Namespace,
 						Name:      limitadorObj.Name,
 					},
 					&createdLimitador)
+				if err != nil {
+					return limitadorv1alpha1.LimitadorService{}
+				}
 				return createdLimitador.Status.Service
 			}, timeout, interval).Should(Equal(limitadorv1alpha1.LimitadorService{
 				Host: "limitador-" + limitadorObj.Name + ".default.svc.cluster.local",
@@ -301,11 +304,7 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&updatedLimitadorConfigMap)
 
-				if err != nil {
-					return false
-				}
-
-				return true
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorCMHash]).Should(Equal("69b3eab828208274d4200aedc6fd8b19"))
 			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]).Should(Equal("- conditions:\n  - req.method == GET\n  max_value: 100\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"))
