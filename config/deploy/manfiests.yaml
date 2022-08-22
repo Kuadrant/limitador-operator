@@ -374,7 +374,7 @@ spec:
         - /manager
         env:
         - name: RELATED_IMAGE_LIMITADOR
-          value: quay.io/3scale/limitador:latest
+          value: quay.io/kuadrant/limitador:latest
         image: quay.io/kuadrant/limitador-operator:latest
         livenessProbe:
           httpGet:

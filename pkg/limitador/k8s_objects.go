@@ -14,7 +14,7 @@ import (
 
 const (
 	DefaultReplicas         = 1
-	LimitadorRepository     = "quay.io/3scale/limitador"
+	LimitadorRepository     = "quay.io/kuadrant/limitador"
 	StatusEndpoint          = "/status"
 	LimitadorConfigFileName = "limitador-config.yaml"
 	LimitsCMNamePrefix      = "limits-config-"
