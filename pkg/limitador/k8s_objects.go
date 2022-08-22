@@ -4,18 +4,18 @@ import (
 	"crypto/md5"
 	"fmt"
 
-	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
+
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
 const (
-	DefaultVersion          = "latest"
 	DefaultReplicas         = 1
-	Image                   = "quay.io/3scale/limitador"
+	LimitadorRepository     = "quay.io/3scale/limitador"
 	StatusEndpoint          = "/status"
 	LimitadorConfigFileName = "limitador-config.yaml"
 	LimitadorCMHash         = "hash"
@@ -64,9 +64,9 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 		replicas = int32(*limitador.Spec.Replicas)
 	}
 
-	version := DefaultVersion
+	image := GetLimitadorImageVersion()
 	if limitador.Spec.Version != nil {
-		version = *limitador.Spec.Version
+		image = fmt.Sprintf("%s:%s", LimitadorRepository, *limitador.Spec.Version)
 	}
 
 	return &appsv1.Deployment{
@@ -93,7 +93,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 					Containers: []v1.Container{
 						{
 							Name:  "limitador",
-							Image: Image + ":" + version,
+							Image: image,
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
