@@ -13,7 +13,6 @@ func TestConstants(t *testing.T) {
 	assert.Check(t, "quay.io/3scale/limitador" == LimitadorRepository)
 	assert.Check(t, "/status" == StatusEndpoint)
 	assert.Check(t, "limitador-config.yaml" == LimitadorConfigFileName)
-	assert.Check(t, "hash" == LimitadorCMHash)
 	assert.Check(t, "limits-config-" == LimitsCMNamePrefix)
 	assert.Check(t, "/home/limitador/etc/" == LimitadorCMMountPath)
 	assert.Check(t, "LIMITS_FILE" == LimitadorLimitsFileEnv)

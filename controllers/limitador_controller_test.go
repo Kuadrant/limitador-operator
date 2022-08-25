@@ -4,9 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/kuadrant/limitador-operator/pkg/limitador"
-
-	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
+
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	"github.com/kuadrant/limitador-operator/pkg/limitador"
 )
 
 var _ = Describe("Limitador controller", func() {
@@ -194,7 +195,8 @@ var _ = Describe("Limitador controller", func() {
 			}))
 
 		})
-		It("Should create a ConfigMap with the correct limits and hash", func() {
+
+		It("Should create a ConfigMap with the correct limits", func() {
 			createdConfigMap := v1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -208,12 +210,10 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(createdConfigMap.Data[limitador.LimitadorCMHash]).Should(
-				Equal("a00c9940ae6bb8de702633ce453e6a97"),
-			)
-			Expect(createdConfigMap.Data[limitador.LimitadorConfigFileName]).Should(
-				Equal("- conditions:\n  - req.method == GET\n  max_value: 10\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n- conditions:\n  - req.method == POST\n  max_value: 5\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"),
-			)
+			var cmLimits []limitadorv1alpha1.RateLimit
+			err := yaml.Unmarshal([]byte(createdConfigMap.Data[limitador.LimitadorConfigFileName]), &cmLimits)
+			Expect(err == nil)
+			Expect(cmLimits).To(Equal(limits))
 		})
 	})
 
@@ -268,7 +268,21 @@ var _ = Describe("Limitador controller", func() {
 				return correctReplicas && correctImage
 			}, timeout, interval).Should(BeTrue())
 		})
+
 		It("Should modify the ConfigMap accordingly", func() {
+			originalCM := v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
+					},
+					&originalCM)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
 			updatedLimitador := limitadorv1alpha1.Limitador{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -282,7 +296,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			limits := []limitadorv1alpha1.RateLimit{
+			newLimits := []limitadorv1alpha1.RateLimit{
 				{
 					Conditions: []string{"req.method == GET"},
 					MaxValue:   100,
@@ -291,9 +305,9 @@ var _ = Describe("Limitador controller", func() {
 					Variables:  []string{"user_id"},
 				},
 			}
-			updatedLimitador.Spec.Limits = limits
-
+			updatedLimitador.Spec.Limits = newLimits
 			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+
 			updatedLimitadorConfigMap := v1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -303,12 +317,14 @@ var _ = Describe("Limitador controller", func() {
 						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
 					},
 					&updatedLimitadorConfigMap)
-
-				return err == nil
+				// wait until the CM has changed
+				return err == nil && updatedLimitadorConfigMap.ResourceVersion != originalCM.ResourceVersion
 			}, timeout, interval).Should(BeTrue())
-			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorCMHash]).Should(Equal("69b3eab828208274d4200aedc6fd8b19"))
-			Expect(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]).Should(Equal("- conditions:\n  - req.method == GET\n  max_value: 100\n  namespace: test-namespace\n  seconds: 60\n  variables:\n  - user_id\n"))
 
+			var cmLimits []limitadorv1alpha1.RateLimit
+			err := yaml.Unmarshal([]byte(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]), &cmLimits)
+			Expect(err == nil)
+			Expect(cmLimits).To(Equal(newLimits))
 		})
 	})
 })
