@@ -1,7 +1,6 @@
 package limitador
 
 import (
-	"crypto/md5"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,7 +17,6 @@ const (
 	LimitadorRepository     = "quay.io/3scale/limitador"
 	StatusEndpoint          = "/status"
 	LimitadorConfigFileName = "limitador-config.yaml"
-	LimitadorCMHash         = "hash"
 	LimitsCMNamePrefix      = "limits-config-"
 	LimitadorCMMountPath    = "/home/limitador/etc/"
 	LimitadorLimitsFileEnv  = "LIMITS_FILE"
@@ -180,7 +178,6 @@ func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, err
 	return &v1.ConfigMap{
 		Data: map[string]string{
 			LimitadorConfigFileName: string(limitsMarshalled),
-			LimitadorCMHash:         fmt.Sprintf("%x", md5.Sum(limitsMarshalled)),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      LimitsCMNamePrefix + limitador.Name,

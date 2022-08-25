@@ -19,9 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -230,13 +232,23 @@ func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) 
 
 	updated := false
 
-	if existing.Data[limitador.LimitadorCMHash] != desired.Data[limitador.LimitadorCMHash] {
-		for k, v := range map[string]string{
-			limitador.LimitadorCMHash:         desired.Data[limitador.LimitadorCMHash],
-			limitador.LimitadorConfigFileName: string(desired.Data[limitador.LimitadorConfigFileName]),
-		} {
-			existing.Data[k] = v
-		}
+	// Limits in limitador.LimitadorConfigFileName field
+	var desiredLimits []limitadorv1alpha1.RateLimit
+	err := yaml.Unmarshal([]byte(desired.Data[limitador.LimitadorConfigFileName]), &desiredLimits)
+	if err != nil {
+		return false, err
+	}
+
+	var existingLimits []limitadorv1alpha1.RateLimit
+	err = yaml.Unmarshal([]byte(existing.Data[limitador.LimitadorConfigFileName]), &existingLimits)
+	if err != nil {
+		return false, err
+	}
+
+	// TODO(eastizle): deepEqual returns false when the order in the list is not equal.
+	// Improvement would be checking to equality of slices ignoring order
+	if !reflect.DeepEqual(desiredLimits, existingLimits) {
+		existing.Data[limitador.LimitadorConfigFileName] = desired.Data[limitador.LimitadorConfigFileName]
 		updated = true
 	}
 	return updated, nil
