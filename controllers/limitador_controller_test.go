@@ -103,7 +103,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.ServiceName(limitadorObj),
 					},
 					&createdLimitadorService)
 				return err == nil
@@ -165,7 +165,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.ServiceName(limitadorObj),
 					},
 					&createdLimitadorService)
 				return err == nil
