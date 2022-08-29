@@ -23,7 +23,7 @@ var _ = Describe("Limitador controller", func() {
 	const (
 		LimitadorNamespace = "default"
 		LimitadorReplicas  = 2
-		LimitadorImage     = "quay.io/3scale/limitador"
+		LimitadorImage     = "quay.io/kuadrant/limitador"
 		LimitadorVersion   = "0.3.0"
 		LimitadorHTTPPort  = 8000
 		LimitadorGRPCPort  = 8001
