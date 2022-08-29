@@ -29,7 +29,7 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            limitador.Name,
+			Name:            ServiceName(limitador),
 			Namespace:       limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
 			Labels:          labels(),
 			OwnerReferences: []metav1.OwnerReference{ownerRefToLimitador(limitador)},
