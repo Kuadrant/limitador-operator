@@ -5,12 +5,12 @@ metadata:
     alm-examples: '[]'
     capabilities: Basic Install
     categories: Integration & Delivery
-    containerImage: quay.io/kuadrant/limitador-operator:latest
+    containerImage: quay.io/kuadrant/limitador-operator:${IMAGE_TAG}
     operators.operatorframework.io/builder: operator-sdk-v1.9.0
     operators.operatorframework.io/project_layout: unknown
     repository: https://github.com/Kuadrant/limitador-operator
     support: kuadrant
-  name: limitador-operator.v0.0.0
+  name: limitador-operator.v${BUNDLE_VERSION}
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -54,4 +54,4 @@ spec:
   provider:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator
-  version: 0.0.0
+  version: ${BUNDLE_VERSION}
