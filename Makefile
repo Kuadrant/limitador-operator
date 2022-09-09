@@ -89,15 +89,10 @@ all: build
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-# Operator manifests (RBAC & CRD)
-OPERATOR_MANIFESTS ?= $(PROJECT_DIR)/config/install/manifests.yaml
-
 ##@ Development
 
-manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases && \
-	$(KUSTOMIZE) build config/install > $(OPERATOR_MANIFESTS)
-	$(MAKE) deploy-manifest
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -138,10 +133,15 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${DEFAULT_IMG}
+
+deploy-develmode: manifests kustomize ## Deploy controller in debug mode to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/deploy-develmode | kubectl apply -f -
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${DEFAULT_IMG}
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
@@ -168,16 +168,6 @@ GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
-
-DEPLOYMENT_DIR = $(PROJECT_DIR)/config/deploy
-.PHONY: deploy-manifest
-deploy-manifest:
-	mkdir -p $(DEPLOYMENT_DIR)
-	rm $(DEPLOYMENT_DIR)/manfiests.yaml || true
-	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=$(IMG) ;\
-	cd $(PROJECT_DIR) && $(KUSTOMIZE) build config/default >> $(DEPLOYMENT_DIR)/manfiests.yaml
-	# clean up
-	cd $(PROJECT_DIR)/config/manager && $(KUSTOMIZE) edit set image controller=${DEFAULT_IMG}
 
 OPERATOR_SDK = $(shell pwd)/bin/operator-sdk
 OPERATOR_SDK_VERSION = v1.22.0
@@ -260,11 +250,14 @@ kind: ## Download kind locally if necessary
 KIND_CLUSTER_NAME = limitador-local
 
 .PHONY: local-setup
-local-setup: local-cleanup local-setup-kind docker-build ## Deploy operator in local kind cluster
+local-setup: export IMG := limitador-operator:dev
+local-setup: ## Deploy operator in local kind cluster
+	$(MAKE) local-cleanup
+	$(MAKE) local-setup-kind
+	$(MAKE) docker-build
 	@echo "Deploying Limitador control plane"
 	$(KIND) load docker-image ${IMG} --name ${KIND_CLUSTER_NAME}
-	make deploy
-	kubectl -n limitador-operator-system patch deployment limitador-operator-controller-manager -p '{"spec": {"template": {"spec":{"containers":[{"name": "manager","image":"${IMG}", "imagePullPolicy":"IfNotPresent"}]}}}}'
+	make deploy-develmode
 	@echo "Wait for all deployments to be up"
 	kubectl -n limitador-operator-system wait --timeout=300s --for=condition=Available deployments --all
 
@@ -292,4 +285,3 @@ verify-manifests: manifests ## Verify manifests update.
 verify-bundle: bundle ## Verify bundle update.
 	git diff --exit-code ./bundle
 	[ -z "$$(git ls-files --other --exclude-standard --directory --no-empty-directory ./bundle)" ]
-
