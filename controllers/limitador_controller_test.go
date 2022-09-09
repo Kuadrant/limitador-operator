@@ -147,8 +147,10 @@ var _ = Describe("Limitador controller", func() {
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
 				Equal(LimitadorImage + ":" + LimitadorVersion),
 			)
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Env[1]).Should(
-				Equal(v1.EnvVar{Name: "LIMITS_FILE", Value: "/home/limitador/etc/limitador-config.yaml", ValueFrom: nil}),
+			// It should contain at least the limits file
+			Expect(len(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command) > 1).Should(BeTrue())
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command[1]).Should(
+				Equal("/home/limitador/etc/limitador-config.yaml"),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).Should(
 				Equal("/home/limitador/etc/"),
