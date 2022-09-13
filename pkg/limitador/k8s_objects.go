@@ -19,7 +19,6 @@ const (
 	LimitadorConfigFileName = "limitador-config.yaml"
 	LimitsCMNamePrefix      = "limits-config-"
 	LimitadorCMMountPath    = "/home/limitador/etc/"
-	LimitadorLimitsFileEnv  = "LIMITS_FILE"
 )
 
 func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
@@ -92,6 +91,10 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 						{
 							Name:  "limitador",
 							Image: image,
+							Command: []string{
+								"limitador-server",
+								fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName),
+							},
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
@@ -102,16 +105,6 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 									Name:          "grpc",
 									ContainerPort: limitador.GRPCPort(),
 									Protocol:      v1.ProtocolTCP,
-								},
-							},
-							Env: []v1.EnvVar{
-								{
-									Name:  "RUST_LOG",
-									Value: "info",
-								},
-								{
-									Name:  LimitadorLimitsFileEnv,
-									Value: LimitadorCMMountPath + LimitadorConfigFileName,
 								},
 							},
 							LivenessProbe: &v1.Probe{
