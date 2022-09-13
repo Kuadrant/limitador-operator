@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,6 +49,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	Listener *Listener `json:"listener,omitempty"`
+
+	// +optional
+	Storage *Storage `json:"storage,omitempty"`
 
 	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
@@ -100,6 +104,31 @@ type LimitadorList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Limitador `json:"items"`
+}
+
+// Storage contains the options for Limitador counters database or in-memory data storage
+type Storage struct {
+	// +optional
+	// +kubebuilder:default="in-memory"
+	Type StorageType `json:"type,omitempty"`
+
+	// +ConfigSecretRef refers to the secret holding the URL for Redis or Inifinispan.
+	// +optional
+	ConfigSecretRef *corev1.ObjectReference `json:"configSecretRef,omitempty"`
+}
+
+// StorageType defines the valid options for storage
+// +kubebuilder:validation:Enum=in-memory;redis;infinispan
+type StorageType string
+
+const (
+	StorageTypeInMemory   StorageType = "in-memory"
+	StorageTypeRedis                  = "redis"
+	StorageTypeInfinispan             = "infinispan"
+)
+
+func (s *Storage) Validate() bool {
+	return s.Type == StorageTypeInMemory || s.ConfigSecretRef != nil
 }
 
 type Listener struct {
