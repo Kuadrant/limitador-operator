@@ -78,6 +78,10 @@ var _ = Describe("Limitador controller", func() {
 					GRPC: grpcPort,
 				},
 				Limits: limits,
+				Storage: &limitadorv1alpha1.Storage{
+					Type:            limitadorv1alpha1.StorageTypeInMemory,
+					ConfigSecretRef: nil,
+				},
 			},
 		}
 	}
@@ -127,7 +131,7 @@ var _ = Describe("Limitador controller", func() {
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
-		It("Should create a new deployment with the right number of replicas, version and config file", func() {
+		It("Should create a new deployment with the right settings", func() {
 			createdLimitadorDeployment := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -157,6 +161,16 @@ var _ = Describe("Limitador controller", func() {
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
 				Equal(limitador.LimitsCMNamePrefix + limitadorObj.Name),
+			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
+				Equal(
+					[]string{
+						"limitador-server",
+						"/home/limitador/etc/limitador-config.yaml",
+						"in-memory",
+						"",
+					},
+				),
 			)
 		})
 

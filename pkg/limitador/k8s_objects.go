@@ -55,7 +55,7 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 	}
 }
 
-func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deployment {
+func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.Secret) *appsv1.Deployment {
 	var replicas int32 = DefaultReplicas
 	if limitador.Spec.Replicas != nil {
 		replicas = int32(*limitador.Spec.Replicas)
@@ -94,6 +94,8 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador) *appsv1.Deploym
 							Command: []string{
 								"limitador-server",
 								fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName),
+								storageType(limitador.Spec.Storage),
+								storageConfig(limitador.Spec.Storage, storageConfigSecret),
 							},
 							Ports: []v1.ContainerPort{
 								{
@@ -195,4 +197,18 @@ func ownerRefToLimitador(limitador *limitadorv1alpha1.Limitador) metav1.OwnerRef
 		Name:       limitador.Name,
 		UID:        limitador.UID,
 	}
+}
+
+func storageType(storage *limitadorv1alpha1.Storage) string {
+	if storage != nil {
+		return string(storage.Type)
+	}
+	return string(limitadorv1alpha1.StorageTypeInMemory)
+}
+
+func storageConfig(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) string {
+	if storage != nil && storage.Type != limitadorv1alpha1.StorageTypeInMemory {
+		return string(storageConfigSecret.Data["URL"])
+	}
+	return ""
 }

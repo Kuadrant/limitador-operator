@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 
 	v1 "k8s.io/api/core/v1"
@@ -78,7 +79,18 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	deployment := limitador.LimitadorDeployment(limitadorObj)
+	limitadorStorage := limitadorObj.Spec.Storage
+	var storageConfigSecret *v1.Secret
+	if limitadorStorage != nil && limitadorStorage.Type != limitadorv1alpha1.StorageTypeInMemory {
+		if !limitadorStorage.Validate() {
+			return ctrl.Result{}, fmt.Errorf("there's no ConfigSecretRef set")
+		}
+		if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorStorage.ConfigSecretRef); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
 	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
 	logger.V(1).Info("reconcile deployment", "error", err)
 	if err != nil {
@@ -277,4 +289,23 @@ func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, err
 	}
 
 	return updated, nil
+}
+
+func getStorageConfigSecret(ctx context.Context, client client.Client, secretRef *v1.ObjectReference) (*v1.Secret, error) {
+	storageConfigSecret := &v1.Secret{}
+	if err := client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      secretRef.Name,
+			Namespace: secretRef.Namespace,
+		},
+		storageConfigSecret,
+	); err != nil {
+		return nil, err
+	}
+
+	if len(storageConfigSecret.Data) > 0 && storageConfigSecret.Data["URL"] != nil {
+		return storageConfigSecret, nil
+	}
+	return nil, fmt.Errorf("the storage config Secret doesn't have the `URL` field")
 }
