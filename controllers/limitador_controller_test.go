@@ -78,10 +78,6 @@ var _ = Describe("Limitador controller", func() {
 					GRPC: grpcPort,
 				},
 				Limits: limits,
-				Storage: &limitadorv1alpha1.Storage{
-					Type:            limitadorv1alpha1.StorageTypeInMemory,
-					ConfigSecretRef: nil,
-				},
 			},
 		}
 	}
@@ -167,8 +163,7 @@ var _ = Describe("Limitador controller", func() {
 					[]string{
 						"limitador-server",
 						"/home/limitador/etc/limitador-config.yaml",
-						"in-memory",
-						"",
+						"memory",
 					},
 				),
 			)

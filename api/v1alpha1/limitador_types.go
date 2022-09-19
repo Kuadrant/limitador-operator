@@ -17,8 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"reflect"
 )
 
 const (
@@ -106,29 +109,97 @@ type LimitadorList struct {
 	Items           []Limitador `json:"items"`
 }
 
+// StorageType defines the valid options for storage
+// +kubebuilder:validation:Enum=memory;redis;redis_cached
+type StorageType string
+
+const (
+	StorageTypeInMemory    StorageType = "memory"
+	StorageTypeRedis                   = "redis"
+	StorageTypeRedisCached             = "redis_cached"
+)
+
 // Storage contains the options for Limitador counters database or in-memory data storage
 type Storage struct {
 	// +optional
-	// +kubebuilder:default="in-memory"
-	Type StorageType `json:"type,omitempty"`
+	Redis *Redis `json:"redis,omitempty"`
 
-	// +ConfigSecretRef refers to the secret holding the URL for Redis or Inifinispan.
+	// +optional
+	RedisCached *RedisCached `json:"redis-cached,omitempty"`
+}
+
+func (s *Storage) Validate() bool {
+	return s.Redis != nil && s.Redis.ConfigSecretRef != nil ||
+		s.RedisCached != nil && s.RedisCached.ConfigSecretRef != nil
+}
+
+func (s *Storage) SecretRef() *corev1.ObjectReference {
+	if s.Redis != nil {
+		return s.Redis.ConfigSecretRef
+	}
+	return s.RedisCached.ConfigSecretRef
+}
+
+func (s *Storage) Config(url string) []string {
+	if s.Redis != nil {
+		return []string{
+			StorageTypeRedis,
+			url,
+		}
+	} else if s.RedisCached != nil {
+		params := []string{
+			StorageTypeRedisCached,
+			url,
+		}
+		options := reflect.ValueOf(*s.RedisCached.Options)
+		typesOf := options.Type()
+		for i := 0; i < options.NumField(); i++ {
+			if !options.Field(i).IsNil() {
+				var value interface{} = options.Field(i).Elem()
+				params = append(
+					params,
+					fmt.Sprintf(
+						"--%s %d",
+						helpers.ToKebabCase(typesOf.Field(i).Name),
+						value))
+			}
+		}
+		return params
+	}
+	return []string{string(StorageTypeInMemory)}
+}
+
+type Redis struct {
+	// +ConfigSecretRef refers to the secret holding the URL for Redis.
 	// +optional
 	ConfigSecretRef *corev1.ObjectReference `json:"configSecretRef,omitempty"`
 }
 
-// StorageType defines the valid options for storage
-// +kubebuilder:validation:Enum=in-memory;redis;infinispan
-type StorageType string
+type RedisCachedOptions struct {
+	// +optional
+	// Ttl for cached counters in milliseconds [default: 5000]
+	Ttl *int `json:"ttl,omitempty"`
 
-const (
-	StorageTypeInMemory   StorageType = "in-memory"
-	StorageTypeRedis                  = "redis"
-	StorageTypeInfinispan             = "infinispan"
-)
+	// +optional
+	// Ratio to apply to the TTL from Redis on cached counters [default: 10]
+	Ratio *int `json:"ratio,omitempty"`
 
-func (s *Storage) Validate() bool {
-	return s.Type == StorageTypeInMemory || s.ConfigSecretRef != nil
+	// +optional
+	// FlushPeriod for counters in milliseconds [default: 1000]
+	FlushPeriod *int `json:"flush-period,omitempty"`
+
+	// +optional
+	// MaxCached refers to the maximum amount of counters cached [default: 10000]
+	MaxCached *int `json:"max-cached,omitempty"`
+}
+
+type RedisCached struct {
+	// +ConfigSecretRef refers to the secret holding the URL for Redis.
+	// +optional
+	ConfigSecretRef *corev1.ObjectReference `json:"configSecretRef,omitempty"`
+
+	// +optional
+	Options *RedisCachedOptions `json:"options,omitempty"`
 }
 
 type Listener struct {

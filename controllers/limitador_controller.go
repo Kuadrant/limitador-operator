@@ -47,7 +47,7 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch;create;update;delete
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
@@ -81,12 +81,13 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 
 	limitadorStorage := limitadorObj.Spec.Storage
 	var storageConfigSecret *v1.Secret
-	if limitadorStorage != nil && limitadorStorage.Type != limitadorv1alpha1.StorageTypeInMemory {
-		if !limitadorStorage.Validate() {
+	if limitadorStorage != nil {
+		if limitadorStorage.Validate() {
+			if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorObj.Namespace, limitadorStorage.SecretRef()); err != nil {
+				return ctrl.Result{}, err
+			}
+		} else {
 			return ctrl.Result{}, fmt.Errorf("there's no ConfigSecretRef set")
-		}
-		if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorStorage.ConfigSecretRef); err != nil {
-			return ctrl.Result{}, err
 		}
 	}
 
@@ -291,13 +292,18 @@ func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, err
 	return updated, nil
 }
 
-func getStorageConfigSecret(ctx context.Context, client client.Client, secretRef *v1.ObjectReference) (*v1.Secret, error) {
+func getStorageConfigSecret(ctx context.Context, client client.Client, limitadorNamespace string, secretRef *v1.ObjectReference) (*v1.Secret, error) {
 	storageConfigSecret := &v1.Secret{}
 	if err := client.Get(
 		ctx,
 		types.NamespacedName{
-			Name:      secretRef.Name,
-			Namespace: secretRef.Namespace,
+			Name: secretRef.Name,
+			Namespace: func() string {
+				if secretRef.Namespace != "" {
+					return secretRef.Namespace
+				}
+				return limitadorNamespace
+			}(),
 		},
 		storageConfigSecret,
 	); err != nil {
@@ -307,5 +313,5 @@ func getStorageConfigSecret(ctx context.Context, client client.Client, secretRef
 	if len(storageConfigSecret.Data) > 0 && storageConfigSecret.Data["URL"] != nil {
 		return storageConfigSecret, nil
 	}
-	return nil, fmt.Errorf("the storage config Secret doesn't have the `URL` field")
+	return nil, errors.NewBadRequest("the storage config Secret doesn't have the `URL` field")
 }

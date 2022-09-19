@@ -89,14 +89,9 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador, storageConfigSe
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:  "limitador",
-							Image: image,
-							Command: []string{
-								"limitador-server",
-								fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName),
-								storageType(limitador.Spec.Storage),
-								storageConfig(limitador.Spec.Storage, storageConfigSecret),
-							},
+							Name:    "limitador",
+							Image:   image,
+							Command: deploymentContainerCommand(limitador.Spec.Storage, storageConfigSecret),
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
@@ -199,16 +194,17 @@ func ownerRefToLimitador(limitador *limitadorv1alpha1.Limitador) metav1.OwnerRef
 	}
 }
 
-func storageType(storage *limitadorv1alpha1.Storage) string {
-	if storage != nil {
-		return string(storage.Type)
+func deploymentContainerCommand(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) []string {
+	command := []string{
+		"limitador-server",
+		fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName),
 	}
-	return string(limitadorv1alpha1.StorageTypeInMemory)
+	return append(command, storageConfig(storage, storageConfigSecret)...)
 }
 
-func storageConfig(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) string {
-	if storage != nil && storage.Type != limitadorv1alpha1.StorageTypeInMemory {
-		return string(storageConfigSecret.Data["URL"])
+func storageConfig(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) []string {
+	if storage == nil {
+		return []string{string(limitadorv1alpha1.StorageTypeInMemory)}
 	}
-	return ""
+	return storage.Config(string(storageConfigSecret.Data["URL"]))
 }
