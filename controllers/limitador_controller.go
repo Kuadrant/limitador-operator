@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 
 	v1 "k8s.io/api/core/v1"
@@ -46,7 +47,7 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch;create;update;delete
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
@@ -78,7 +79,19 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	deployment := limitador.LimitadorDeployment(limitadorObj)
+	limitadorStorage := limitadorObj.Spec.Storage
+	var storageConfigSecret *v1.Secret
+	if limitadorStorage != nil {
+		if limitadorStorage.Validate() {
+			if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorObj.Namespace, limitadorStorage.SecretRef()); err != nil {
+				return ctrl.Result{}, err
+			}
+		} else {
+			return ctrl.Result{}, fmt.Errorf("there's no ConfigSecretRef set")
+		}
+	}
+
+	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
 	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
 	logger.V(1).Info("reconcile deployment", "error", err)
 	if err != nil {
@@ -277,4 +290,28 @@ func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, err
 	}
 
 	return updated, nil
+}
+
+func getStorageConfigSecret(ctx context.Context, client client.Client, limitadorNamespace string, secretRef *v1.ObjectReference) (*v1.Secret, error) {
+	storageConfigSecret := &v1.Secret{}
+	if err := client.Get(
+		ctx,
+		types.NamespacedName{
+			Name: secretRef.Name,
+			Namespace: func() string {
+				if secretRef.Namespace != "" {
+					return secretRef.Namespace
+				}
+				return limitadorNamespace
+			}(),
+		},
+		storageConfigSecret,
+	); err != nil {
+		return nil, err
+	}
+
+	if len(storageConfigSecret.Data) > 0 && storageConfigSecret.Data["URL"] != nil {
+		return storageConfigSecret, nil
+	}
+	return nil, errors.NewBadRequest("the storage config Secret doesn't have the `URL` field")
 }
