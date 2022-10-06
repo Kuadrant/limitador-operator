@@ -18,6 +18,7 @@ package reconcilers
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -150,31 +151,51 @@ func (b *BaseReconciler) ReconcileConfigMap(ctx context.Context, desired *corev1
 }
 
 func (b *BaseReconciler) GetResource(ctx context.Context, objKey types.NamespacedName, obj client.Object) error {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("get object", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
 	return b.Client().Get(ctx, objKey, obj)
 }
 
 func (b *BaseReconciler) CreateResource(ctx context.Context, obj client.Object) error {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("create object", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
 	return b.Client().Create(ctx, obj)
 }
 
 func (b *BaseReconciler) UpdateResource(ctx context.Context, obj client.Object) error {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("update object", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
 	return b.Client().Update(ctx, obj)
 }
 
 func (b *BaseReconciler) DeleteResource(ctx context.Context, obj client.Object, options ...client.DeleteOption) error {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("delete object", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
 	return b.Client().Delete(ctx, obj, options...)
 }
 
 func (b *BaseReconciler) UpdateResourceStatus(ctx context.Context, obj client.Object) error {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("update object status", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
 	return b.Client().Status().Update(ctx, obj)
 }
