@@ -39,12 +39,6 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 		return reconcile.Result{}, nil
 	}
 
-	// Save the generation number we acted on, otherwise we might wrongfully indicate
-	// that we've seen a spec update when we retry.
-	// TODO: This can clobber an update if we allow multiple agents to write to the
-	// same status.
-	newStatus.ObservedGeneration = limitadorObj.Generation
-
 	logger.V(1).Info("Updating Status", "sequence no:", fmt.Sprintf("sequence No: %v->%v", limitadorObj.Status.ObservedGeneration, newStatus.ObservedGeneration))
 
 	limitadorObj.Status = *newStatus
