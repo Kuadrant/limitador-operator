@@ -9,11 +9,11 @@ import (
 
 // CopyConditions copies the set of conditions
 func CopyConditions(conditions []metav1.Condition) []metav1.Condition {
-	newConditions := make([]metav1.Condition, 0)
+	newConditions := make([]metav1.Condition, 0, len(conditions))
 	for idx := range conditions {
 		// copy
-		newCondition := conditions[idx]
-		newConditions = append(newConditions, newCondition)
+		newCondition := conditions[idx].DeepCopy()
+		newConditions = append(newConditions, *newCondition)
 	}
 	return newConditions
 }
