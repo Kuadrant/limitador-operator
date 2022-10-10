@@ -63,6 +63,7 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 
 func (r *LimitadorReconciler) calculateStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador, specErr error) (*limitadorv1alpha1.LimitadorStatus, error) {
 	newStatus := &limitadorv1alpha1.LimitadorStatus{
+		ObservedGeneration: limitadorObj.Generation,
 		// Copy initial conditions. Otherwise, status will always be updated
 		Conditions: helpers.CopyConditions(limitadorObj.Status.Conditions),
 		Service: &limitadorv1alpha1.LimitadorService{
