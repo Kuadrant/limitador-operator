@@ -7,13 +7,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CopyConditions copies the set of conditions
-func CopyConditions(conditions []metav1.Condition) []metav1.Condition {
+// DeepCopyConditions copies the set of conditions
+func DeepCopyConditions(conditions []metav1.Condition) []metav1.Condition {
 	newConditions := make([]metav1.Condition, 0, len(conditions))
 	for idx := range conditions {
 		// copy
-		newCondition := conditions[idx].DeepCopy()
-		newConditions = append(newConditions, *newCondition)
+		newConditions = append(newConditions, *conditions[idx].DeepCopy())
 	}
 	return newConditions
 }

@@ -59,7 +59,7 @@ func (r *LimitadorReconciler) calculateStatus(ctx context.Context, limitadorObj 
 	newStatus := &limitadorv1alpha1.LimitadorStatus{
 		ObservedGeneration: limitadorObj.Generation,
 		// Copy initial conditions. Otherwise, status will always be updated
-		Conditions: helpers.CopyConditions(limitadorObj.Status.Conditions),
+		Conditions: helpers.DeepCopyConditions(limitadorObj.Status.Conditions),
 		Service: &limitadorv1alpha1.LimitadorService{
 			Host: buildServiceHost(limitadorObj),
 			Ports: limitadorv1alpha1.Ports{
