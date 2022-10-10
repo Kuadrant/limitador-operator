@@ -28,10 +28,9 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            ServiceName(limitador),
-			Namespace:       limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
-			Labels:          labels(),
-			OwnerReferences: []metav1.OwnerReference{ownerRefToLimitador(limitador)},
+			Name:      ServiceName(limitador),
+			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
+			Labels:    labels(),
 		},
 		Spec: v1.ServiceSpec{
 			Ports: []v1.ServicePort{
@@ -72,10 +71,9 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador, storageConfigSe
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            limitador.ObjectMeta.Name,      // TODO: revisit later. For now assume same.
-			Namespace:       limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
-			Labels:          labels(),
-			OwnerReferences: []metav1.OwnerReference{ownerRefToLimitador(limitador)},
+			Name:      limitador.ObjectMeta.Name,      // TODO: revisit later. For now assume same.
+			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
+			Labels:    labels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -183,15 +181,6 @@ func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
 
 func labels() map[string]string {
 	return map[string]string{"app": "limitador"}
-}
-
-func ownerRefToLimitador(limitador *limitadorv1alpha1.Limitador) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion: limitador.APIVersion,
-		Kind:       limitador.Kind,
-		Name:       limitador.Name,
-		UID:        limitador.UID,
-	}
 }
 
 func deploymentContainerCommand(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) []string {

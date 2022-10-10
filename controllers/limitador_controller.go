@@ -104,38 +104,22 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 }
 
 func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
-	logger, err := logr.FromContext(ctx)
-	if err != nil {
+	if err := r.reconcileService(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	limitadorService := limitador.LimitadorService(limitadorObj)
-	err = r.ReconcileService(ctx, limitadorService, reconcilers.CreateOnlyMutator)
-	logger.V(1).Info("reconcile service", "error", err)
-	if err != nil {
+	if err := r.reconcileDeployment(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileLimitadorDeployment(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Reconcile Limits ConfigMap
-	limitsConfigMap, err := limitador.LimitsConfigMap(limitadorObj)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
-	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
-	if err != nil {
+	if err := r.reconcileLimitsConfigMap(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *LimitadorReconciler) reconcileLimitadorDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
@@ -154,8 +138,57 @@ func (r *LimitadorReconciler) reconcileLimitadorDeployment(ctx context.Context, 
 	}
 
 	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
+	// controller reference
+	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
+		return err
+	}
 	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
 	logger.V(1).Info("reconcile deployment", "error", err)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	limitadorService := limitador.LimitadorService(limitadorObj)
+	// controller reference
+	if err := r.SetOwnerReference(limitadorObj, limitadorService); err != nil {
+		return err
+	}
+
+	err = r.ReconcileService(ctx, limitadorService, reconcilers.CreateOnlyMutator)
+	logger.V(1).Info("reconcile service", "error", err)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	limitsConfigMap, err := limitador.LimitsConfigMap(limitadorObj)
+	if err != nil {
+		return err
+	}
+	// controller reference
+	if err := r.SetOwnerReference(limitadorObj, limitsConfigMap); err != nil {
+		return err
+	}
+
+	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
+	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
 	if err != nil {
 		return err
 	}
@@ -168,6 +201,7 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.Limitador{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&v1.ConfigMap{}).
 		Complete(r)
 }
 
