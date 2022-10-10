@@ -236,7 +236,9 @@ func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) 
 	var existingLimits []limitadorv1alpha1.RateLimit
 	err = yaml.Unmarshal([]byte(existing.Data[limitador.LimitadorConfigFileName]), &existingLimits)
 	if err != nil {
-		return false, err
+		// if existing content cannot be parsed, leave existingLimits as nil, so the operator will
+		// enforce desired content.
+		existingLimits = nil
 	}
 
 	// TODO(eastizle): deepEqual returns false when the order in the list is not equal.
