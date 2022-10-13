@@ -105,7 +105,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador, storageConfigSe
 								},
 							},
 							LivenessProbe: &v1.Probe{
-								Handler: v1.Handler{
+								ProbeHandler: v1.ProbeHandler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
 										Port:   intstr.FromInt(int(limitador.HTTPPort())),
@@ -119,7 +119,7 @@ func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador, storageConfigSe
 								FailureThreshold:    3,
 							},
 							ReadinessProbe: &v1.Probe{
-								Handler: v1.Handler{
+								ProbeHandler: v1.ProbeHandler{
 									HTTPGet: &v1.HTTPGetAction{
 										Path:   StatusEndpoint,
 										Port:   intstr.FromInt(int(limitador.HTTPPort())),

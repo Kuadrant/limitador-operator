@@ -19,8 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"reflect"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,7 +127,10 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return nil
+	}
 
 	isLimitadorRunning, err := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
 	if err != nil {
@@ -153,7 +157,11 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 }
 
 func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (bool, error) {
-	logger := logr.FromContext(ctx)
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return false, err
+	}
+
 	limitadorInstance := &appsv1.Deployment{}
 	limitadorInstanceNamespacedName := client.ObjectKey{ // Its deployment is built after the same name and namespace
 		Namespace: limitadorObj.Namespace,
