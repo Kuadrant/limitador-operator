@@ -185,7 +185,7 @@ var _ = Describe("Limitador controller", func() {
 
 		It("Should build the correct Status", func() {
 			createdLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() limitadorv1alpha1.LimitadorService {
+			Eventually(func() *limitadorv1alpha1.LimitadorService {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
@@ -194,10 +194,10 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&createdLimitador)
 				if err != nil {
-					return limitadorv1alpha1.LimitadorService{}
+					return nil
 				}
 				return createdLimitador.Status.Service
-			}, timeout, interval).Should(Equal(limitadorv1alpha1.LimitadorService{
+			}, timeout, interval).Should(Equal(&limitadorv1alpha1.LimitadorService{
 				Host: "limitador-" + limitadorObj.Name + ".default.svc.cluster.local",
 				Ports: limitadorv1alpha1.Ports{
 					GRPC: grpcPortNumber,

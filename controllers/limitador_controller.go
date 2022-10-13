@@ -18,20 +18,18 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
@@ -59,8 +57,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	limitadorObj := &limitadorv1alpha1.Limitador{}
 	if err := r.Client().Get(ctx, req.NamespacedName, limitadorObj); err != nil {
 		if errors.IsNotFound(err) {
-			// The deployment and the service should be deleted automatically
-			// because they have an owner ref to Limitador
+			logger.Info("no object found")
 			return ctrl.Result{}, nil
 		}
 
@@ -68,34 +65,58 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	if limitadorObj.GetDeletionTimestamp() != nil { // Marked to be deleted
-		logger.V(1).Info("marked to be deleted")
+	if logger.V(1).Enabled() {
+		jsonData, err := json.MarshalIndent(limitadorObj, "", "  ")
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		logger.V(1).Info(string(jsonData))
+	}
+
+	if limitadorObj.GetDeletionTimestamp() != nil {
+		logger.Info("marked to be deleted")
 		return ctrl.Result{}, nil
 	}
 
+	specResult, specErr := r.reconcileSpec(ctx, limitadorObj)
+	if specErr == nil && specResult.Requeue {
+		logger.V(1).Info("Reconciling spec not finished. Requeueing.")
+		return specResult, nil
+	}
+
+	statusResult, statusErr := r.reconcileStatus(ctx, limitadorObj, specErr)
+
+	if specErr != nil {
+		return ctrl.Result{}, specErr
+	}
+
+	if statusErr != nil {
+		return ctrl.Result{}, statusErr
+	}
+
+	if statusResult.Requeue {
+		logger.V(1).Info("Reconciling status not finished. Requeueing.")
+		return statusResult, nil
+	}
+
+	logger.Info("successfully reconciled")
+	return ctrl.Result{}, nil
+}
+
+func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	limitadorService := limitador.LimitadorService(limitadorObj)
-	err := r.ReconcileService(ctx, limitadorService, reconcilers.CreateOnlyMutator)
+	err = r.ReconcileService(ctx, limitadorService, reconcilers.CreateOnlyMutator)
 	logger.V(1).Info("reconcile service", "error", err)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	limitadorStorage := limitadorObj.Spec.Storage
-	var storageConfigSecret *v1.Secret
-	if limitadorStorage != nil {
-		if limitadorStorage.Validate() {
-			if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorObj.Namespace, limitadorStorage.SecretRef()); err != nil {
-				return ctrl.Result{}, err
-			}
-		} else {
-			return ctrl.Result{}, fmt.Errorf("there's no ConfigSecretRef set")
-		}
-	}
-
-	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
-	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
-	logger.V(1).Info("reconcile deployment", "error", err)
-	if err != nil {
+	if err := r.reconcileLimitadorDeployment(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -104,18 +125,42 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
 	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile Status
-	if err := r.reconcileStatus(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
+	return ctrl.Result{}, nil
+}
+
+func (r *LimitadorReconciler) reconcileLimitadorDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
 	}
 
-	return ctrl.Result{}, nil
+	limitadorStorage := limitadorObj.Spec.Storage
+	var storageConfigSecret *v1.Secret
+	if limitadorStorage != nil {
+		if limitadorStorage.Validate() {
+			if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorObj.Namespace, limitadorStorage.SecretRef()); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("there's no ConfigSecretRef set")
+		}
+	}
+
+	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
+	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
+	logger.V(1).Info("reconcile deployment", "error", err)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -124,121 +169,6 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&limitadorv1alpha1.Limitador{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
-}
-
-func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
-	logger, err := logr.FromContext(ctx)
-	if err != nil {
-		return nil
-	}
-
-	isLimitadorRunning, err := r.checkLimitadorInstanceIsRunning(ctx, limitadorObj)
-	if err != nil {
-		return err
-	}
-	changed := updateStatusReady(limitadorObj, isLimitadorRunning)
-
-	changed = updateStatusService(limitadorObj) || changed
-
-	if !changed {
-		logger.V(1).Info("resource status did not change")
-		return nil // to save an update request
-	}
-
-	logger.V(1).Info("resource status changed", "limitador/status", limitadorObj.Status)
-
-	if updateErr := r.Client().Status().Update(ctx, limitadorObj); updateErr != nil {
-		logger.Error(updateErr, "failed to update the resource")
-		return updateErr
-	}
-
-	logger.Info("status updated", "Name", limitadorObj.Name)
-	return nil
-}
-
-func (r *LimitadorReconciler) checkLimitadorInstanceIsRunning(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (bool, error) {
-	logger, err := logr.FromContext(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	limitadorInstance := &appsv1.Deployment{}
-	limitadorInstanceNamespacedName := client.ObjectKey{ // Its deployment is built after the same name and namespace
-		Namespace: limitadorObj.Namespace,
-		Name:      limitadorObj.Name,
-	}
-	if err := r.Client().Get(ctx, limitadorInstanceNamespacedName, limitadorInstance); err != nil {
-		logger.Error(err, "Failed to get Limitador Instance.")
-		if errors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
-
-	return limitadorInstance.Status.ReadyReplicas >= 1, nil
-}
-
-func updateStatusService(limitadorObj *limitadorv1alpha1.Limitador) (changed bool) {
-	changed = false
-	serviceHost := buildServiceHost(limitadorObj)
-	if serviceHost != limitadorObj.Status.Service.Host {
-		limitadorObj.Status.Service.Host = serviceHost
-		limitadorObj.Status.Service.Ports.GRPC = limitadorObj.GRPCPort()
-		limitadorObj.Status.Service.Ports.HTTP = limitadorObj.HTTPPort()
-		changed = true
-	}
-	return
-}
-
-func updateStatusReady(limitadorObj *limitadorv1alpha1.Limitador, ready bool) (changed bool) {
-	status := metav1.ConditionFalse
-	reason := limitadorv1alpha1.StatusReasonServiceNotRunning
-	message := "There's no Limitador Pod running"
-
-	if ready {
-		status = metav1.ConditionTrue
-		reason = limitadorv1alpha1.StatusReasonInstanceRunning
-		message = ""
-	}
-	limitadorObj.Status.Conditions, changed = updateStatusConditions(limitadorObj.Status.Conditions, metav1.Condition{
-		Type:    limitadorv1alpha1.StatusConditionReady,
-		Status:  status,
-		Reason:  reason,
-		Message: message,
-	})
-
-	return
-}
-
-func updateStatusConditions(currentConditions []metav1.Condition, newCondition metav1.Condition) ([]metav1.Condition, bool) {
-	newCondition.LastTransitionTime = metav1.Now()
-
-	if currentConditions == nil {
-		return []metav1.Condition{newCondition}, true
-	}
-
-	for i, condition := range currentConditions {
-		if condition.Type == newCondition.Type {
-			if condition.Status == newCondition.Status {
-				if condition.Reason == newCondition.Reason && condition.Message == newCondition.Message {
-					return currentConditions, false
-				}
-
-				newCondition.LastTransitionTime = condition.LastTransitionTime
-			}
-
-			res := make([]metav1.Condition, len(currentConditions))
-			copy(res, currentConditions)
-			res[i] = newCondition
-			return res, true
-		}
-	}
-
-	return append(currentConditions, newCondition), true
-}
-
-func buildServiceHost(limitadorObj *limitadorv1alpha1.Limitador) string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", limitador.ServiceName(limitadorObj), limitadorObj.Namespace)
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {

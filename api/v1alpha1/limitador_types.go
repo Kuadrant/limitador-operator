@@ -18,10 +18,14 @@ package v1alpha1
 
 import (
 	"fmt"
-	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"reflect"
+
+	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
+
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 )
 
 const (
@@ -30,10 +34,6 @@ const (
 
 	// Status conditions
 	StatusConditionReady string = "Ready"
-
-	// Status reasons
-	StatusReasonInstanceRunning   string = "LimitadorInstanceRunning"
-	StatusReasonServiceNotRunning string = "LimitadorInstanceNotRunning"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -226,11 +226,21 @@ type RateLimit struct {
 
 // LimitadorStatus defines the observed state of Limitador
 type LimitadorStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// ObservedGeneration reflects the generation of the most recently observed spec.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Represents the observations of a foo's current state.
+	// Known .status.conditions.type are: "Available"
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
-	Service LimitadorService `json:"service,omitempty"`
+	// Service provides information about the service exposing limitador API
+	// +optional
+	Service *LimitadorService `json:"service,omitempty"`
 }
 
 type LimitadorService struct {
@@ -243,13 +253,29 @@ type Ports struct {
 	GRPC int32 `json:"grpc,omitempty"`
 }
 
-func (s *LimitadorStatus) Ready() bool {
-	for _, condition := range s.Conditions {
-		if condition.Type == StatusConditionReady {
-			return condition.Status == metav1.ConditionTrue
-		}
+func (s *LimitadorStatus) Equals(other *LimitadorStatus, logger logr.Logger) bool {
+	if s.ObservedGeneration != other.ObservedGeneration {
+		diff := cmp.Diff(s.ObservedGeneration, other.ObservedGeneration)
+		logger.V(1).Info("status observedGeneration not equal", "difference", diff)
+		return false
 	}
-	return false
+
+	// Marshalling sorts by condition type
+	currentMarshaledJSON, _ := helpers.ConditionMarshal(s.Conditions)
+	otherMarshaledJSON, _ := helpers.ConditionMarshal(other.Conditions)
+	if string(currentMarshaledJSON) != string(otherMarshaledJSON) {
+		diff := cmp.Diff(string(currentMarshaledJSON), string(otherMarshaledJSON))
+		logger.V(1).Info("status conditions not equal", "difference", diff)
+		return false
+	}
+
+	if !reflect.DeepEqual(s.Service, other.Service) {
+		diff := cmp.Diff(s.Service, other.Service)
+		logger.V(1).Info("status service not equal", "difference", diff)
+		return false
+	}
+
+	return true
 }
 
 func init() {
