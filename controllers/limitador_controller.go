@@ -137,12 +137,21 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		}
 	}
 
+	deploymentMutators := make([]reconcilers.DeploymentMutateFn, 0)
+	if limitadorObj.Spec.Replicas != nil {
+		deploymentMutators = append(deploymentMutators, reconcilers.DeploymentReplicasMutator)
+	}
+
+	deploymentMutators = append(deploymentMutators,
+		reconcilers.DeploymentImageMutator,
+	)
+
 	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
 		return err
 	}
-	err = r.ReconcileDeployment(ctx, deployment, mutateLimitadorDeployment)
+	err = r.ReconcileDeployment(ctx, deployment, reconcilers.DeploymentMutator(deploymentMutators...))
 	logger.V(1).Info("reconcile deployment", "error", err)
 	if err != nil {
 		return err
@@ -236,31 +245,6 @@ func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) 
 		existing.Data[limitador.LimitadorConfigFileName] = desired.Data[limitador.LimitadorConfigFileName]
 		updated = true
 	}
-	return updated, nil
-}
-
-func mutateLimitadorDeployment(existingObj, desiredObj client.Object) (bool, error) {
-	existing, ok := existingObj.(*appsv1.Deployment)
-	if !ok {
-		return false, fmt.Errorf("%T is not a *appsv1.Deployment", existingObj)
-	}
-	desired, ok := desiredObj.(*appsv1.Deployment)
-	if !ok {
-		return false, fmt.Errorf("%T is not a *appsv1.Deployment", desiredObj)
-	}
-
-	updated := false
-
-	if existing.Spec.Replicas != desired.Spec.Replicas {
-		existing.Spec.Replicas = desired.Spec.Replicas
-		updated = true
-	}
-
-	if existing.Spec.Template.Spec.Containers[0].Image != desired.Spec.Template.Spec.Containers[0].Image {
-		existing.Spec.Template.Spec.Containers[0].Image = desired.Spec.Template.Spec.Containers[0].Image
-		updated = true
-	}
-
 	return updated, nil
 }
 
