@@ -7,5 +7,5 @@ import (
 )
 
 func TestLimitadorDefaulImage(t *testing.T) {
-	assert.Equal(t, GetLimitadorImageVersion(), "quay.io/kuadrant/limitador:latest")
+	assert.Equal(t, GetLimitadorImageVersion(), "quay.io/kuadrant/limitador:v1.0.0")
 }
