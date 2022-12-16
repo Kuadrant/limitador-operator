@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	defaultImageVersion = fmt.Sprintf("%s:%s", LimitadorRepository, "latest")
+	defaultImageVersion = fmt.Sprintf("%s:%s", LimitadorRepository, "v1.0.0")
 )
 
 func GetLimitadorImageVersion() string {
