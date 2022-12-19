@@ -29,7 +29,7 @@ spec:
     grpc:
       port: 8081
   limits:
-    - conditions: ["get-toy == yes"]
+    - conditions: ["get_toy == 'yes'"]
       max_value: 2
       namespace: toystore-app
       seconds: 30
