@@ -55,3 +55,4 @@ spec:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator
   version: ${BUNDLE_VERSION}
+  replaces: limitador-operator.v0.3.0
