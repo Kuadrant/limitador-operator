@@ -35,7 +35,7 @@ spec:
         name: redisconfig
         namespace: default # optional
   limits:
-    - conditions: ["get-toy == yes"]
+    - conditions: ["get_toy == 'yes'"]
       max_value: 2
       namespace: toystore-app
       seconds: 30
@@ -69,7 +69,7 @@ spec:
         ttl: 1000      
        
   limits:
-    - conditions: ["get-toy == yes"]
+    - conditions: ["get_toy == 'yes'"]
       max_value: 2
       namespace: toystore-app
       seconds: 30
