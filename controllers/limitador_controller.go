@@ -146,7 +146,7 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentImageMutator,
 	)
 
-	deployment := limitador.LimitadorDeployment(limitadorObj, storageConfigSecret)
+	deployment := limitador.Deployment(limitadorObj, storageConfigSecret)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
 		return err
@@ -166,7 +166,7 @@ func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj
 		return err
 	}
 
-	limitadorService := limitador.LimitadorService(limitadorObj)
+	limitadorService := limitador.Service(limitadorObj)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, limitadorService); err != nil {
 		return err

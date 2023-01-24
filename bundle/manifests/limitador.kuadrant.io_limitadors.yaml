@@ -227,7 +227,7 @@ spec:
                               cached counters [default: 10]'
                             type: integer
                           ttl:
-                            description: 'Ttl for cached counters in milliseconds
+                            description: 'TTL for cached counters in milliseconds
                               [default: 5000]'
                             type: integer
                         type: object

@@ -177,8 +177,8 @@ type Redis struct {
 
 type RedisCachedOptions struct {
 	// +optional
-	// Ttl for cached counters in milliseconds [default: 5000]
-	Ttl *int `json:"ttl,omitempty"`
+	// TTL for cached counters in milliseconds [default: 5000]
+	TTL *int `json:"ttl,omitempty"`
 
 	// +optional
 	// Ratio to apply to the TTL from Redis on cached counters [default: 10]
