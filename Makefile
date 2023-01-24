@@ -1,3 +1,6 @@
+MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
+PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -73,6 +76,73 @@ SHELL = /usr/bin/env bash -o pipefail
 
 all: build
 
+##@ Tools
+
+OPERATOR_SDK = $(PROJECT_PATH)/bin/operator-sdk
+OPERATOR_SDK_VERSION = v1.22.0
+$(OPERATOR_SDK):
+	./utils/install-operator-sdk.sh $(OPERATOR_SDK) $(OPERATOR_SDK_VERSION)
+
+.PHONY: operator-sdk
+operator-sdk: $(OPERATOR_SDK) ## Download operator-sdk locally if necessary.
+
+CONTROLLER_GEN = $(PROJECT_PATH)/bin/controller-gen
+$(CONTROLLER_GEN):
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0)
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN)  ## Download controller-gen locally if necessary.
+
+KUSTOMIZE = $(PROJECT_PATH)/bin/kustomize
+$(KUSTOMIZE):
+	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.5)
+
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+
+YQ=$(PROJECT_PATH)/bin/yq
+
+$(YQ):
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4@latest)
+
+.PHONY: yq
+yq: $(YQ) ## Download yq locally if necessary.
+
+OPM = $(PROJECT_PATH)/bin/opm
+OPM_VERSION = v1.26.2
+$(OPM):
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPM)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/$${OS}-$${ARCH}-opm ;\
+	chmod +x $(OPM) ;\
+	}
+
+.PHONY: opm
+opm: $(OPM) ## Download opm locally if necessary.
+
+KIND = $(PROJECT_PATH)/bin/kind
+$(KIND):
+	$(call go-install-tool,$(KIND),sigs.k8s.io/kind@v0.11.1)
+
+.PHONY: kind
+kind: $(KIND) ## Download kind locally if necessary.
+
+ACT = $(PROJECT_PATH)/bin/act
+$(ACT):
+	$(call go-install-tool,$(ACT),github.com/nektos/act@latest)
+
+.PHONY: act
+act: $(ACT) ## Download act locally if necessary.
+
+GOLANGCI-LINT = $(PROJECT_PATH)/bin/golangci-lint
+$(GOLANGCI-LINT):
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v1.50.1
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -117,10 +187,10 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t $(IMG) .
 
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push $(IMG)
 
 ##@ Deployment
 
@@ -143,21 +213,21 @@ deploy-develmode: manifests kustomize ## Deploy controller in debug mode to the 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
+.PHONY: install-olm
+install-olm: $(OPERATOR_SDK)
+	$(OPERATOR_SDK) olm install
 
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.5)
+.PHONY: uninstall-olm
+uninstall-olm:
+	$(OPERATOR_SDK) olm uninstall
 
 ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
-	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
+	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
-# go-get-tool will 'go install' any package $2 and install it to $1.
+# go-install-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
+define go-install-tool
 @[ -f $(1) ] || { \
 set -e ;\
 TMP_DIR=$$(mktemp -d) ;\
@@ -169,21 +239,18 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
-OPERATOR_SDK = $(shell pwd)/bin/operator-sdk
-OPERATOR_SDK_VERSION = v1.22.0
-operator-sdk: ## Download operator-sdk locally if necessary.
-	./utils/install-operator-sdk.sh $(OPERATOR_SDK) $(OPERATOR_SDK_VERSION)
-
 .PHONY: bundle
-bundle: export IMAGE_TAG := $(IMAGE_TAG)
-bundle: export BUNDLE_VERSION := $(VERSION)
-bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+bundle: $(OPM) $(YQ) manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
+	# Set desired operator image
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	envsubst \
-		< config/manifests/bases/limitador-operator.clusterserviceversion.template.yaml \
-		> config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	# Update CSV
+	V="limitador-operator.v$(VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	V="$(VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	V="$(IMG)" $(YQ) eval '.metadata.annotations.containerImage = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	# Generate bundle
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	# Validate bundle manifests
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
@@ -194,66 +261,19 @@ bundle-build: ## Build the bundle image.
 bundle-push: ## Push the bundle image.
 	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
 
-.PHONY: opm
-OPM = ./bin/opm
-opm: ## Download opm locally if necessary.
-ifeq (,$(wildcard $(OPM)))
-ifeq (,$(shell which opm 2>/dev/null))
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
-	chmod +x $(OPM) ;\
-	}
-else
-OPM = $(shell which opm)
-endif
-endif
-
-# A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
-# These images MUST exist in a registry and be pull-able.
-BUNDLE_IMGS ?= $(BUNDLE_IMG)
-
-# The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:$(IMAGE_TAG)
-
-# Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
-ifneq ($(origin CATALOG_BASE_IMG), undefined)
-FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
-endif
-
-# Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
-# This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
-# https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
-.PHONY: catalog-build
-catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
-
-.PHONY: catalog-generate
-catalog-generate: opm ## Generate a catalog/index Dockerfile.
-	$(OPM) index add --generate --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
-
-# Push the catalog image.
-.PHONY: catalog-push
-catalog-push: ## Push a catalog image.
-	$(MAKE) docker-push IMG=$(CATALOG_IMG)
-
 ##@ Misc
 
+.PHONY: local-env-setup
+local-env-setup: ## Prepare environment to run the operator with "make run"
+	$(MAKE) kind-delete-cluster
+	$(MAKE) kind-create-cluster
+	$(MAKE) install
+
 ## Miscellaneous Custom targets
-
-KIND = $(shell pwd)/bin/kind
-kind: ## Download kind locally if necessary
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.11.1)
-
-KIND_CLUSTER_NAME = limitador-local
-
 .PHONY: local-setup
 local-setup: export IMG := limitador-operator:dev
 local-setup: ## Deploy operator in local kind cluster
-	$(MAKE) local-cleanup
-	$(MAKE) local-setup-kind
+	$(MAKE) local-env-setup
 	$(MAKE) docker-build
 	@echo "Deploying Limitador control plane"
 	$(KIND) load docker-image ${IMG} --name ${KIND_CLUSTER_NAME}
@@ -261,27 +281,15 @@ local-setup: ## Deploy operator in local kind cluster
 	@echo "Wait for all deployments to be up"
 	kubectl -n limitador-operator-system wait --timeout=300s --for=condition=Available deployments --all
 
-.PHONY: local-dev-setup
-local-dev-setup: local-cleanup local-setup-kind install run ## Run operator locally in local kind cluster
-
 .PHONY: local-cleanup
-local-cleanup: kind ## Clean up local kind cluster
-	$(KIND) delete cluster --name $(KIND_CLUSTER_NAME)
+local-cleanup: ## Clean up local kind cluster
+	$(MAKE) kind-delete-cluster
 
-.PHONY: local-setup-kind
-local-setup-kind: kind ## Create kind cluster
-	$(KIND) create cluster --name $(KIND_CLUSTER_NAME) --config utils/kind-cluster.yaml
+##@ Code Style
 
-##@ Verify
+.PHONY: run-lint
+run-lint: $(GOLANGCI-LINT) ## Run lint tests
+	$(GOLANGCI-LINT) run
 
-## Targets to verify actions that generate/modify code have been executed and output committed
-
-.PHONY: verify-manifests
-verify-manifests: manifests ## Verify manifests update.
-	git diff --exit-code ./config
-	[ -z "$$(git ls-files --other --exclude-standard --directory --no-empty-directory ./config)" ]
-
-.PHONY: verify-bundle
-verify-bundle: bundle ## Verify bundle update.
-	git diff --exit-code ./bundle
-	[ -z "$$(git ls-files --other --exclude-standard --directory --no-empty-directory ./bundle)" ]
+# Include last to avoid changing MAKEFILE_LIST used above
+include ./make/*.mk

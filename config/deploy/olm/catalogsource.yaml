@@ -1,0 +1,9 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: limitador-operator-catalog
+spec:
+  sourceType: grpc
+  image: quay.io/kuadrant/limitador-operator-catalog:eguzki-45
+  displayName: Limitador Operator
+  publisher: grpc

@@ -36,6 +36,14 @@ spec:
       variables: []
 ```
 
+## Contributing
+
+The [Development guide](doc/development.md) describes how to build the operator and
+how to test your changes before submitting a patch or opening a PR.
+
+Join us on [kuadrant.slack.com](https://kuadrant.slack.com/)
+for live discussions about the roadmap and more.
+
 ## Licensing
 
 This software is licensed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
