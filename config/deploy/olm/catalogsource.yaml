@@ -4,6 +4,6 @@ metadata:
   name: limitador-operator-catalog
 spec:
   sourceType: grpc
-  image: quay.io/kuadrant/limitador-operator-catalog:eguzki-45
+  image: quay.io/kuadrant/limitador-operator-catalog:latest
   displayName: Limitador Operator
   publisher: grpc
