@@ -125,7 +125,7 @@ make bundle-push [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
 
 ### Build custom catalog
 
-The catalog's format will be [File-based Catalg](https://olm.operatorframework.io/docs/reference/file-based-catalogs/).
+The catalog format will be [File-based Catalg](https://olm.operatorframework.io/docs/reference/file-based-catalogs/).
 
 Make sure all the required bundles are pushed to the registry. It is required by the `opm` tool.
 
