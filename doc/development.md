@@ -59,7 +59,7 @@ make local-setup
 
 You can deploy the operator using OLM just running a few commands.
 No need to build any image. Kuadrant engineering team provides `latest` and
-release version tagged images. They are available in
+released version tagged images. They are available in
 the [Quay.io/Kuadrant](https://quay.io/organization/kuadrant) image repository.
 
 Create kind cluster
