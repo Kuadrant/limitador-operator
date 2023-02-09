@@ -70,11 +70,13 @@ func TestBaseReconcilerCreate(t *testing.T) {
 	}
 
 	// Objects to track in the fake client.
-	objs := []runtime.Object{}
+	objs := []client.Object{}
 
 	// Create a fake client to mock API calls.
-	cl := fake.NewFakeClient(objs...)
-	clientAPIReader := fake.NewFakeClient(objs...)
+	clBuilder := fake.NewClientBuilder()
+	cl := clBuilder.WithObjects(objs...).Build()
+	clientAPIReaderBuilder := fake.NewClientBuilder()
+	clientAPIReader := clientAPIReaderBuilder.WithObjects(objs...).Build()
 	recorder := record.NewFakeRecorder(10000)
 
 	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, logger, recorder)
@@ -138,11 +140,13 @@ func TestBaseReconcilerUpdateNeeded(t *testing.T) {
 	}
 
 	// Objects to track in the fake client.
-	objs := []runtime.Object{existingConfigmap}
+	objs := []client.Object{existingConfigmap}
 
 	// Create a fake client to mock API calls.
-	cl := fake.NewFakeClient(objs...)
-	clientAPIReader := fake.NewFakeClient(objs...)
+	clBuilder := fake.NewClientBuilder()
+	cl := clBuilder.WithObjects(objs...).Build()
+	clientAPIReaderBuilder := fake.NewClientBuilder()
+	clientAPIReader := clientAPIReaderBuilder.WithObjects(objs...).Build()
 	recorder := record.NewFakeRecorder(10000)
 
 	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, logger, recorder)
@@ -225,11 +229,13 @@ func TestBaseReconcilerDelete(t *testing.T) {
 	}
 
 	// Objects to track in the fake client.
-	objs := []runtime.Object{existing}
+	objs := []client.Object{existing}
 
 	// Create a fake client to mock API calls.
-	cl := fake.NewFakeClient(objs...)
-	clientAPIReader := fake.NewFakeClient(objs...)
+	clBuilder := fake.NewClientBuilder()
+	cl := clBuilder.WithObjects(objs...).Build()
+	clientAPIReaderBuilder := fake.NewClientBuilder()
+	clientAPIReader := clientAPIReaderBuilder.WithObjects(objs...).Build()
 	recorder := record.NewFakeRecorder(10000)
 
 	baseReconciler := NewBaseReconciler(cl, s, clientAPIReader, logger, recorder)

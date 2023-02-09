@@ -21,7 +21,7 @@ const (
 	LimitadorCMMountPath    = "/home/limitador/etc/"
 )
 
-func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
+func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 	return &v1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
@@ -54,7 +54,7 @@ func LimitadorService(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 	}
 }
 
-func LimitadorDeployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.Secret) *appsv1.Deployment {
+func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.Secret) *appsv1.Deployment {
 	var replicas int32 = DefaultReplicas
 	if limitador.Spec.Replicas != nil {
 		replicas = int32(*limitador.Spec.Replicas)

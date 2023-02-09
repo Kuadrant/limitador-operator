@@ -9,12 +9,12 @@ import (
 )
 
 func TestConstants(t *testing.T) {
-	assert.Check(t, 1 == DefaultReplicas)
-	assert.Check(t, "quay.io/kuadrant/limitador" == LimitadorRepository)
-	assert.Check(t, "/status" == StatusEndpoint)
-	assert.Check(t, "limitador-config.yaml" == LimitadorConfigFileName)
-	assert.Check(t, "limits-config-" == LimitsCMNamePrefix)
-	assert.Check(t, "/home/limitador/etc/" == LimitadorCMMountPath)
+	assert.Check(t, DefaultReplicas == 1)
+	assert.Check(t, LimitadorRepository == "quay.io/kuadrant/limitador")
+	assert.Check(t, StatusEndpoint == "/status")
+	assert.Check(t, LimitadorConfigFileName == "limitador-config.yaml")
+	assert.Check(t, LimitsCMNamePrefix == "limits-config-")
+	assert.Check(t, LimitadorCMMountPath == "/home/limitador/etc/")
 }
 
 // TODO: Test individual k8s objects.

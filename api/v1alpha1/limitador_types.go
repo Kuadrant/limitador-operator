@@ -115,8 +115,8 @@ type StorageType string
 
 const (
 	StorageTypeInMemory    StorageType = "memory"
-	StorageTypeRedis                   = "redis"
-	StorageTypeRedisCached             = "redis_cached"
+	StorageTypeRedis       StorageType = "redis"
+	StorageTypeRedisCached StorageType = "redis_cached"
 )
 
 // Storage contains the options for Limitador counters database or in-memory data storage
@@ -143,12 +143,12 @@ func (s *Storage) SecretRef() *corev1.ObjectReference {
 func (s *Storage) Config(url string) []string {
 	if s.Redis != nil {
 		return []string{
-			StorageTypeRedis,
+			string(StorageTypeRedis),
 			url,
 		}
 	} else if s.RedisCached != nil {
 		params := []string{
-			StorageTypeRedisCached,
+			string(StorageTypeRedisCached),
 			url,
 		}
 		options := reflect.ValueOf(*s.RedisCached.Options)
@@ -177,8 +177,8 @@ type Redis struct {
 
 type RedisCachedOptions struct {
 	// +optional
-	// Ttl for cached counters in milliseconds [default: 5000]
-	Ttl *int `json:"ttl,omitempty"`
+	// TTL for cached counters in milliseconds [default: 5000]
+	TTL *int `json:"ttl,omitempty"`
 
 	// +optional
 	// Ratio to apply to the TTL from Redis on cached counters [default: 10]
