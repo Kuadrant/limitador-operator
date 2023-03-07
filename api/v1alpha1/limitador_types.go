@@ -142,30 +142,30 @@ func (s *Storage) SecretRef() *corev1.ObjectReference {
 
 func (s *Storage) Config(url string) []string {
 	if s.Redis != nil {
-		return []string{
-			string(StorageTypeRedis),
-			url,
-		}
-	} else if s.RedisCached != nil {
-		params := []string{
-			string(StorageTypeRedisCached),
-			url,
-		}
-		options := reflect.ValueOf(*s.RedisCached.Options)
-		typesOf := options.Type()
-		for i := 0; i < options.NumField(); i++ {
-			if !options.Field(i).IsNil() {
-				var value interface{} = options.Field(i).Elem()
-				params = append(
-					params,
-					fmt.Sprintf(
-						"--%s %d",
-						helpers.ToKebabCase(typesOf.Field(i).Name),
-						value))
+		return []string{string(StorageTypeRedis), url}
+	}
+
+	if s.RedisCached != nil {
+		params := []string{string(StorageTypeRedisCached), url}
+
+		if s.RedisCached.Options != nil {
+			options := reflect.ValueOf(*s.RedisCached.Options)
+			typesOf := options.Type()
+			for i := 0; i < options.NumField(); i++ {
+				if !options.Field(i).IsNil() {
+					var value interface{} = options.Field(i).Elem()
+					params = append(
+						params,
+						fmt.Sprintf(
+							"--%s %d",
+							helpers.ToKebabCase(typesOf.Field(i).Name),
+							value))
+				}
 			}
 		}
 		return params
 	}
+
 	return []string{string(StorageTypeInMemory)}
 }
 
