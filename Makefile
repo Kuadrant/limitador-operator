@@ -51,6 +51,22 @@ ifeq ($(shell uname -sm),Darwin arm64)
 	ARCH_PARAM = --arch=amd64
 endif
 
+DEFAULT_IMAGE_TAG = latest
+
+# Semantic versioning (i.e. Major.Minor.Patch)
+is_semantic_version = $(shell [[ $(1) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$ ]] && echo "true")
+
+# BUNDLE_VERSION defines the version for the limitador-operator bundle.
+# If the version is not semantic, will use the default one
+bundle_is_semantic := $(call is_semantic_version,$(VERSION))
+ifdef bundle_is_semantic
+BUNDLE_VERSION = $(VERSION)
+IMAGE_TAG = v$(VERSION)
+else
+BUNDLE_VERSION = 0.0.0
+IMAGE_TAG ?= $(DEFAULT_IMAGE_TAG)
+endif
+
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(IMAGE_TAG)
@@ -245,11 +261,11 @@ bundle: $(OPM) $(YQ) manifests kustomize operator-sdk ## Generate bundle manifes
 	# Set desired operator image
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	# Update CSV
-	V="limitador-operator.v$(VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
-	V="$(VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	V="limitador-operator.v$(BUNDLE_VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	V="$(BUNDLE_VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	V="$(IMG)" $(YQ) eval '.metadata.annotations.containerImage = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	# Generate bundle
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 	# Validate bundle manifests
 	$(OPERATOR_SDK) bundle validate ./bundle
 
