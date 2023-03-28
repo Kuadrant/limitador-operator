@@ -6,10 +6,11 @@ on:
     tags: ['*']
 
 env:
-  IMG_TAGS: ${{ github.ref_name }}
+  IMG_TAGS: ${{ github.sha }}
   IMG_REGISTRY_HOST: quay.io
   IMG_REGISTRY_ORG: kuadrant
   MAIN_BRANCH_NAME: main
+  OPERATOR_NAME: limitador-operator
 
 jobs:
   build:
@@ -66,17 +67,24 @@ jobs:
         id: add-latest-tag
         run: |
           echo "IMG_TAGS=latest ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
-      - name: Run make bundle
-        run: make bundle REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} IMAGE_TAG=${{ github.ref_name }}
+      - name: Add release tag
+        if: ${{ github.ref_name != env.MAIN_BRANCH_NAME }}
+        id: add-branch-tag
+        run: |
+          TAG_NAME=${GITHUB_REF_NAME/\//-}
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          echo "IMG_TAGS=${TAG_NAME} ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
       - name: Install qemu dependency
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
+      - name: Run make bundle
+        run: make bundle REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} VERSION=${TAG_NAME/v/}
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          image: limitador-operator-bundle
+          image: ${{ env.OPERATOR_NAME }}-bundle
           tags: ${{ env.IMG_TAGS }}
           platforms: linux/amd64,linux/arm64
           dockerfiles: |
