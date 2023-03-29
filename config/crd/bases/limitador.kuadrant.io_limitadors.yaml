@@ -76,6 +76,13 @@ spec:
                         type: integer
                     type: object
                 type: object
+              rateLimitHeaders:
+                description: RateLimitHeadersType defines the valid options for the
+                  --rate-limit-headers arg
+                enum:
+                - NONE
+                - DRAFT_VERSION_03
+                type: string
               replicas:
                 type: integer
               storage:

@@ -2,6 +2,7 @@ package reconcilers
 
 import (
 	"fmt"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,6 +60,17 @@ func DeploymentImageMutator(desired, existing *appsv1.Deployment) bool {
 
 	if existing.Spec.Template.Spec.Containers[0].Image != desired.Spec.Template.Spec.Containers[0].Image {
 		existing.Spec.Template.Spec.Containers[0].Image = desired.Spec.Template.Spec.Containers[0].Image
+		update = true
+	}
+
+	return update
+}
+
+func DeploymentCommandMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.Containers[0].Command, desired.Spec.Template.Spec.Containers[0].Command) {
+		existing.Spec.Template.Spec.Containers[0].Command = desired.Spec.Template.Spec.Containers[0].Command
 		update = true
 	}
 

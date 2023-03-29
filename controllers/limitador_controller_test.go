@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -159,6 +160,7 @@ var _ = Describe("Limitador controller", func() {
 				Equal(limitador.LimitsCMNamePrefix + limitadorObj.Name),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
+				// asserts request headers command line arg is not there
 				Equal(
 					[]string{
 						"limitador-server",
@@ -336,6 +338,103 @@ var _ = Describe("Limitador controller", func() {
 			err := yaml.Unmarshal([]byte(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]), &cmLimits)
 			Expect(err == nil)
 			Expect(cmLimits).To(Equal(newLimits))
+		})
+	})
+
+	Context("Creating a new Limitador object with rate limit headers", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = newLimitador()
+			limitadorObj.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		It("Should create a new deployment with rate limit headers command line arg", func() {
+			createdLimitadorDeployment := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&createdLimitadorDeployment)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			// It should contain at least the limits file
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
+				// asserts request headers command line arg is not there
+				Equal(
+					[]string{
+						"limitador-server",
+						"--rate-limit-headers",
+						"DRAFT_VERSION_03",
+						"/home/limitador/etc/limitador-config.yaml",
+						"memory",
+					},
+				),
+			)
+		})
+	})
+
+	Context("Reconciling command line args", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = newLimitador()
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		It("Should modify the limitador deployment command line args", func() {
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(updatedLimitador.Spec.RateLimitHeaders).Should(BeNil())
+			updatedLimitador.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
+
+			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+			Eventually(func() bool {
+				updatedLimitadorDeployment := appsv1.Deployment{}
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitadorDeployment)
+
+				if err != nil {
+					return false
+				}
+
+				return reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Command,
+					[]string{
+						"limitador-server",
+						"--rate-limit-headers",
+						"DRAFT_VERSION_03",
+						"/home/limitador/etc/limitador-config.yaml",
+						"memory",
+					})
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 })
