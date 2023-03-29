@@ -1,3 +1,9 @@
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
+
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
@@ -51,20 +57,15 @@ ifeq ($(shell uname -sm),Darwin arm64)
 	ARCH_PARAM = --arch=amd64
 endif
 
-DEFAULT_IMAGE_TAG = latest
-
 # Semantic versioning (i.e. Major.Minor.Patch)
-is_semantic_version = $(shell [[ $(1) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$ ]] && echo "true")
+VERSION_IS_SEMANTIC = $(shell [[ $(VERSION) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$ ]] && echo "true")
 
 # BUNDLE_VERSION defines the version for the limitador-operator bundle.
 # If the version is not semantic, will use the default one
-bundle_is_semantic := $(call is_semantic_version,$(VERSION))
-ifdef bundle_is_semantic
+ifeq ($(VERSION_IS_SEMANTIC),true)
 BUNDLE_VERSION = $(VERSION)
-IMAGE_TAG = v$(VERSION)
 else
 BUNDLE_VERSION = 0.0.0
-IMAGE_TAG ?= $(DEFAULT_IMAGE_TAG)
 endif
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
@@ -84,11 +85,6 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# This is a requirement for 'setup-envtest.sh' in the test target.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
 
 all: build
 
