@@ -39,6 +39,12 @@ REGISTRY = quay.io
 # Organization in container resgistry
 ORG ?= kuadrant
 
+# kubebuilder-tools still doesn't support darwin/arm64. This is a workaround (https://github.com/kubernetes-sigs/controller-runtime/issues/1657)
+ARCH_PARAM =
+ifeq ($(shell uname -sm),Darwin arm64)
+	ARCH_PARAM = --arch=amd64
+endif
+
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
 #
@@ -46,26 +52,21 @@ ORG ?= kuadrant
 # quay.io/kuadrant/limitador-operator-bundle:$VERSION and quay.io/kuadrant/limitador-operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= $(REGISTRY)/$(ORG)/limitador-operator
 
-ifeq (0.0.0,$(VERSION))
-IMAGE_TAG ?= latest
-else
-IMAGE_TAG ?= v$(VERSION)
-endif
-# kubebuilder-tools still doesn't support darwin/arm64. This is a workaround (https://github.com/kubernetes-sigs/controller-runtime/issues/1657)
-ARCH_PARAM =
-ifeq ($(shell uname -sm),Darwin arm64)
-	ARCH_PARAM = --arch=amd64
-endif
-
 # Semantic versioning (i.e. Major.Minor.Patch)
-VERSION_IS_SEMANTIC = $(shell [[ $(VERSION) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$ ]] && echo "true")
+is_semantic_version = $(shell [[ $(1) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$ ]] && echo "true")
 
 # BUNDLE_VERSION defines the version for the limitador-operator bundle.
 # If the version is not semantic, will use the default one
-ifeq ($(VERSION_IS_SEMANTIC),true)
+bundle_is_semantic := $(call is_semantic_version,$(VERSION))
+ifeq (0.0.0,$(VERSION))
 BUNDLE_VERSION = $(VERSION)
+IMAGE_TAG = latest
+else ifeq ($(bundle_is_semantic),true)
+BUNDLE_VERSION = $(VERSION)
+IMAGE_TAG = v$(VERSION)
 else
 BUNDLE_VERSION = 0.0.0
+IMAGE_TAG ?= $(DEFAULT_IMAGE_TAG)
 endif
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
