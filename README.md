@@ -12,7 +12,7 @@ The Operator to manage [Limitador](https://github.com/Kuadrant/limitador) deploy
 
 ### Limitador CRD
 
-[Limitador v1alpha1 API reference](api/v1alpha1/limitador_types.go)
+[Limitador v1alpha1 API reference](/api/v1alpha1/limitador_types.go)
 
 Example:
 
@@ -35,6 +35,12 @@ spec:
       seconds: 30
       variables: []
 ```
+
+## Features
+
+* [Storage Options](/doc/storage.md)
+* [Rate Limit Headers](/doc/rate-limit-headers.md)
+* [Logging](/doc/logging.md)
 
 ## Contributing
 

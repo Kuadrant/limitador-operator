@@ -6,7 +6,7 @@ In order to configure a Redis data structure store, currently there are 2 altern
 * Redis
 * Redis Cached
 
-For any of those, one should store the URL of the Redis service, inside a K8s opaque 
+For any of those, one should store the URL of the Redis service, inside a K8s opaque
 [Secret](https://kubernetes.io/docs/concepts/configuration/secret/).
 
 ```yaml
@@ -51,7 +51,7 @@ spec:
 | ttl          | TTL for cached counters in milliseconds [default: 5000]           |
 | ratio        | Ratio to apply to the TTL from Redis on cached counters [default: |
 | flush-period | Flushing period for counters in milliseconds [default: 1000]      |
- | max-cached   | Maximum amount of counters cached [default: 10000]                |
+| max-cached   | Maximum amount of counters cached [default: 10000]                |
 
 
 ```yaml
@@ -66,8 +66,8 @@ spec:
         name: redisconfig
         namespace: default # optional
      options: # Every option is optional
-        ttl: 1000      
-       
+        ttl: 1000
+
   limits:
     - conditions: ["get_toy == 'yes'"]
       max_value: 2
