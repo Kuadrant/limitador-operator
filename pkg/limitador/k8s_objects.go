@@ -89,7 +89,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 						{
 							Name:    "limitador",
 							Image:   image,
-							Command: deploymentContainerCommand(limitador.Spec.Storage, storageConfigSecret),
+							Command: deploymentContainerCommand(limitador.Spec.Storage, storageConfigSecret, limitador.Spec.RateLimitHeaders),
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
@@ -183,11 +183,16 @@ func labels() map[string]string {
 	return map[string]string{"app": "limitador"}
 }
 
-func deploymentContainerCommand(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) []string {
-	command := []string{
-		"limitador-server",
-		fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName),
+func deploymentContainerCommand(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret, rateLimitHeaders *limitadorv1alpha1.RateLimitHeadersType) []string {
+	command := []string{"limitador-server"}
+
+	// stick to the same default as Limitador
+	if rateLimitHeaders != nil {
+		command = append(command, "--rate-limit-headers", string(*rateLimitHeaders))
 	}
+
+	command = append(command, fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName))
+
 	return append(command, storageConfig(storage, storageConfigSecret)...)
 }
 

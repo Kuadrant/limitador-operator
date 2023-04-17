@@ -125,6 +125,11 @@ func (in *LimitadorSpec) DeepCopyInto(out *LimitadorSpec) {
 		*out = new(Storage)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RateLimitHeaders != nil {
+		in, out := &in.RateLimitHeaders, &out.RateLimitHeaders
+		*out = new(RateLimitHeadersType)
+		**out = **in
+	}
 	if in.Limits != nil {
 		in, out := &in.Limits, &out.Limits
 		*out = make([]RateLimit, len(*in))

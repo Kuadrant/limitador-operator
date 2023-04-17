@@ -57,6 +57,9 @@ type LimitadorSpec struct {
 	Storage *Storage `json:"storage,omitempty"`
 
 	// +optional
+	RateLimitHeaders *RateLimitHeadersType `json:"rateLimitHeaders,omitempty"`
+
+	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
 }
 
@@ -108,6 +111,10 @@ type LimitadorList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Limitador `json:"items"`
 }
+
+// RateLimitHeadersType defines the valid options for the --rate-limit-headers arg
+// +kubebuilder:validation:Enum=NONE;DRAFT_VERSION_03
+type RateLimitHeadersType string
 
 // StorageType defines the valid options for storage
 // +kubebuilder:validation:Enum=memory;redis;redis_cached
