@@ -55,6 +55,18 @@ IMAGE_TAG_BASE ?= $(REGISTRY)/$(ORG)/limitador-operator
 # Semantic versioning (i.e. Major.Minor.Patch)
 is_semantic_version = $(shell [[ $(1) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.+)?$$ ]] && echo "true")
 
+# Limitador version
+LIMITADOR_VERSION ?= latest
+
+limitador_version_is_semantic := $(call is_semantic_version,$(LIMITADOR_VERSION))
+
+ifeq (true,$(limitador_version_is_semantic))
+RELATED_IMAGE_LIMITADOR ?= quay.io/kuadrant/limitador:v$(LIMITADOR_VERSION)
+else
+RELATED_IMAGE_LIMITADOR ?= quay.io/kuadrant/limitador:$(LIMITADOR_VERSION)
+endif
+
+
 # BUNDLE_VERSION defines the version for the limitador-operator bundle.
 # If the version is not semantic, will use the default one
 bundle_is_semantic := $(call is_semantic_version,$(VERSION))
@@ -255,7 +267,8 @@ endef
 .PHONY: bundle
 bundle: $(OPM) $(YQ) manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
-	# Set desired operator image
+	# Set desired operator image and related limitador image
+	V="$(RELATED_IMAGE_LIMITADOR)" $(YQ) eval '(select(.kind == "Deployment").spec.template.spec.containers[].env[] | select(.name == "RELATED_IMAGE_LIMITADOR").value) = strenv(V)' -i config/manager/manager.yaml
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	# Update CSV
 	V="limitador-operator.v$(BUNDLE_VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
