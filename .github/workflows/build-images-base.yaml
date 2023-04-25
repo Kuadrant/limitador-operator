@@ -11,6 +11,10 @@ on:
         description: Operator tag
         default: latest
         type: string
+      limitadorVersion:
+        description: Limitador version
+        default: latest
+        type: string
   workflow_dispatch:
     inputs:
       operatorVersion:
@@ -19,6 +23,10 @@ on:
         type: string
       operatorTag:
         description: Operator tag
+        default: latest
+        type: string
+      limitadorVersion:
+        description: Limitador version
         default: latest
         type: string
 
@@ -83,7 +91,7 @@ jobs:
         id: make-bundle
         run: |
           make bundle REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
-            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }}
+            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
@@ -121,7 +129,7 @@ jobs:
       - name: Generate Catalog Content
         run: |
           make catalog REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
-            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }}
+            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
       - name: Install qemu dependency
         run: |
           sudo apt-get update
