@@ -92,15 +92,18 @@ If you want to deploy (using OLM) a custom limitador operator, you need to build
 
 The `make bundle` target accepts the following variables:
 
-| **Makefile Variable** | **Description** | **Default value** |
-| --- | --- | --- |
-| `IMG` | Operator image URL | `quay.io/kuadrant/limitador-operator:latest` |
-| `VERSION` | Bundle version | `0.0.0` |
+| **Makefile Variable**     | **Description**      | **Default value**                            | **Notes**                                                                |
+|---------------------------|----------------------|----------------------------------------------|--------------------------------------------------------------------------|
+| `IMG`                     | Operator image URL   | `quay.io/kuadrant/limitador-operator:latest` |                                                                          |
+| `VERSION`                 | Bundle version       | `0.0.0`                                      |                                                                          |
+| `RELATED_IMAGE_LIMITADOR` | Limitador bundle URL | `quay.io/kuadrant/limitador:latest`          | `LIMITADOR_VERSION` var could be use to build this URL providing the tag |
 
 * Build the bundle manifests
 
 ```bash
-make bundle [IMG=quay.io/kuadrant/limitador-operator:latest] [VERSION=0.0.0]
+make bundle [IMG=quay.io/kuadrant/limitador-operator:latest] \
+            [VERSION=0.0.0] \
+            [RELATED_IMAGE_LIMITADOR=quay.io/kuadrant/limitador:latest]
 ```
 
 * Build the bundle image from the manifests
