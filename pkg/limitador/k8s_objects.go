@@ -151,6 +151,9 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 							},
 						},
 					},
+					SecurityContext: &v1.PodSecurityContext{
+						SupplementalGroups: []int64{1000},
+					},
 				},
 			},
 		},

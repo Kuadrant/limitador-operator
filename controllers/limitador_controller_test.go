@@ -169,6 +169,9 @@ var _ = Describe("Limitador controller", func() {
 					},
 				),
 			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.SecurityContext.SupplementalGroups).Should(
+				ContainElement(int64(1000)),
+			)
 		})
 
 		It("Should create a Limitador service", func() {
