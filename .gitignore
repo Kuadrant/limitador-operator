@@ -28,3 +28,6 @@ testbin
 
 /catalog/limitador-operator-catalog
 /catalog/limitador-operator-catalog.Dockerfile
+
+# Vendor dependencies
+vendor
