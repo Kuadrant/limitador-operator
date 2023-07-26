@@ -1,6 +1,7 @@
 # Limitador Operator
 
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0) 
+[![codecov](https://codecov.io/gh/Kuadrant/limitador-operator/branch/main/graph/badge.svg?token=181Q05ZJBJ)](https://codecov.io/gh/Kuadrant/limitador-operator)
 
 ## Overview
 
