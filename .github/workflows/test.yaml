@@ -18,7 +18,7 @@ jobs:
         with:
           go-version: 1.19.x
         id: go
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Run the tests
         run: make test
       - name: Upload coverage reports to Codecov
@@ -36,7 +36,7 @@ jobs:
         with:
           go-version: 1.19.x
         id: go
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Verify manifests
         run: make verify-manifests
   verify-bundle:
@@ -49,7 +49,7 @@ jobs:
           go-version: 1.19.x
         id: go
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run make verify-bundle
         run: |
           make verify-bundle
@@ -63,7 +63,7 @@ jobs:
           go-version: 1.19.x
         id: go
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Run make verify-fmt
         run: |
           make verify-fmt
@@ -77,6 +77,6 @@ jobs:
           go-version: 1.19.x
         id: go
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Go Lint
         run: make run-lint
