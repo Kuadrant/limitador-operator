@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -185,6 +186,8 @@ var _ = Describe("Limitador controller", func() {
 					},
 				),
 			)
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources).Should(
+				Equal(*limitadorObj.ResourceRequirements()))
 		})
 
 		It("Should create a Limitador service", func() {
@@ -292,6 +295,17 @@ var _ = Describe("Limitador controller", func() {
 			updatedLimitador.Spec.Replicas = &replicas
 			version = "latest"
 			updatedLimitador.Spec.Version = &version
+			resourceRequirements := &v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceCPU:    resource.MustParse("200m"),
+					v1.ResourceMemory: resource.MustParse("30Mi"),
+				},
+				Limits: v1.ResourceList{
+					v1.ResourceCPU:    resource.MustParse("400m"),
+					v1.ResourceMemory: resource.MustParse("60Mi"),
+				},
+			}
+			updatedLimitador.Spec.ResourceRequirements = resourceRequirements
 
 			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
 			updatedLimitadorDeployment := appsv1.Deployment{}
@@ -310,8 +324,9 @@ var _ = Describe("Limitador controller", func() {
 
 				correctReplicas := *updatedLimitadorDeployment.Spec.Replicas == LimitadorReplicas+1
 				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == LimitadorImage+":latest"
+				correctResources := reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources, *resourceRequirements)
 
-				return correctReplicas && correctImage
+				return correctReplicas && correctImage && correctResources
 			}, timeout, interval).Should(BeTrue())
 		})
 

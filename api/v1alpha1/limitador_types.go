@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -35,6 +36,19 @@ const (
 
 	// Status conditions
 	StatusConditionReady string = "Ready"
+)
+
+var (
+	defaultResourceRequirements = &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("250m"),
+			corev1.ResourceMemory: resource.MustParse("32Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("500m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+	}
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -65,6 +79,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	PodDisruptionBudget *PodDisruptionBudgetType `json:"pdb,omitempty"`
+
+	// +optional
+	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -105,6 +122,14 @@ func (l *Limitador) Limits() []RateLimit {
 	}
 
 	return l.Spec.Limits
+}
+
+func (l *Limitador) ResourceRequirements() *corev1.ResourceRequirements {
+	if l.Spec.ResourceRequirements == nil {
+		return defaultResourceRequirements
+	}
+
+	return l.Spec.ResourceRequirements
 }
 
 //+kubebuilder:object:root=true

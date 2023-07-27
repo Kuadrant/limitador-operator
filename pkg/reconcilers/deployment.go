@@ -87,3 +87,14 @@ func DeploymentCommandMutator(desired, existing *appsv1.Deployment) bool {
 
 	return update
 }
+
+func DeploymentResourcesMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.Containers[0].Resources, desired.Spec.Template.Spec.Containers[0].Resources) {
+		existing.Spec.Template.Spec.Containers[0].Resources = desired.Spec.Template.Spec.Containers[0].Resources
+		update = true
+	}
+
+	return update
+}
