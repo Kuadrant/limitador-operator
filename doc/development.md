@@ -12,7 +12,7 @@
    * [Cleaning up](#cleaning-up)
    * [Run tests](#run-tests)
       * [Lint tests](#lint-tests)
-   * [(Un)Install Limitador CRD](#uninstall-limitador-crds)
+   * [(Un)Install Limitador CRD](#uninstall-limitador-crd)
 
 <!-- Created by https://github.com/ekalinin/github-markdown-toc -->
 
@@ -76,9 +76,9 @@ make install-olm
 
 Deploy the operator using OLM. The `make deploy-catalog` target accepts the following variables:
 
-| **Makefile Variable** | **Description** | **Default value** |
-| --- | --- | --- |
-| `CATALOG_IMG` | Catalog image URL | `quay.io/kuadrant/limitador-operator-catalog:latest` |
+| **Makefile Variable** | **Description**   | **Default value**                                    |
+|-----------------------|-------------------|------------------------------------------------------|
+| `CATALOG_IMG`         | Catalog image URL | `quay.io/kuadrant/limitador-operator-catalog:latest` |
 
 ```sh
 make deploy-catalog [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:latest]
@@ -108,9 +108,9 @@ make bundle [IMG=quay.io/kuadrant/limitador-operator:latest] \
 
 * Build the bundle image from the manifests
 
-| **Makefile Variable** | **Description** | **Default value** |
-| --- | --- | --- |
-| `BUNDLE_IMG` | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
+| **Makefile Variable** | **Description**           | **Default value**                                   |
+|-----------------------|---------------------------|-----------------------------------------------------|
+| `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
 
 ```sh
 make bundle-build [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
@@ -118,9 +118,9 @@ make bundle-build [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
 
 * Push the bundle image to a registry
 
-| **Makefile Variable** | **Description** | **Default value** |
-| --- | --- | --- |
-| `BUNDLE_IMG` | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
+| **Makefile Variable** | **Description**           | **Default value**                                   |
+|-----------------------|---------------------------|-----------------------------------------------------|
+| `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
 
 ```sh
 make bundle-push [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
@@ -128,15 +128,15 @@ make bundle-push [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
 
 ### Build custom catalog
 
-The catalog format will be [File-based Catalg](https://olm.operatorframework.io/docs/reference/file-based-catalogs/).
+The catalog format will be [File-based Catalog](https://olm.operatorframework.io/docs/reference/file-based-catalogs/).
 
 Make sure all the required bundles are pushed to the registry. It is required by the `opm` tool.
 
 The `make catalog` target accepts the following variables:
 
-| **Makefile Variable** | **Description** | **Default value** |
-| --- | --- | --- |
-| `BUNDLE_IMG` | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
+| **Makefile Variable** | **Description**           | **Default value**                                   |
+|-----------------------|---------------------------|-----------------------------------------------------|
+| `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
 
 ```sh
 make catalog [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
@@ -144,9 +144,9 @@ make catalog [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
 
 * Build the catalog image from the manifests
 
-| **Makefile Variable** | **Description** | **Default value** |
-| --- | --- | --- |
-| `CATALOG_IMG` | Operator catalog image URL | `quay.io/kuadrant/limitador-operator-catalog:latest` |
+| **Makefile Variable** | **Description**            | **Default value**                                    |
+|-----------------------|----------------------------|------------------------------------------------------|
+| `CATALOG_IMG`         | Operator catalog image URL | `quay.io/kuadrant/limitador-operator-catalog:latest` |
 
 ```sh
 make catalog-build [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:latest]

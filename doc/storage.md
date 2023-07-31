@@ -65,7 +65,7 @@ spec:
       configSecretRef: # The secret reference storing the URL for Redis
         name: redisconfig
         namespace: default # optional
-     options: # Every option is optional
+      options: # Every option is optional
         ttl: 1000
 
   limits:

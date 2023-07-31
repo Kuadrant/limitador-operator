@@ -9,11 +9,11 @@ The Operator to manage [Limitador](https://github.com/Kuadrant/limitador) deploy
 
 ## CustomResourceDefinitions
 
-* [Limitador](#limitador), which defines a desired Limitador deployment.
+* [Limitador](#limitador-crd), which defines a desired Limitador deployment.
 
 ### Limitador CRD
 
-[Limitador v1alpha1 API reference](/api/v1alpha1/limitador_types.go)
+[Limitador v1alpha1 API reference](./api/v1alpha1/limitador_types.go)
 
 Example:
 
@@ -39,13 +39,13 @@ spec:
 
 ## Features
 
-* [Storage Options](/doc/storage.md)
-* [Rate Limit Headers](/doc/rate-limit-headers.md)
-* [Logging](/doc/logging.md)
+* [Storage Options](./doc/storage.md)
+* [Rate Limit Headers](./doc/rate-limit-headers.md)
+* [Logging](./doc/logging.md)
 
 ## Contributing
 
-The [Development guide](doc/development.md) describes how to build the operator and
+The [Development guide](./doc/development.md) describes how to build the operator and
 how to test your changes before submitting a patch or opening a PR.
 
 Join us on [kuadrant.slack.com](https://kuadrant.slack.com/)
