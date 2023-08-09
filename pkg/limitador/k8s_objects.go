@@ -86,6 +86,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 					Labels: Labels(limitador),
 				},
 				Spec: v1.PodSpec{
+					Affinity: limitador.Spec.Affinity,
 					Containers: []v1.Container{
 						{
 							Name:    "limitador",
