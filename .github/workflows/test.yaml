@@ -27,6 +27,7 @@ jobs:
           flags: unit
           verbose: true
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
   verify-manifests:
     name: Verify manifests
     runs-on: ubuntu-latest
