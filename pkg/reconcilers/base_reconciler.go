@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -148,6 +149,10 @@ func (b *BaseReconciler) ReconcileDeployment(ctx context.Context, desired *appsv
 
 func (b *BaseReconciler) ReconcileConfigMap(ctx context.Context, desired *corev1.ConfigMap, mutatefn MutateFn) error {
 	return b.ReconcileResource(ctx, &corev1.ConfigMap{}, desired, mutatefn)
+}
+
+func (b *BaseReconciler) ReconcilePodDisruptionBudget(ctx context.Context, desired *policyv1.PodDisruptionBudget, mutatefn MutateFn) error {
+	return b.ReconcileResource(ctx, &policyv1.PodDisruptionBudget{}, desired, mutatefn)
 }
 
 func (b *BaseReconciler) GetResource(ctx context.Context, objKey types.NamespacedName, obj client.Object) error {

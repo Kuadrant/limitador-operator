@@ -9,9 +9,11 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -22,12 +24,14 @@ import (
 
 var _ = Describe("Limitador controller", func() {
 	const (
-		LimitadorNamespace = "default"
-		LimitadorReplicas  = 2
-		LimitadorImage     = "quay.io/kuadrant/limitador"
-		LimitadorVersion   = "0.3.0"
-		LimitadorHTTPPort  = 8000
-		LimitadorGRPCPort  = 8001
+		LimitadorNamespace             = "default"
+		LimitadorReplicas              = 2
+		LimitadorImage                 = "quay.io/kuadrant/limitador"
+		LimitadorVersion               = "0.3.0"
+		LimitadorHTTPPort              = 8000
+		LimitadorGRPCPort              = 8001
+		LimitadorMaxUnavailable        = 1
+		LimitdaorUpdatedMaxUnavailable = 3
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
@@ -35,6 +39,15 @@ var _ = Describe("Limitador controller", func() {
 
 	httpPortNumber := int32(LimitadorHTTPPort)
 	grpcPortNumber := int32(LimitadorGRPCPort)
+
+	maxUnavailable := &intstr.IntOrString{
+		Type:   0,
+		IntVal: LimitadorMaxUnavailable,
+	}
+	updatedMaxUnavailable := &intstr.IntOrString{
+		Type:   0,
+		IntVal: LimitdaorUpdatedMaxUnavailable,
+	}
 
 	replicas := LimitadorReplicas
 	version := LimitadorVersion
@@ -79,6 +92,9 @@ var _ = Describe("Limitador controller", func() {
 					GRPC: grpcPort,
 				},
 				Limits: limits,
+				PodDisruptionBudget: &policyv1.PodDisruptionBudgetSpec{
+					MaxUnavailable: maxUnavailable,
+				},
 			},
 		}
 	}
@@ -228,6 +244,23 @@ var _ = Describe("Limitador controller", func() {
 			Expect(err == nil)
 			Expect(cmLimits).To(Equal(limits))
 		})
+
+		It("Should create a PodDisruptionBudget", func() {
+			createdPdb := policyv1.PodDisruptionBudget{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
+					},
+					&createdPdb)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdPdb.Spec.MaxUnavailable).To(Equal(maxUnavailable))
+			Expect(createdPdb.Spec.Selector.MatchLabels).To(Equal(map[string]string{"app": "limitador"}))
+		})
 	})
 
 	Context("Updating a limitador object", func() {
@@ -338,6 +371,53 @@ var _ = Describe("Limitador controller", func() {
 			err := yaml.Unmarshal([]byte(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]), &cmLimits)
 			Expect(err == nil)
 			Expect(cmLimits).To(Equal(newLimits))
+		})
+
+		It("Updates the PodDisruptionBudget accordingly", func() {
+			originalPdb := policyv1.PodDisruptionBudget{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
+					},
+					&originalPdb)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			updatedLimitador.Spec.PodDisruptionBudget.MaxUnavailable = updatedMaxUnavailable
+			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+
+			updatedPdb := policyv1.PodDisruptionBudget{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
+					},
+					&updatedPdb)
+
+				return err == nil && updatedPdb.ResourceVersion != originalPdb.ResourceVersion
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(updatedPdb.Spec.MaxUnavailable).To(Equal(updatedMaxUnavailable))
 		})
 	})
 

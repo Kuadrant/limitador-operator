@@ -5,6 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
@@ -177,6 +178,17 @@ func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, err
 
 func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
+func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
+func ValidatePDB(pdb *policyv1.PodDisruptionBudgetSpec) error {
+	if pdb.MaxUnavailable != nil && pdb.MinAvailable != nil {
+		return fmt.Errorf("pdb spec invalid, maxunavailable and minavailable are mutually exclusive")
+	}
+	return nil
 }
 
 func labels() map[string]string {

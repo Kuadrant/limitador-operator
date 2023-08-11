@@ -5,7 +5,9 @@ import (
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"gotest.tools/assert"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestConstants(t *testing.T) {
@@ -42,6 +44,12 @@ func newTestLimitadorObj(name, namespace string, limits []limitadorv1alpha1.Rate
 				GRPC: &limitadorv1alpha1.TransportProtocol{Port: &grpcPort},
 			},
 			Limits: limits,
+			PodDisruptionBudget: &policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intstr.IntOrString{
+					Type:   0,
+					IntVal: 1,
+				},
+			},
 		},
 	}
 }
@@ -87,4 +95,22 @@ func TestDeployment(t *testing.T) {
 				"memory",
 			})
 	})
+}
+
+func TestPodDisruptionBudgetName(t *testing.T) {
+	name := PodDisruptionBudgetName(newTestLimitadorObj("my-limitador-instance", "default", nil))
+	assert.Equal(t, name, "limitador-my-limitador-instance")
+}
+
+func TestValidatePdb(t *testing.T) {
+	intStrOne := &intstr.IntOrString{
+		Type:   0,
+		IntVal: 1,
+	}
+	limitadorPdb := &policyv1.PodDisruptionBudgetSpec{
+		MaxUnavailable: intStrOne,
+		MinAvailable:   intStrOne,
+	}
+	err := ValidatePDB(limitadorPdb)
+	assert.Error(t, err, "pdb spec invalid, maxunavailable and minavailable are mutually exclusive")
 }

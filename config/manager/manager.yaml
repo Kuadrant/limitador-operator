@@ -25,35 +25,35 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - command:
-        - /manager
-        args:
-        - --leader-elect
-        env:
-        - name: RELATED_IMAGE_LIMITADOR
-          value: "quay.io/kuadrant/limitador:latest"
-        image: controller:latest
-        name: manager
-        securityContext:
-          allowPrivilegeEscalation: false
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        resources:
-          limits:
-            cpu: 200m
-            memory: 300Mi
-          requests:
-            cpu: 200m
-            memory: 200Mi
+        - command:
+            - /manager
+          args:
+            - --leader-elect
+          env:
+            - name: RELATED_IMAGE_LIMITADOR
+              value: "quay.io/kuadrant/limitador:latest"
+          image: controller:latest
+          name: manager
+          securityContext:
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 200m
+              memory: 300Mi
+            requests:
+              cpu: 200m
+              memory: 200Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

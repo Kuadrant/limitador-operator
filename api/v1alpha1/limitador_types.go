@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
@@ -61,6 +62,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
+
+	// +optional
+	PodDisruptionBudget *policyv1.PodDisruptionBudgetSpec `json:"pdb,omitempty"`
 }
 
 //+kubebuilder:object:root=true
