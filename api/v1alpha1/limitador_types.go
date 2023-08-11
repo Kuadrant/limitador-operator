@@ -124,7 +124,7 @@ func (l *Limitador) Limits() []RateLimit {
 	return l.Spec.Limits
 }
 
-func (l *Limitador) ResourceRequirements() *corev1.ResourceRequirements {
+func (l *Limitador) GetResourceRequirements() *corev1.ResourceRequirements {
 	if l.Spec.ResourceRequirements == nil {
 		return defaultResourceRequirements
 	}

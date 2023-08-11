@@ -22,9 +22,9 @@ spec:
       variables: []  
 ```
 
-| **Field**            | **json/yaml field**    | **Type**                                                                                                                         | **Required** | **Default value**                                                                           | **Description**                            |
-|----------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------------------------|--------------------------------------------|
-| ResourceRequirements | `resourceRequirements` | [*corev1.ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core | No           | `{"limits": {"cpu": "500m","memory": "64Mi"},"requests": {"cpu": "250m","memory": "32Mi"}}` | Limitador deployment resource requirements |
+| **Field**            | **json/yaml field**    | **Type**                                                                                                                          | **Required** | **Default value**                                                                           | **Description**                            |
+|----------------------|------------------------|-----------------------------------------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------------------------|--------------------------------------------|
+| ResourceRequirements | `resourceRequirements` | [*corev1.ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core) | No           | `{"limits": {"cpu": "500m","memory": "64Mi"},"requests": {"cpu": "250m","memory": "32Mi"}}` | Limitador deployment resource requirements |
 
 ## Example with resource limits 
 The resource requests and limits for the deployment can be set like the following:
@@ -51,7 +51,8 @@ spec:
       cpu: 200m
       memory: 400Mi
     requests:
-      cpu: 101m         
+      cpu: 101m  
+      memory: 201Mi    
 ```
 
 To specify the deployment without resource requests or limits, set an empty struct `{}` to the field:

@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gotest.tools/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -125,38 +126,11 @@ func TestDeploymentResourcesMutator(t *testing.T) {
 	requirementsA := requirementsFactory("1m", "1Mi", "2m", "2Mi")
 	requirementsB := requirementsFactory("2m", "2Mi", "4m", "4Mi")
 
-	type args struct {
-		desired  *appsv1.Deployment
-		existing *appsv1.Deployment
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "test false when desired and existing are the same",
-			args: args{
-				desired:  deploymentFactory(requirementsA),
-				existing: deploymentFactory(requirementsA),
-			},
-			want: false,
-		},
-		{
-			name: "test true when desired and existing are different",
-			args: args{
-				desired:  deploymentFactory(requirementsA),
-				existing: deploymentFactory(requirementsB),
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := DeploymentResourcesMutator(tt.args.desired, tt.args.existing); got != tt.want {
-				t.Errorf("DeploymentResourcesMutator() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+	t.Run("test false when desired and existing are the same", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentResourcesMutator(deploymentFactory(requirementsA), deploymentFactory(requirementsA)), false)
+	})
 
+	t.Run("test true when desired and existing are different", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentResourcesMutator(deploymentFactory(requirementsA), deploymentFactory(requirementsB)), true)
+	})
+}

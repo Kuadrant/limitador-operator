@@ -187,7 +187,7 @@ var _ = Describe("Limitador controller", func() {
 				),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources).Should(
-				Equal(*limitadorObj.ResourceRequirements()))
+				Equal(*limitadorObj.GetResourceRequirements()))
 		})
 
 		It("Should create a Limitador service", func() {
