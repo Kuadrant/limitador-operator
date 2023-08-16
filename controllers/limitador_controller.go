@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -135,21 +134,9 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 		return nil
 	}
 
-	limitadorPdb := limitadorObj.Spec.PodDisruptionBudget
-	if err := limitador.ValidatePDB(limitadorPdb); err != nil {
+	pdb := limitador.PodDisruptionBudget(limitadorObj)
+	if err := limitador.ValidatePDB(pdb); err != nil {
 		return err
-	}
-
-	limitadorPdb.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{"app": "limitador"},
-	}
-
-	pdb := &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-			Namespace: limitadorObj.ObjectMeta.Namespace,
-		},
-		Spec: *limitadorPdb,
 	}
 
 	// controller reference

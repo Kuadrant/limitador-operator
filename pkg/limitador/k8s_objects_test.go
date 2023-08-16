@@ -10,6 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+var intStrOne = &intstr.IntOrString{
+	Type:   0,
+	IntVal: 1,
+}
+
 func TestConstants(t *testing.T) {
 	assert.Check(t, DefaultReplicas == 1)
 	assert.Check(t, LimitadorRepository == "quay.io/kuadrant/limitador")
@@ -44,11 +49,8 @@ func newTestLimitadorObj(name, namespace string, limits []limitadorv1alpha1.Rate
 				GRPC: &limitadorv1alpha1.TransportProtocol{Port: &grpcPort},
 			},
 			Limits: limits,
-			PodDisruptionBudget: &policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: &intstr.IntOrString{
-					Type:   0,
-					IntVal: 1,
-				},
+			PodDisruptionBudget: &limitadorv1alpha1.PodDisruptionBudgetType{
+				MaxUnavailable: intStrOne,
 			},
 		},
 	}
@@ -103,14 +105,19 @@ func TestPodDisruptionBudgetName(t *testing.T) {
 }
 
 func TestValidatePdb(t *testing.T) {
-	intStrOne := &intstr.IntOrString{
-		Type:   0,
-		IntVal: 1,
-	}
-	limitadorPdb := &policyv1.PodDisruptionBudgetSpec{
-		MaxUnavailable: intStrOne,
-		MinAvailable:   intStrOne,
+	limitadorPdb := &policyv1.PodDisruptionBudget{
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: intStrOne,
+			MinAvailable:   intStrOne,
+		},
 	}
 	err := ValidatePDB(limitadorPdb)
 	assert.Error(t, err, "pdb spec invalid, maxunavailable and minavailable are mutually exclusive")
+}
+
+func TestPodDisruptionBudget(t *testing.T) {
+	limitadorObj := newTestLimitadorObj("my-limitador-instance", "default", nil)
+	pdb := PodDisruptionBudget(limitadorObj)
+	assert.DeepEqual(t, pdb.Spec.MaxUnavailable, intStrOne)
+	assert.DeepEqual(t, pdb.Spec.Selector.MatchLabels, Labels())
 }

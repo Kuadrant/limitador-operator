@@ -317,7 +317,7 @@ local-redeploy: ## re-deploy operator in local kind cluster
 	$(MAKE) docker-build
 	@echo "Deploying Limitador control plane"
 	$(KIND) load docker-image ${IMG} --name ${KIND_CLUSTER_NAME}
-	make deploy-develmode
+	$(MAKE) deploy-develmode
 	kubectl rollout restart deployment -n limitador-operator-system limitador-operator-controller-manager
 	@echo "Wait for all deployments to be up"
 	kubectl -n limitador-operator-system wait --timeout=300s --for=condition=Available deployments --all

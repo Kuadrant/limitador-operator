@@ -92,7 +92,7 @@ var _ = Describe("Limitador controller", func() {
 					GRPC: grpcPort,
 				},
 				Limits: limits,
-				PodDisruptionBudget: &policyv1.PodDisruptionBudgetSpec{
+				PodDisruptionBudget: &limitadorv1alpha1.PodDisruptionBudgetType{
 					MaxUnavailable: maxUnavailable,
 				},
 			},
@@ -259,7 +259,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdPdb.Spec.MaxUnavailable).To(Equal(maxUnavailable))
-			Expect(createdPdb.Spec.Selector.MatchLabels).To(Equal(map[string]string{"app": "limitador"}))
+			Expect(createdPdb.Spec.Selector.MatchLabels).To(Equal(limitador.Labels()))
 		})
 	})
 
