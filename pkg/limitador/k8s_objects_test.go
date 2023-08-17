@@ -119,5 +119,5 @@ func TestPodDisruptionBudget(t *testing.T) {
 	limitadorObj := newTestLimitadorObj("my-limitador-instance", "default", nil)
 	pdb := PodDisruptionBudget(limitadorObj)
 	assert.DeepEqual(t, pdb.Spec.MaxUnavailable, intStrOne)
-	assert.DeepEqual(t, pdb.Spec.Selector.MatchLabels, Labels())
+	assert.DeepEqual(t, pdb.Spec.Selector.MatchLabels, Labels(limitadorObj))
 }

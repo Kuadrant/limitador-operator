@@ -259,7 +259,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdPdb.Spec.MaxUnavailable).To(Equal(maxUnavailable))
-			Expect(createdPdb.Spec.Selector.MatchLabels).To(Equal(limitador.Labels()))
+			Expect(createdPdb.Spec.Selector.MatchLabels).To(Equal(limitador.Labels(limitadorObj)))
 		})
 	})
 
