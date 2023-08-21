@@ -131,6 +131,22 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 		return err
 	}
 	if limitadorObj.Spec.PodDisruptionBudget == nil {
+		pdb := &policyv1.PodDisruptionBudget{}
+		if err := r.GetResource(ctx,
+			types.NamespacedName{
+				Namespace: limitadorObj.Namespace,
+				Name:      limitador.PodDisruptionBudgetName(limitadorObj),
+			}, pdb); err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		if pdb.ObjectMeta.DeletionTimestamp == nil {
+			if err = r.DeleteResource(ctx, pdb); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
