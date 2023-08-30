@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
 )
@@ -61,6 +62,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
+
+	// +optional
+	PodDisruptionBudget *PodDisruptionBudgetType `json:"pdb,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -287,4 +291,19 @@ func (s *LimitadorStatus) Equals(other *LimitadorStatus, logger logr.Logger) boo
 
 func init() {
 	SchemeBuilder.Register(&Limitador{}, &LimitadorList{})
+}
+
+type PodDisruptionBudgetType struct {
+	// An eviction is allowed if at most "maxUnavailable" limitador pods
+	// are unavailable after the eviction, i.e. even in absence of
+	// the evicted pod. For example, one can prevent all voluntary evictions
+	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// An eviction is allowed if at least "minAvailable" limitador pods will
+	// still be available after the eviction, i.e. even in the absence of
+	// the evicted pod.  So for example you can prevent all voluntary
+	// evictions by specifying "100%".
+	// +optional
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 }

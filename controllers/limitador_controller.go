@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,6 +46,7 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch;create;update;delete
 
@@ -116,7 +118,53 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 		return ctrl.Result{}, err
 	}
 
+	if err := r.reconcilePdb(ctx, limitadorObj); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if limitadorObj.Spec.PodDisruptionBudget == nil {
+		pdb := &policyv1.PodDisruptionBudget{}
+		if err := r.GetResource(ctx,
+			types.NamespacedName{
+				Namespace: limitadorObj.Namespace,
+				Name:      limitador.PodDisruptionBudgetName(limitadorObj),
+			}, pdb); err != nil {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+		if pdb.ObjectMeta.DeletionTimestamp == nil {
+			if err = r.DeleteResource(ctx, pdb); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	pdb := limitador.PodDisruptionBudget(limitadorObj)
+	if err := limitador.ValidatePDB(pdb); err != nil {
+		return err
+	}
+
+	// controller reference
+	if err := r.SetOwnerReference(limitadorObj, pdb); err != nil {
+		return err
+	}
+	err = r.ReconcilePodDisruptionBudget(ctx, pdb, reconcilers.PodDisruptionBudgetMutator)
+	logger.V(1).Info("reconcile pdb", "error", err)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -213,6 +261,7 @@ func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&limitadorv1alpha1.Limitador{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&v1.ConfigMap{}).
+		Owns(&policyv1.PodDisruptionBudget{}).
 		Complete(r)
 }
 

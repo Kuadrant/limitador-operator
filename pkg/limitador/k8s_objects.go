@@ -5,6 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
@@ -30,7 +31,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName(limitador),
 			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
-			Labels:    labels(),
+			Labels:    Labels(limitador),
 		},
 		Spec: v1.ServiceSpec{
 			Ports: []v1.ServicePort{
@@ -47,7 +48,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 					TargetPort: intstr.FromString("grpc"),
 				},
 			},
-			Selector:  labels(),
+			Selector:  Labels(limitador),
 			ClusterIP: v1.ClusterIPNone,
 			Type:      v1.ServiceTypeClusterIP,
 		},
@@ -73,16 +74,16 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      limitador.ObjectMeta.Name,      // TODO: revisit later. For now assume same.
 			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
-			Labels:    labels(),
+			Labels:    Labels(limitador),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels(),
+				MatchLabels: Labels(limitador),
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels(),
+					Labels: Labels(limitador),
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
@@ -170,7 +171,7 @@ func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, err
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      LimitsCMNamePrefix + limitador.Name,
 			Namespace: limitador.Namespace,
-			Labels:    map[string]string{"app": "limitador"},
+			Labels:    Labels(limitador),
 		},
 	}, nil
 }
@@ -179,8 +180,39 @@ func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
 }
 
-func labels() map[string]string {
-	return map[string]string{"app": "limitador"}
+func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      PodDisruptionBudgetName(limitadorObj),
+			Namespace: limitadorObj.ObjectMeta.Namespace,
+			Labels:    Labels(limitadorObj),
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable: limitadorObj.Spec.PodDisruptionBudget.MaxUnavailable,
+			MinAvailable:   limitadorObj.Spec.PodDisruptionBudget.MinAvailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: Labels(limitadorObj),
+			},
+		},
+	}
+}
+
+func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
+func ValidatePDB(pdb *policyv1.PodDisruptionBudget) error {
+	if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MinAvailable != nil {
+		return fmt.Errorf("pdb spec invalid, maxunavailable and minavailable are mutually exclusive")
+	}
+	return nil
+}
+
+func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
+	return map[string]string{
+		"app":                "limitador",
+		"limitador-resource": limitador.ObjectMeta.Name,
+	}
 }
 
 func deploymentContainerCommand(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret, rateLimitHeaders *limitadorv1alpha1.RateLimitHeadersType) []string {
