@@ -55,6 +55,17 @@ func DeploymentReplicasMutator(desired, existing *appsv1.Deployment) bool {
 	return update
 }
 
+func DeploymentContainerListMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	if len(existing.Spec.Template.Spec.Containers) != len(desired.Spec.Template.Spec.Containers) {
+		existing.Spec.Template.Spec.Containers = desired.Spec.Template.Spec.Containers
+		update = true
+	}
+
+	return update
+}
+
 func DeploymentImageMutator(desired, existing *appsv1.Deployment) bool {
 	update := false
 

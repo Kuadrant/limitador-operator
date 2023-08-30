@@ -437,4 +437,51 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 	})
+
+	Context("Modifying limitador deployment objects", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = newLimitador()
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		It("User tries adding side-cars to deployment CR", func() {
+			deploymentObj := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&deploymentObj)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			containerObj := v1.Container{Name: LimitadorNamespace, Image: LimitadorNamespace}
+
+			deploymentObj.Spec.Template.Spec.Containers = append(deploymentObj.Spec.Template.Spec.Containers, containerObj)
+
+			Expect(k8sClient.Update(context.TODO(), &deploymentObj)).Should(Succeed())
+			updateDeploymentObj := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updateDeploymentObj)
+
+				return err == nil && len(updateDeploymentObj.Spec.Template.Spec.Containers) == 1
+			}, timeout, interval).Should(BeTrue())
+
+		})
+	})
 })
