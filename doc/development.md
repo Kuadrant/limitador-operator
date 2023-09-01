@@ -20,7 +20,7 @@
 
 ## Technology stack required for development
 
-* [operator-sdk] version v1.28.0
+* [operator-sdk] version v1.28.1
 * [kind] version v0.20.0
 * [git][git_tool]
 * [go] version 1.20+
