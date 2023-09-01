@@ -80,11 +80,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	specResult, specErr := r.reconcileSpec(ctx, limitadorObj)
-	if specErr == nil && specResult.Requeue {
-		logger.V(1).Info("Reconciling spec not finished. Requeueing.")
-		return specResult, nil
-	}
+	specErr := r.reconcileSpec(ctx, limitadorObj)
 
 	statusResult, statusErr := r.reconcileStatus(ctx, limitadorObj, specErr)
 
@@ -105,24 +101,20 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
+func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
 	if err := r.reconcileService(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	if err := r.reconcileDeployment(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	if err := r.reconcileLimitsConfigMap(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
-	if err := r.reconcilePdb(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
+	return r.reconcilePdb(ctx, limitadorObj)
 }
 
 func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {

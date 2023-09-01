@@ -3,7 +3,7 @@ package limitador
 import (
 	"fmt"
 
-	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"k8s.io/utils/env"
 )
 
 var (
@@ -11,5 +11,5 @@ var (
 )
 
 func GetLimitadorImageVersion() string {
-	return helpers.FetchEnv("RELATED_IMAGE_LIMITADOR", defaultImageVersion)
+	return env.GetString("RELATED_IMAGE_LIMITADOR", defaultImageVersion)
 }

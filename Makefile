@@ -104,7 +104,7 @@ all: build
 ##@ Tools
 
 OPERATOR_SDK = $(PROJECT_PATH)/bin/operator-sdk
-OPERATOR_SDK_VERSION = v1.22.0
+OPERATOR_SDK_VERSION = v1.28.0
 $(OPERATOR_SDK):
 	./utils/install-operator-sdk.sh $(OPERATOR_SDK) $(OPERATOR_SDK_VERSION)
 
@@ -163,7 +163,7 @@ act: $(ACT) ## Download act locally if necessary.
 
 GOLANGCI-LINT = $(PROJECT_PATH)/bin/golangci-lint
 $(GOLANGCI-LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v1.50.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v1.54.2
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.

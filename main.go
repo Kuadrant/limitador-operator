@@ -28,12 +28,12 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/utils/env"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/controllers"
-	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	"github.com/kuadrant/limitador-operator/pkg/log"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
@@ -41,8 +41,8 @@ import (
 
 var (
 	scheme   = k8sruntime.NewScheme()
-	logLevel = helpers.FetchEnv("LOG_LEVEL", "info")
-	logMode  = helpers.FetchEnv("LOG_MODE", "production")
+	logLevel = env.GetString("LOG_LEVEL", "info")
+	logMode  = env.GetString("LOG_MODE", "production")
 )
 
 func init() {

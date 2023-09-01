@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -12,15 +11,6 @@ import (
 const (
 	DeleteTagAnnotation = "limitador.kuadrant.io/delete"
 )
-
-func Contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
 
 func ObjectInfo(obj client.Object) string {
 	return fmt.Sprintf("%s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName())
@@ -44,15 +34,6 @@ func IsObjectTaggedToDelete(obj client.Object) bool {
 
 	annotation, ok := annotations[DeleteTagAnnotation]
 	return ok && annotation == "true"
-}
-
-func FetchEnv(key string, def string) string {
-	val, ok := os.LookupEnv(key)
-	if !ok {
-		return def
-	}
-
-	return val
 }
 
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
