@@ -197,7 +197,7 @@ var _ = Describe("Limitador controller", func() {
 				Equal("/home/limitador/etc/"),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
-				Equal(limitador.LimitsCMNamePrefix + limitadorObj.Name),
+				Equal(limitador.LimitsConfigMapName(limitadorObj)),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
 				// asserts request headers command line arg is not there
@@ -261,7 +261,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
+						Name:      limitador.LimitsConfigMapName(limitadorObj),
 					},
 					&createdConfigMap)
 
@@ -413,7 +413,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
+						Name:      limitador.LimitsConfigMapName(limitadorObj),
 					},
 					&originalCM)
 
@@ -454,7 +454,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitador.LimitsCMNamePrefix + limitadorObj.Name,
+						Name:      limitador.LimitsConfigMapName(limitadorObj),
 					},
 					&updatedLimitadorConfigMap)
 				// wait until the CM has changed

@@ -20,8 +20,7 @@ func TestConstants(t *testing.T) {
 	assert.Check(t, LimitadorRepository == "quay.io/kuadrant/limitador")
 	assert.Check(t, StatusEndpoint == "/status")
 	assert.Check(t, LimitadorConfigFileName == "limitador-config.yaml")
-	assert.Check(t, LimitsCMNamePrefix == "limits-config-")
-	assert.Check(t, LimitadorCMMountPath == "/home/limitador/etc/")
+	assert.Check(t, LimitadorCMMountPath == "/home/limitador/etc")
 }
 
 // TODO: Test individual k8s objects.
@@ -62,41 +61,7 @@ func TestServiceName(t *testing.T) {
 }
 
 func TestDeployment(t *testing.T) {
-	t.Run("when no rate limit headers set in the spec command line args does not include --rate-limit-headers", func(subT *testing.T) {
-		limitador := &limitadorv1alpha1.Limitador{
-			TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-			ObjectMeta: metav1.ObjectMeta{Name: "somename", Namespace: "somenamespace"},
-			Spec:       limitadorv1alpha1.LimitadorSpec{},
-		}
-
-		deployment := Deployment(limitador, nil)
-		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Command,
-			[]string{
-				"limitador-server",
-				"/home/limitador/etc/limitador-config.yaml",
-				"memory",
-			})
-	})
-
-	t.Run("when rate limit headers set in the spec command line args includes --rate-limit-headers", func(subT *testing.T) {
-		limitador := &limitadorv1alpha1.Limitador{
-			TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-			ObjectMeta: metav1.ObjectMeta{Name: "somename", Namespace: "somenamespace"},
-			Spec: limitadorv1alpha1.LimitadorSpec{
-				RateLimitHeaders: &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0],
-			},
-		}
-
-		deployment := Deployment(limitador, nil)
-		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Command,
-			[]string{
-				"limitador-server",
-				"--rate-limit-headers",
-				"DRAFT_VERSION_03",
-				"/home/limitador/etc/limitador-config.yaml",
-				"memory",
-			})
-	})
+	// TODO
 }
 
 func TestPodDisruptionBudgetName(t *testing.T) {

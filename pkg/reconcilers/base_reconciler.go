@@ -155,6 +155,10 @@ func (b *BaseReconciler) ReconcilePodDisruptionBudget(ctx context.Context, desir
 	return b.ReconcileResource(ctx, &policyv1.PodDisruptionBudget{}, desired, mutatefn)
 }
 
+func (b *BaseReconciler) ReconcilePersistentVolumeClaim(ctx context.Context, desired *corev1.PersistentVolumeClaim, mutatefn MutateFn) error {
+	return b.ReconcileResource(ctx, &corev1.PersistentVolumeClaim{}, desired, mutatefn)
+}
+
 func (b *BaseReconciler) GetResource(ctx context.Context, objKey types.NamespacedName, obj client.Object) error {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
