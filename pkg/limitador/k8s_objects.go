@@ -131,6 +131,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 								SuccessThreshold:    1,
 								FailureThreshold:    3,
 							},
+							Resources: *limitador.GetResourceRequirements(),
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "config-file",

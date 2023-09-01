@@ -1,0 +1,2 @@
+ignore:
+  - "**/*.deepcopy.go" # ignore controller-gen generated code
