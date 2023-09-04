@@ -223,6 +223,12 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 			AccessModes: []v1.PersistentVolumeAccessMode{
 				v1.PersistentVolumeAccessMode("ReadWriteOnce"),
 			},
+			Resources: v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					// Default value for resources
+					v1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
 		},
 	}
 
@@ -238,15 +244,12 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 		}
 
 		// Default value for resources
-		resources := resource.MustParse("1Gi")
 		if limitador.Spec.Storage.Disk.PVC.Resources != nil {
-			resources = limitador.Spec.Storage.Disk.PVC.Resources.Requests
-		}
-
-		pvc.Spec.Resources = v1.ResourceRequirements{
-			Requests: v1.ResourceList{
-				v1.ResourceStorage: resources,
-			},
+			pvc.Spec.Resources = v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceStorage: limitador.Spec.Storage.Disk.PVC.Resources.Requests,
+				},
+			}
 		}
 	}
 
