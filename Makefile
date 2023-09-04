@@ -104,7 +104,7 @@ all: build
 ##@ Tools
 
 OPERATOR_SDK = $(PROJECT_PATH)/bin/operator-sdk
-OPERATOR_SDK_VERSION = v1.22.0
+OPERATOR_SDK_VERSION = v1.28.1
 $(OPERATOR_SDK):
 	./utils/install-operator-sdk.sh $(OPERATOR_SDK) $(OPERATOR_SDK_VERSION)
 
@@ -163,7 +163,7 @@ act: $(ACT) ## Download act locally if necessary.
 
 GOLANGCI-LINT = $(PROJECT_PATH)/bin/golangci-lint
 $(GOLANGCI-LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v1.50.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v1.54.2
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.
@@ -278,6 +278,18 @@ bundle: $(OPM) $(YQ) manifests kustomize operator-sdk ## Generate bundle manifes
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 	# Validate bundle manifests
 	$(OPERATOR_SDK) bundle validate ./bundle
+	$(MAKE) bundle-ignore-createdAt
+
+.PHONY: bundle-ignore-createdAt
+bundle-ignore-createdAt:
+	# Since operator-sdk 1.26.0, `make bundle` changes the `createdAt` field from the bundle
+	# even if it is patched:
+	#   https://github.com/operator-framework/operator-sdk/pull/6136
+	# This code checks if only the createdAt field. If is the only change, it is ignored.
+	# Else, it will do nothing.
+	# https://github.com/operator-framework/operator-sdk/issues/6285#issuecomment-1415350333
+	# https://github.com/operator-framework/operator-sdk/issues/6285#issuecomment-1532150678
+	git diff --quiet -I'^    createdAt: ' ./bundle && git checkout ./bundle || true
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
