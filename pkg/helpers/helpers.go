@@ -2,8 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

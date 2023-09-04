@@ -107,7 +107,7 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 	}
 
 	if err := r.reconcilePVC(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	if err := r.reconcileDeployment(ctx, limitadorObj); err != nil {
