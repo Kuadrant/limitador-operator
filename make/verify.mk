@@ -16,3 +16,7 @@ verify-bundle: bundle ## Verify bundle update.
 .PHONY: verify-fmt
 verify-fmt: fmt ## Verify fmt update.
 	git diff --exit-code ./api ./controllers
+
+.PHONY: verify-fmt
+verify-tidy: fmt ## Verify fmt update.
+	git diff --exit-code -- go.mod go.sum
