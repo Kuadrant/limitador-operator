@@ -107,3 +107,32 @@ func DeploymentResourcesMutator(desired, existing *appsv1.Deployment) bool {
 
 	return update
 }
+
+// DeploymentVolumesMutator implements strict Volumes reconcilliation
+// Does not allow manually added volumes
+func DeploymentVolumesMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.Volumes, desired.Spec.Template.Spec.Volumes) {
+		existing.Spec.Template.Spec.Volumes = desired.Spec.Template.Spec.Volumes
+		update = true
+	}
+
+	return update
+}
+
+// DeploymentVolumesMutator implements strict VolumeMounts reconcilliation
+// Does not allow manually added volumeMounts
+func DeploymentVolumeMountsMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	existingContainer := &existing.Spec.Template.Spec.Containers[0]
+	desiredContainer := &desired.Spec.Template.Spec.Containers[0]
+
+	if !reflect.DeepEqual(existingContainer.VolumeMounts, desiredContainer.VolumeMounts) {
+		existingContainer.VolumeMounts = desiredContainer.VolumeMounts
+		update = true
+	}
+
+	return update
+}

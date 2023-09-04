@@ -185,6 +185,8 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentCommandMutator,
 		reconcilers.DeploymentAffinityMutator,
 		reconcilers.DeploymentResourcesMutator,
+		reconcilers.DeploymentVolumesMutator,
+		reconcilers.DeploymentVolumeMountsMutator,
 	)
 
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)

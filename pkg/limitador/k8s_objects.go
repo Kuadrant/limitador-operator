@@ -215,8 +215,9 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   PVCName(limitador),
-			Labels: Labels(limitador),
+			Name:      PVCName(limitador),
+			Namespace: limitador.ObjectMeta.Namespace,
+			Labels:    Labels(limitador),
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{
