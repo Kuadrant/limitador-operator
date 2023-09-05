@@ -188,6 +188,7 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentCommandMutator,
 		reconcilers.DeploymentAffinityMutator,
 		reconcilers.DeploymentResourcesMutator,
+		reconcilers.DeploymentPullSecretMutator,
 	)
 
 	deployment := limitador.Deployment(limitadorObj, storageConfigSecret)

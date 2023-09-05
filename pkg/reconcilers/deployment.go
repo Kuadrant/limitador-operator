@@ -107,3 +107,14 @@ func DeploymentResourcesMutator(desired, existing *appsv1.Deployment) bool {
 
 	return update
 }
+
+func DeploymentPullSecretMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.ImagePullSecrets, desired.Spec.Template.Spec.ImagePullSecrets) {
+		existing.Spec.Template.Spec.ImagePullSecrets = desired.Spec.Template.Spec.ImagePullSecrets
+		update = true
+	}
+
+	return update
+}

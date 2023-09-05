@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 
@@ -208,5 +209,55 @@ func TestLimitadorStatusEquals(t *testing.T) {
 	t.Run("test true if status are the same", func(subT *testing.T) {
 		l := LimitadorStatus{ObservedGeneration: status.ObservedGeneration, Conditions: status.Conditions, Service: status.Service}
 		assert.Equal(subT, l.Equals(status, logr.Logger{}), true)
+	})
+}
+
+func TestLimitadorGetImage(t *testing.T) {
+	var (
+		testImage = "quay.io/test/limitador:nightly"
+	)
+	const envVarImage = "quay.io/env/limitador:custom"
+
+	setEnvVarImage := func(t *testing.T) {
+		if err := os.Setenv(ImageEnvVarKey, envVarImage); err != nil {
+			t.Fatal(err)
+		}
+	}
+	unSetEnvVarImage := func(t *testing.T) {
+		if err := os.Unsetenv(ImageEnvVarKey); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("test default image if not specified in spec", func(subT *testing.T) {
+		l := &Limitador{}
+		assert.Equal(subT, l.GetImage(), DefaultLimitadorImage)
+	})
+
+	t.Run("test image override via env var", func(subT *testing.T) {
+		defer unSetEnvVarImage(subT)
+		setEnvVarImage(subT)
+		l := &Limitador{}
+		assert.Equal(subT, l.GetImage(), envVarImage)
+	})
+
+	t.Run("test image preference via spec over env var and default", func(subT *testing.T) {
+		defer unSetEnvVarImage(subT)
+		setEnvVarImage(subT)
+		l := &Limitador{Spec: LimitadorSpec{Image: &testImage}}
+		assert.Equal(subT, l.GetImage(), testImage)
+	})
+}
+
+func TestLimitadorGetImagePullSecrets(t *testing.T) {
+	t.Run("test nil returned if image not specified in spec", func(subT *testing.T) {
+		l := &Limitador{}
+		assert.DeepEqual(subT, l.GetImagePullSecrets(), []corev1.LocalObjectReference(nil))
+	})
+
+	t.Run("test pull secret returned if specified in spec", func(subT *testing.T) {
+		pullSecret := corev1.LocalObjectReference{Name: "pullSecret"}
+		l := &Limitador{Spec: LimitadorSpec{ImagePullSecret: &pullSecret}}
+		assert.DeepEqual(subT, l.GetImagePullSecrets(), []corev1.LocalObjectReference{pullSecret})
 	})
 }

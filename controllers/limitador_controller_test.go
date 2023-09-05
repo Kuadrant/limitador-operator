@@ -27,12 +27,11 @@ var _ = Describe("Limitador controller", func() {
 	const (
 		LimitadorNamespace             = "default"
 		LimitadorReplicas              = 2
-		LimitadorImage                 = "quay.io/kuadrant/limitador"
-		LimitadorVersion               = "0.3.0"
+		LimitadorImage                 = "quay.io/kuadrant/limitador:0.3.0"
 		LimitadorHTTPPort              = 8000
 		LimitadorGRPCPort              = 8001
 		LimitadorMaxUnavailable        = 1
-		LimitdaorUpdatedMaxUnavailable = 3
+		LimitadorUpdatedMaxUnavailable = 3
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
@@ -47,11 +46,11 @@ var _ = Describe("Limitador controller", func() {
 	}
 	updatedMaxUnavailable := &intstr.IntOrString{
 		Type:   0,
-		IntVal: LimitdaorUpdatedMaxUnavailable,
+		IntVal: LimitadorUpdatedMaxUnavailable,
 	}
 
 	replicas := LimitadorReplicas
-	version := LimitadorVersion
+	image := LimitadorImage
 	httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 	grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
 	affinity := &v1.Affinity{
@@ -104,7 +103,7 @@ var _ = Describe("Limitador controller", func() {
 			},
 			Spec: limitadorv1alpha1.LimitadorSpec{
 				Replicas: &replicas,
-				Version:  &version,
+				Image:    &image,
 				Affinity: affinity,
 				Listener: &limitadorv1alpha1.Listener{
 					HTTP: httpPort,
@@ -186,7 +185,7 @@ var _ = Describe("Limitador controller", func() {
 				Equal((int32)(LimitadorReplicas)),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
-				Equal(LimitadorImage + ":" + LimitadorVersion),
+				Equal(LimitadorImage),
 			)
 			// It should contain at least the limits file
 			Expect(len(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command) > 1).Should(BeTrue())
@@ -308,7 +307,7 @@ var _ = Describe("Limitador controller", func() {
 		It("Should modify the limitador deployment", func() {
 			updatedLimitador := limitadorv1alpha1.Limitador{}
 			replicas = LimitadorReplicas + 1
-			version = "latest"
+			image := "quay.io/test/limitador:nightly"
 			resourceRequirements := &v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceCPU:    resource.MustParse("200m"),
@@ -335,7 +334,8 @@ var _ = Describe("Limitador controller", func() {
 				}
 
 				updatedLimitador.Spec.Replicas = &replicas
-				updatedLimitador.Spec.Version = &version
+				updatedLimitador.Spec.Image = &image
+				updatedLimitador.Spec.ImagePullSecret = &v1.LocalObjectReference{Name: "pullSecret"}
 				updatedLimitador.Spec.ResourceRequirements = resourceRequirements
 				affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 99
 				updatedLimitador.Spec.Affinity = affinity
@@ -358,11 +358,12 @@ var _ = Describe("Limitador controller", func() {
 				}
 
 				correctReplicas := *updatedLimitadorDeployment.Spec.Replicas == LimitadorReplicas+1
-				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == LimitadorImage+":latest"
+				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == image
 				correctResources := reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources, *resourceRequirements)
 				correctAffinity := updatedLimitadorDeployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight == 99
+				correctImagePullSecret := len(updatedLimitadorDeployment.Spec.Template.Spec.ImagePullSecrets) == 1 && updatedLimitadorDeployment.Spec.Template.Spec.ImagePullSecrets[0].Name == updatedLimitador.Spec.ImagePullSecret.Name
 
-				return correctReplicas && correctImage && correctResources && correctAffinity
+				return correctReplicas && correctImage && correctResources && correctAffinity && correctImagePullSecret
 			}, timeout, interval).Should(BeTrue())
 		})
 

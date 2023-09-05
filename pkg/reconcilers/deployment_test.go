@@ -134,3 +134,29 @@ func TestDeploymentResourcesMutator(t *testing.T) {
 		assert.Equal(subT, reconcilers.DeploymentResourcesMutator(deploymentFactory(requirementsA), deploymentFactory(requirementsB)), true)
 	})
 }
+
+func TestDeploymentPullSecretMutator(t *testing.T) {
+	deploymentFactory := func(pullSecret ...corev1.LocalObjectReference) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.PodSpec{
+						ImagePullSecrets: pullSecret,
+					},
+				},
+			},
+		}
+	}
+
+	pullSecretA := corev1.LocalObjectReference{Name: "pullSecretA"}
+	pullSecretB := corev1.LocalObjectReference{Name: "pullSecretB"}
+
+	t.Run("test false when desired and existing are the same", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentPullSecretMutator(deploymentFactory(pullSecretA), deploymentFactory(pullSecretA)), false)
+	})
+
+	t.Run("test true when desired and existing are different", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentPullSecretMutator(deploymentFactory(pullSecretA), deploymentFactory(pullSecretB)), true)
+	})
+}

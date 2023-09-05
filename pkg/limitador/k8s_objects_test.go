@@ -28,7 +28,7 @@ func TestConstants(t *testing.T) {
 func newTestLimitadorObj(name, namespace string, limits []limitadorv1alpha1.RateLimit) *limitadorv1alpha1.Limitador {
 	var (
 		replicas = 1
-		version  = "1.0"
+		image    = "quay.io/kuadrant/limitador:1.0"
 		httpPort = int32(8000)
 		grpcPort = int32(8001)
 	)
@@ -43,7 +43,7 @@ func newTestLimitadorObj(name, namespace string, limits []limitadorv1alpha1.Rate
 		},
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Replicas: &replicas,
-			Version:  &version,
+			Image:    &image,
 			Listener: &limitadorv1alpha1.Listener{
 				HTTP: &limitadorv1alpha1.TransportProtocol{Port: &httpPort},
 				GRPC: &limitadorv1alpha1.TransportProtocol{Port: &grpcPort},

@@ -116,11 +116,6 @@ func (in *LimitadorSpec) DeepCopyInto(out *LimitadorSpec) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.Version != nil {
-		in, out := &in.Version, &out.Version
-		*out = new(string)
-		**out = **in
-	}
 	if in.Listener != nil {
 		in, out := &in.Listener, &out.Listener
 		*out = new(Listener)
@@ -152,6 +147,16 @@ func (in *LimitadorSpec) DeepCopyInto(out *LimitadorSpec) {
 		in, out := &in.ResourceRequirements, &out.ResourceRequirements
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Image != nil {
+		in, out := &in.Image, &out.Image
+		*out = new(string)
+		**out = **in
+	}
+	if in.ImagePullSecret != nil {
+		in, out := &in.ImagePullSecret, &out.ImagePullSecret
+		*out = new(v1.LocalObjectReference)
+		**out = **in
 	}
 }
 

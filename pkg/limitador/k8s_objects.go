@@ -61,11 +61,6 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 		replicas = int32(*limitador.Spec.Replicas)
 	}
 
-	image := GetLimitadorImageVersion()
-	if limitador.Spec.Version != nil {
-		image = fmt.Sprintf("%s:%s", LimitadorRepository, *limitador.Spec.Version)
-	}
-
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -90,7 +85,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 					Containers: []v1.Container{
 						{
 							Name:    "limitador",
-							Image:   image,
+							Image:   limitador.GetImage(),
 							Command: deploymentContainerCommand(limitador.Spec.Storage, storageConfigSecret, limitador.Spec.RateLimitHeaders),
 							Ports: []v1.ContainerPort{
 								{
@@ -142,6 +137,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 							ImagePullPolicy: v1.PullIfNotPresent,
 						},
 					},
+					ImagePullSecrets: limitador.GetImagePullSecrets(),
 					Volumes: []v1.Volume{
 						{
 							Name: "config-file",

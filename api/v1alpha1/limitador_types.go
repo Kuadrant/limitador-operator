@@ -22,20 +22,23 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"k8s.io/utils/env"
 )
 
 const (
-	DefaultServiceHTTPPort int32 = 8080
-	DefaultServiceGRPCPort int32 = 8081
+	DefaultServiceHTTPPort int32  = 8080
+	DefaultServiceGRPCPort int32  = 8081
+	DefaultLimitadorImage  string = "quay.io/kuadrant/limitador:latest"
 
 	// Status conditions
 	StatusConditionReady string = "Ready"
+
+	ImageEnvVarKey = "RELATED_IMAGE_LIMITADOR"
 )
 
 var (
@@ -66,9 +69,6 @@ type LimitadorSpec struct {
 	Replicas *int `json:"replicas,omitempty"`
 
 	// +optional
-	Version *string `json:"version,omitempty"`
-
-	// +optional
 	Listener *Listener `json:"listener,omitempty"`
 
 	// +optional
@@ -85,6 +85,12 @@ type LimitadorSpec struct {
 
 	// +optional
 	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
+
+	// +optional
+	Image *string `json:"image"`
+
+	// +optional
+	ImagePullSecret *corev1.LocalObjectReference `json:"imagePullSecret"`
 }
 
 //+kubebuilder:object:root=true
@@ -133,6 +139,25 @@ func (l *Limitador) GetResourceRequirements() *corev1.ResourceRequirements {
 	}
 
 	return l.Spec.ResourceRequirements
+}
+
+func (l *Limitador) GetImage() string {
+	if l.Spec.Image == nil {
+		return env.GetString(ImageEnvVarKey, DefaultLimitadorImage)
+	}
+
+	return *l.Spec.Image
+}
+
+func (l *Limitador) GetImagePullSecrets() []corev1.LocalObjectReference {
+	var imagePullSecrets []corev1.LocalObjectReference
+	if l.Spec.ImagePullSecret == nil {
+		return nil
+	}
+
+	imagePullSecrets = append(imagePullSecrets, *l.Spec.ImagePullSecret)
+
+	return imagePullSecrets
 }
 
 //+kubebuilder:object:root=true
