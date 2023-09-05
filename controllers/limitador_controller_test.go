@@ -54,6 +54,23 @@ var _ = Describe("Limitador controller", func() {
 	version := LimitadorVersion
 	httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 	grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
+	affinity := &v1.Affinity{
+		PodAntiAffinity: &v1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
+				{
+					Weight: 100,
+					PodAffinityTerm: v1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"pod": "label",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
+	}
 
 	limits := []limitadorv1alpha1.RateLimit{
 		{
@@ -88,6 +105,7 @@ var _ = Describe("Limitador controller", func() {
 			Spec: limitadorv1alpha1.LimitadorSpec{
 				Replicas: &replicas,
 				Version:  &version,
+				Affinity: affinity,
 				Listener: &limitadorv1alpha1.Listener{
 					HTTP: httpPort,
 					GRPC: grpcPort,
@@ -188,6 +206,9 @@ var _ = Describe("Limitador controller", func() {
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources).Should(
 				Equal(*limitadorObj.GetResourceRequirements()))
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Affinity).Should(
+				Equal(affinity),
+			)
 		})
 
 		It("Should create a Limitador service", func() {
@@ -306,6 +327,8 @@ var _ = Describe("Limitador controller", func() {
 				},
 			}
 			updatedLimitador.Spec.ResourceRequirements = resourceRequirements
+			affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 99
+			updatedLimitador.Spec.Affinity = affinity
 
 			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
 			updatedLimitadorDeployment := appsv1.Deployment{}
@@ -325,8 +348,46 @@ var _ = Describe("Limitador controller", func() {
 				correctReplicas := *updatedLimitadorDeployment.Spec.Replicas == LimitadorReplicas+1
 				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == LimitadorImage+":latest"
 				correctResources := reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources, *resourceRequirements)
+				correctAffinity := updatedLimitadorDeployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight == 99
 
-				return correctReplicas && correctImage && correctResources
+				return correctReplicas && correctImage && correctResources && correctAffinity
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("Should modify limitador deployments if nil object set", func() {
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			updatedLimitador.Spec.Affinity = nil
+
+			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+			updatedLimitadorDeployment := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitadorDeployment)
+
+				if err != nil {
+					return false
+				}
+
+				correctAffinity := updatedLimitadorDeployment.Spec.Template.Spec.Affinity == nil
+
+				return correctAffinity
 			}, timeout, interval).Should(BeTrue())
 		})
 

@@ -60,6 +60,9 @@ type LimitadorSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// +optional
 	Replicas *int `json:"replicas,omitempty"`
 
 	// +optional
