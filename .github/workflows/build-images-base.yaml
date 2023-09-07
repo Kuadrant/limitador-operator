@@ -15,6 +15,10 @@ on:
         description: Limitador version
         default: latest
         type: string
+      channels:
+        description: Bundle and catalog channels, comma separated
+        default: preview
+        type: string
   workflow_dispatch:
     inputs:
       operatorVersion:
@@ -28,6 +32,10 @@ on:
       limitadorVersion:
         description: Limitador version
         default: latest
+        type: string
+      channels:
+        description: Bundle and catalog channels, comma separated
+        default: preview
         type: string
 
 env:
@@ -90,8 +98,13 @@ jobs:
       - name: Run make bundle
         id: make-bundle
         run: |
-          make bundle REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
-            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
+          make bundle \
+            REGISTRY=${{ env.IMG_REGISTRY_HOST }} \
+            ORG=${{ env.IMG_REGISTRY_ORG }} \
+            VERSION=${{ env.VERSION }} \
+            IMAGE_TAG=${{ inputs.operatorTag }} \
+            LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
+            CHANNELS=${{ inputs.channels }}
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
