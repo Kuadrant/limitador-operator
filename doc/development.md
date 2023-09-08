@@ -169,6 +169,36 @@ make local-cleanup
 
 ## Run tests
 
+### Unittests
+
+```sh
+make test-unit
+```
+
+Optionally, add `TEST_NAME` makefile variable to run specific test
+
+```sh
+make test-unit TEST_NAME=TestConstants
+```
+
+or even subtest
+
+```sh
+make test-unit TEST_NAME=TestLimitIndexEquals/empty_indexes_are_equal
+```
+
+### Integration tests
+
+Run integration tests
+
+```sh
+make test-integration
+```
+
+### All tests
+
+Run all tests
+
 ```sh
 make test
 ```

@@ -29,6 +29,7 @@ testbin
 
 /catalog/limitador-operator-catalog
 /catalog/limitador-operator-catalog.Dockerfile
+/coverage/
 
 # Vendor dependencies
 vendor

@@ -1,2 +1,55 @@
+# Find more at https://docs.codecov.com/docs/codecovyml-reference
+codecov:
+  bot: "Codecov Bot"
+  max_report_age: 12
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 1
+    wait_for_ci: yes
+
+# Layout of the PR comment produced by Codecov bot
+comment:
+  layout: "header, diff, flags, components, files"
+
+# Find more at https://docs.codecov.com/docs/ignoring-paths
 ignore:
   - "**/*.deepcopy.go" # ignore controller-gen generated code
+
+flag_management:
+  individual_flags:
+    - name: unit
+      paths:
+        - pkg/**
+        - api/**
+      carryforward: true
+    - name: integration
+      paths:
+        - controllers/**
+      carryforward: true
+
+component_management:
+  individual_components:
+    - component_id: api-v1alpha1
+      name: api/v1alpha1 (u)
+      paths:
+        - api/v1alpha1
+    - component_id: helpers
+      name: pkg/helpers (u)
+      paths:
+        - pkg/helpers
+    - component_id: log
+      name: pkg/log (u)
+      paths:
+        - pkg/log
+    - component_id: reconcilers
+      name: pkg/reconcilers (u)
+      paths:
+        - pkg/reconcilers
+    - component_id: limitador
+      name: pkg/limitador (u)
+      paths:
+        - pkg/limitador
+    - component_id: controllers
+      name: controllers (i)
+      paths:
+        - controllers

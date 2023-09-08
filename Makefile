@@ -198,8 +198,23 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) $(ARCH_PARAM) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+.PHONY: clean-cov
+clean-cov: ## Remove coverage reports
+	rm -rf coverage
+
+.PHONY: test
+test: test-unit test-integration ## Run all tests
+
+test-integration: clean-cov generate fmt vet envtest ## Run Integration tests.
+	mkdir -p coverage/integration
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) $(ARCH_PARAM) use $(ENVTEST_K8S_VERSION) -p path)" go test ./controllers... -coverprofile $(PROJECT_PATH)/coverage/integration/cover.out -ginkgo.v -v -timeout 0
+
+ifdef TEST_NAME
+test-unit: TEST_PATTERN := --run $(TEST_NAME)
+endif
+test-unit: clean-cov generate fmt vet ## Run Unit tests.
+	mkdir -p coverage/unit
+	go test ./pkg/... ./api/... -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
 
 ##@ Build
 
