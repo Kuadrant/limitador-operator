@@ -207,7 +207,7 @@ test: test-unit test-integration ## Run all tests
 
 test-integration: clean-cov generate fmt vet envtest ## Run Integration tests.
 	mkdir -p coverage/integration
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) $(ARCH_PARAM) use $(ENVTEST_K8S_VERSION) -p path)" go test ./controllers... -coverprofile $(PROJECT_PATH)/coverage/integration/cover.out -ginkgo.v -ginkgo.progress -v -timeout 0
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) $(ARCH_PARAM) use $(ENVTEST_K8S_VERSION) -p path)" go test ./controllers... -coverprofile $(PROJECT_PATH)/coverage/integration/cover.out -ginkgo.v -v -timeout 0
 
 ifdef TEST_NAME
 test-unit: TEST_PATTERN := --run $(TEST_NAME)
