@@ -1,8 +1,6 @@
 package limitador
 
 import (
-	"context"
-
 	v1 "k8s.io/api/core/v1"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
@@ -13,7 +11,7 @@ const (
 	DiskPath       = "/var/lib/limitador/data"
 )
 
-func DiskDeploymentOptions(ctx context.Context, limObj *limitadorv1alpha1.Limitador, diskObj limitadorv1alpha1.DiskSpec) (DeploymentStorageOptions, error) {
+func DiskDeploymentOptions(limObj *limitadorv1alpha1.Limitador, diskObj limitadorv1alpha1.DiskSpec) (DeploymentStorageOptions, error) {
 	command := []string{"disk"}
 
 	if diskObj.Optimize != nil {

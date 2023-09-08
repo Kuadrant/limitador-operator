@@ -60,7 +60,7 @@ func TestServiceName(t *testing.T) {
 	assert.Equal(t, name, "limitador-my-limitador-instance")
 }
 
-func TestDeployment(t *testing.T) {
+func TestDeployment(_ *testing.T) {
 	// TODO
 }
 

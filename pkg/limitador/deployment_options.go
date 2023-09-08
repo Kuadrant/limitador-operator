@@ -40,7 +40,7 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 	return command
 }
 
-func DeploymentVolumeMounts(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []v1.VolumeMount {
+func DeploymentVolumeMounts(storageOptions DeploymentStorageOptions) []v1.VolumeMount {
 	volumeMounts := []v1.VolumeMount{
 		{
 			Name:      LimitsCMVolumeName,

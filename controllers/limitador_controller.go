@@ -314,7 +314,7 @@ func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *
 	}
 
 	deploymentOptions.Command = limitador.DeploymentCommand(limObj, deploymentStorageOptions)
-	deploymentOptions.VolumeMounts = limitador.DeploymentVolumeMounts(limObj, deploymentStorageOptions)
+	deploymentOptions.VolumeMounts = limitador.DeploymentVolumeMounts(deploymentStorageOptions)
 	deploymentOptions.Volumes = limitador.DeploymentVolumes(limObj, deploymentStorageOptions)
 
 	return deploymentOptions, nil
@@ -331,7 +331,7 @@ func (r *LimitadorReconciler) getDeploymentStorageOptions(ctx context.Context, l
 		}
 
 		if limObj.Spec.Storage.Disk != nil {
-			return limitador.DiskDeploymentOptions(ctx, limObj, *limObj.Spec.Storage.Disk)
+			return limitador.DiskDeploymentOptions(limObj, *limObj.Spec.Storage.Disk)
 		}
 
 		// if all of them are nil, fallback to InMemory
