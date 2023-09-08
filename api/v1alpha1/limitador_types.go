@@ -94,6 +94,8 @@ type Limitador struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="(!has(self.storage) || !has(self.storage.disk)) || (!has(self.replicas) || self.replicas < 2)",message="disk storage does not allow multiple replicas"
 	Spec   LimitadorSpec   `json:"spec,omitempty"`
 	Status LimitadorStatus `json:"status,omitempty"`
 }

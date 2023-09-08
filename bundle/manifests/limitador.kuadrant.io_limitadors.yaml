@@ -1177,6 +1177,10 @@ spec:
               version:
                 type: string
             type: object
+            x-kubernetes-validations:
+            - message: disk storage does not allow multiple replicas
+              rule: (!has(self.storage) || !has(self.storage.disk)) || (!has(self.replicas)
+                || self.replicas < 2)
           status:
             description: LimitadorStatus defines the observed state of Limitador
             properties:

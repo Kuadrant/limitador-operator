@@ -194,7 +194,7 @@ var _ = Describe("Limitador controller", func() {
 				Equal("/home/limitador/etc/limitador-config.yaml"),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).Should(
-				Equal("/home/limitador/etc/"),
+				Equal("/home/limitador/etc"),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
 				Equal(limitador.LimitsConfigMapName(limitadorObj)),
@@ -673,4 +673,36 @@ var _ = Describe("Limitador controller", func() {
 
 		})
 	})
+
+	// This test requires actual k8s cluster
+	// It's testing implementation based on CRD x-kubernetes-validations extentions
+	// used to alidate custom resources using Common Expression Language (CEL)
+	// https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules
+	Context("Disk storage does not allow multiple replicas", func() {
+		AfterEach(func() {
+			limitadorObj := limitadorWithInvalidDiskReplicas()
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
+		})
+
+		It("resource is rejected", func() {
+			limitadorObj := limitadorWithInvalidDiskReplicas()
+			err := k8sClient.Create(context.TODO(), limitadorObj)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+		})
+	})
 })
+
+func limitadorWithInvalidDiskReplicas() *limitadorv1alpha1.Limitador {
+	return &limitadorv1alpha1.Limitador{
+		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-invalid-disk-replicas", Namespace: "default"},
+		Spec: limitadorv1alpha1.LimitadorSpec{
+			Replicas: &[]int{2}[0],
+			Storage: &limitadorv1alpha1.Storage{
+				Disk: &limitadorv1alpha1.DiskSpec{},
+			},
+		},
+	}
+}
