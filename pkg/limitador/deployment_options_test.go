@@ -16,7 +16,7 @@ func TestDeploymentCommand(t *testing.T) {
 			Spec:       limitadorv1alpha1.LimitadorSpec{},
 		}
 
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{})
+		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
 		assert.DeepEqual(subT, command,
 			[]string{
 				"limitador-server",
@@ -34,7 +34,7 @@ func TestDeploymentCommand(t *testing.T) {
 			},
 		}
 
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{})
+		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
 		assert.DeepEqual(subT, command,
 			[]string{
 				"limitador-server",
