@@ -141,8 +141,11 @@ jobs:
         uses: actions/checkout@v3
       - name: Generate Catalog Content
         run: |
-          make catalog REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
-            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
+          make catalog \
+            REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
+            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} \
+            LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
+            CHANNELS=${{ inputs.channels }}
       - name: Install qemu dependency
         run: |
           sudo apt-get update
