@@ -233,3 +233,38 @@ func TestDeploymentVolumeMountsMutator(t *testing.T) {
 		assert.DeepEqual(subT, desired, existing)
 	})
 }
+
+func TestDeploymentCommandMutator(t *testing.T) {
+	deploymentFactory := func(command []string) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Command: command,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	existing := deploymentFactory([]string{"A", "B"})
+
+	desired := deploymentFactory([]string{"C", "D"})
+
+	desiredCopy := desired.DeepCopyObject()
+
+	t.Run("test false when desired and existing are the same", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentCommandMutator(existing, existing), false)
+	})
+
+	t.Run("test true when desired and existing are different", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentCommandMutator(desired, existing), true)
+		assert.DeepEqual(subT, desired, desiredCopy)
+		assert.DeepEqual(subT, desired, existing)
+	})
+}
