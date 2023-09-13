@@ -318,7 +318,6 @@ func TestDeploymentMutator(t *testing.T) {
 		mutatorList := make([]reconcilers.DeploymentMutateFn, 10)
 		for i := 0; i < len(mutatorList); i++ {
 			mutatorList[i] = func(_, _ *appsv1.Deployment) bool { return false }
-
 		}
 
 		mutator := reconcilers.DeploymentMutator(mutatorList...)

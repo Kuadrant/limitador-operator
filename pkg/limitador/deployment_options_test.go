@@ -3,10 +3,11 @@ package limitador
 import (
 	"testing"
 
-	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
 func TestDeploymentCommand(t *testing.T) {
