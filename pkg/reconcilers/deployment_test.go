@@ -268,3 +268,88 @@ func TestDeploymentCommandMutator(t *testing.T) {
 		assert.DeepEqual(subT, desired, existing)
 	})
 }
+
+func TestDeploymentMutator(t *testing.T) {
+	newExistingDeployment := func() *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:    "originalName",
+								Command: []string{"original", "name"},
+								Image:   "example.com/limitador-operator:original",
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("desired object is not deployment", func(subT *testing.T) {
+		emptyMutator := reconcilers.DeploymentMutator()
+		existing := &appsv1.Deployment{}
+		desired := &corev1.Service{}
+		_, err := emptyMutator(existing, desired)
+		assert.Error(subT, err, "*v1.Service is not a *appsv1.Deployment")
+	})
+
+	t.Run("existing object is not deployment", func(subT *testing.T) {
+		emptyMutator := reconcilers.DeploymentMutator()
+		existing := &corev1.Service{}
+		desired := &appsv1.Deployment{}
+		_, err := emptyMutator(existing, desired)
+		assert.Error(subT, err, "*v1.Service is not a *appsv1.Deployment")
+	})
+
+	t.Run("no mutator", func(subT *testing.T) {
+		existing := newExistingDeployment()
+		emptyMutator := reconcilers.DeploymentMutator()
+		updated, err := emptyMutator(existing, &appsv1.Deployment{})
+		assert.NilError(subT, err)
+		assert.Assert(subT, !updated)
+		// object has not been mutated
+		assert.DeepEqual(subT, existing, newExistingDeployment())
+	})
+
+	t.Run("all mutators return false", func(subT *testing.T) {
+		mutatorList := make([]reconcilers.DeploymentMutateFn, 10)
+		for i := 0; i < len(mutatorList); i++ {
+			mutatorList[i] = func(_, _ *appsv1.Deployment) bool { return false }
+
+		}
+
+		mutator := reconcilers.DeploymentMutator(mutatorList...)
+		updated, err := mutator(&appsv1.Deployment{}, &appsv1.Deployment{})
+		assert.NilError(subT, err)
+		assert.Assert(subT, !updated)
+	})
+
+	t.Run("all mutators are applied", func(subT *testing.T) {
+		nameMutator := func(_, existing *appsv1.Deployment) bool {
+			existing.Spec.Template.Spec.Containers[0].Name = "newName"
+			return true
+		}
+		commandMutator := func(_, existing *appsv1.Deployment) bool {
+			existing.Spec.Template.Spec.Containers[0].Command = []string{"new", "command"}
+			return true
+		}
+		imageMutator := func(_, existing *appsv1.Deployment) bool {
+			existing.Spec.Template.Spec.Containers[0].Image = "newImage"
+			return true
+		}
+
+		existing := newExistingDeployment()
+		mutator := reconcilers.DeploymentMutator(
+			nameMutator, commandMutator, imageMutator,
+		)
+		updated, err := mutator(existing, &appsv1.Deployment{})
+		assert.NilError(subT, err)
+		assert.Assert(subT, updated)
+		assert.Equal(subT, existing.Spec.Template.Spec.Containers[0].Name, "newName")
+		assert.DeepEqual(subT, existing.Spec.Template.Spec.Containers[0].Command, []string{"new", "command"})
+		assert.Equal(subT, existing.Spec.Template.Spec.Containers[0].Image, "newImage")
+	})
+}
