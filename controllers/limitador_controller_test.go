@@ -126,10 +126,13 @@ var _ = Describe("Limitador controller", func() {
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
 			limitadorObj.Spec = limitadorv1alpha1.LimitadorSpec{}
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
 		})
 
 		It("Should create a Limitador service with default ports", func() {
@@ -157,10 +160,12 @@ var _ = Describe("Limitador controller", func() {
 
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
 			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
 			Expect(err == nil || errors.IsNotFound(err))
-
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
 		It("Should create a new deployment with the right settings", func() {
@@ -292,30 +297,18 @@ var _ = Describe("Limitador controller", func() {
 
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
 			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
 			Expect(err == nil || errors.IsNotFound(err))
-
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
 		It("Should modify the limitador deployment", func() {
 			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&updatedLimitador)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
 			replicas = LimitadorReplicas + 1
-			updatedLimitador.Spec.Replicas = &replicas
 			version = "latest"
-			updatedLimitador.Spec.Version = &version
 			resourceRequirements := &v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceCPU:    resource.MustParse("200m"),
@@ -326,11 +319,30 @@ var _ = Describe("Limitador controller", func() {
 					v1.ResourceMemory: resource.MustParse("60Mi"),
 				},
 			}
-			updatedLimitador.Spec.ResourceRequirements = resourceRequirements
-			affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 99
-			updatedLimitador.Spec.Affinity = affinity
 
-			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+			// Sometimes there can be a conflict due to stale resource if controller is still reconciling resource
+			// from create event
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+				if err != nil {
+					return false
+				}
+
+				updatedLimitador.Spec.Replicas = &replicas
+				updatedLimitador.Spec.Version = &version
+				updatedLimitador.Spec.ResourceRequirements = resourceRequirements
+				affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 99
+				updatedLimitador.Spec.Affinity = affinity
+
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
+			}, timeout, interval).Should(BeTrue())
+
 			updatedLimitadorDeployment := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -365,12 +377,15 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&updatedLimitador)
 
-				return err == nil
+				if err != nil {
+					return false
+				}
+				updatedLimitador.Spec.Affinity = nil
+
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
+
 			}, timeout, interval).Should(BeTrue())
 
-			updatedLimitador.Spec.Affinity = nil
-
-			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
 			updatedLimitadorDeployment := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -406,18 +421,6 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&updatedLimitador)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
 			newLimits := []limitadorv1alpha1.RateLimit{
 				{
 					Conditions: []string{"req.method == GET"},
@@ -427,8 +430,23 @@ var _ = Describe("Limitador controller", func() {
 					Variables:  []string{"user_id"},
 				},
 			}
-			updatedLimitador.Spec.Limits = newLimits
-			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+
+				updatedLimitador.Spec.Limits = newLimits
+
+				if err != nil {
+					return false
+				}
+
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
+			}, timeout, interval).Should(BeTrue())
 
 			updatedLimitadorConfigMap := v1.ConfigMap{}
 			Eventually(func() bool {
@@ -465,6 +483,7 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			updatedLimitador := limitadorv1alpha1.Limitador{}
+
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
@@ -474,11 +493,13 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&updatedLimitador)
 
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+				if err != nil {
+					return false
+				}
+				updatedLimitador.Spec.PodDisruptionBudget.MaxUnavailable = updatedMaxUnavailable
 
-			updatedLimitador.Spec.PodDisruptionBudget.MaxUnavailable = updatedMaxUnavailable
-			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
+			}, timeout, interval).Should(BeTrue())
 
 			updatedPdb := policyv1.PodDisruptionBudget{}
 			Eventually(func() bool {
@@ -503,10 +524,13 @@ var _ = Describe("Limitador controller", func() {
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
 			limitadorObj.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
 		})
 
 		It("Should create a new deployment with rate limit headers command line arg", func() {
@@ -544,10 +568,13 @@ var _ = Describe("Limitador controller", func() {
 
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
 		})
 
 		It("Should modify the limitador deployment command line args", func() {
@@ -561,13 +588,17 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&updatedLimitador)
 
-				return err == nil
+				if err != nil {
+					return false
+				}
+
+				if updatedLimitador.Spec.RateLimitHeaders != nil {
+					return false
+				}
+				updatedLimitador.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(updatedLimitador.Spec.RateLimitHeaders).Should(BeNil())
-			updatedLimitador.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
-
-			Expect(k8sClient.Update(context.TODO(), &updatedLimitador)).Should(Succeed())
 			Eventually(func() bool {
 				updatedLimitadorDeployment := appsv1.Deployment{}
 				err := k8sClient.Get(
@@ -599,10 +630,12 @@ var _ = Describe("Limitador controller", func() {
 
 		BeforeEach(func() {
 			limitadorObj = newLimitador()
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
 			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
 			Expect(err == nil || errors.IsNotFound(err))
-
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 		})
 
 		It("User tries adding side-cars to deployment CR", func() {
