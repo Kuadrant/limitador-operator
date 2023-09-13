@@ -48,7 +48,7 @@ spec:
 The [Development guide](./doc/development.md) describes how to build the operator and
 how to test your changes before submitting a patch or opening a PR.
 
-Join us on [kuadrant.slack.com](https://kuadrant.slack.com/)
+Join us on the [#kuadrant](https://kubernetes.slack.com/archives/C05J0D0V525) channel in the Kubernetes Slack workspace, 
 for live discussions about the roadmap and more.
 
 ## Licensing
