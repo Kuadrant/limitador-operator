@@ -313,8 +313,8 @@ func TestLimitsConfigMap(t *testing.T) {
 	})
 }
 
-func newDiskStorageLimitador(name, namespace string) *limitadorv1alpha1.Limitador {
-	limObj := newTestLimitadorObj(name, namespace, nil)
+func newDiskStorageLimitador(name string) *limitadorv1alpha1.Limitador {
+	limObj := newTestLimitadorObj(name, "some-ns", nil)
 	limObj.Spec.Storage = &limitadorv1alpha1.Storage{
 		Disk: &limitadorv1alpha1.DiskSpec{},
 	}
@@ -335,24 +335,24 @@ func TestPVC(t *testing.T) {
 	})
 
 	t.Run("labels", func(subT *testing.T) {
-		limObj := newDiskStorageLimitador("some-name", "some-ns")
+		limObj := newDiskStorageLimitador("this-is-resource-name")
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Labels,
 			map[string]string{
 				"app":                "limitador",
-				"limitador-resource": "some-name",
+				"limitador-resource": "this-is-resource-name",
 			})
 	})
 
 	t.Run("RWO access mode", func(subT *testing.T) {
-		limObj := newDiskStorageLimitador("some-name", "some-ns")
+		limObj := newDiskStorageLimitador("some-name")
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Spec.AccessModes,
 			[]v1.PersistentVolumeAccessMode{v1.ReadWriteOnce})
 	})
 
 	t.Run("default resources", func(subT *testing.T) {
-		limObj := newDiskStorageLimitador("some-name", "some-ns")
+		limObj := newDiskStorageLimitador("some-name")
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Spec.Resources.Requests,
 			v1.ResourceList{v1.ResourceStorage: resource.MustParse("1Gi")},
@@ -360,7 +360,7 @@ func TestPVC(t *testing.T) {
 	})
 
 	t.Run("custom resources", func(subT *testing.T) {
-		limObj := newDiskStorageLimitador("some-name", "some-ns")
+		limObj := newDiskStorageLimitador("some-name")
 		limObj.Spec.Storage.Disk.PVC = &limitadorv1alpha1.PVCGenericSpec{
 			Resources: &limitadorv1alpha1.PersistentVolumeClaimResources{
 				Requests: resource.MustParse("100Gi"),
@@ -373,13 +373,13 @@ func TestPVC(t *testing.T) {
 	})
 
 	t.Run("default storage class", func(subT *testing.T) {
-		limObj := newDiskStorageLimitador("some-name", "some-ns")
+		limObj := newDiskStorageLimitador("some-name")
 		pvc := PVC(limObj)
 		assert.Assert(subT, pvc.Spec.StorageClassName == nil)
 	})
 
 	t.Run("custom storage class", func(subT *testing.T) {
-		limObj := newDiskStorageLimitador("some-name", "some-ns")
+		limObj := newDiskStorageLimitador("some-name")
 		limObj.Spec.Storage.Disk.PVC = &limitadorv1alpha1.PVCGenericSpec{
 			StorageClassName: &[]string{"myCustomStorage"}[0],
 		}
