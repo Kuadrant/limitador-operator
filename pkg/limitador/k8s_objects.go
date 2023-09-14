@@ -220,9 +220,7 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 			Labels:    Labels(limitador),
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.PersistentVolumeAccessMode("ReadWriteOnce"),
-			},
+			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					// Default value for resources
