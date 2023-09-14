@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -23,9 +24,14 @@ import (
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 )
 
+const (
+	LimitadorNamespace = "default"
+	timeout            = time.Second * 10
+	interval           = time.Millisecond * 250
+)
+
 var _ = Describe("Limitador controller", func() {
 	const (
-		LimitadorNamespace             = "default"
 		LimitadorReplicas              = 2
 		LimitadorImage                 = "quay.io/kuadrant/limitador"
 		LimitadorVersion               = "0.3.0"
@@ -33,9 +39,6 @@ var _ = Describe("Limitador controller", func() {
 		LimitadorGRPCPort              = 8001
 		LimitadorMaxUnavailable        = 1
 		LimitdaorUpdatedMaxUnavailable = 3
-
-		timeout  = time.Second * 10
-		interval = time.Millisecond * 250
 	)
 
 	httpPortNumber := int32(LimitadorHTTPPort)
@@ -74,14 +77,14 @@ var _ = Describe("Limitador controller", func() {
 
 	limits := []limitadorv1alpha1.RateLimit{
 		{
-			Conditions: []string{"req.method == GET"},
+			Conditions: []string{"req.method == 'GET'"},
 			MaxValue:   10,
 			Namespace:  "test-namespace",
 			Seconds:    60,
 			Variables:  []string{"user_id"},
 		},
 		{
-			Conditions: []string{"req.method == POST"},
+			Conditions: []string{"req.method == 'POST'"},
 			MaxValue:   5,
 			Namespace:  "test-namespace",
 			Seconds:    60,
@@ -676,13 +679,18 @@ var _ = Describe("Limitador controller", func() {
 
 	// This test requires actual k8s cluster
 	// It's testing implementation based on CRD x-kubernetes-validations extentions
-	// used to alidate custom resources using Common Expression Language (CEL)
+	// used to validate custom resources using Common Expression Language (CEL)
 	// https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules
 	Context("Disk storage does not allow multiple replicas", func() {
 		AfterEach(func() {
 			limitadorObj := limitadorWithInvalidDiskReplicas()
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			err := k8sClient.Delete(context.TODO(), limitadorObj)
 			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(func() bool {
+				var l limitadorv1alpha1.Limitador
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("resource is rejected", func() {
@@ -692,16 +700,407 @@ var _ = Describe("Limitador controller", func() {
 			Expect(errors.IsInvalid(err)).To(BeTrue())
 		})
 	})
+
+	Context("Deploying limitador object with redis storage", func() {
+		redisSecret := &v1.Secret{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: LimitadorNamespace},
+			StringData: map[string]string{"URL": "redis://example.com:6379"},
+			Type:       v1.SecretTypeOpaque,
+		}
+
+		BeforeEach(func() {
+			deployRedis()
+
+			err := k8sClient.Create(context.Background(), redisSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() bool {
+				secret := &v1.Secret{}
+				err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(redisSecret), secret)
+				if err != nil {
+					if errors.IsNotFound(err) {
+						fmt.Fprintln(GinkgoWriter, "==== redis secret not found")
+					} else {
+						fmt.Fprintln(GinkgoWriter, "==== cannot read redis secret", "error", err)
+					}
+
+					return false
+				}
+
+				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		AfterEach(func() {
+			unDeployRedis()
+			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret))
+			err := k8sClient.Delete(context.TODO(), limitadorObj)
+			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(func() bool {
+				var l limitadorv1alpha1.Limitador
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+
+			err = k8sClient.Delete(context.TODO(), redisSecret)
+			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(func() bool {
+				var s v1.Secret
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(redisSecret), &s)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("command line is correct", func() {
+			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret))
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+
+			deploymentObj := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&deploymentObj)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+				Equal(
+					[]string{
+						"limitador-server",
+						"/home/limitador/etc/limitador-config.yaml",
+						"redis",
+						"redis://example.com:6379",
+					},
+				),
+			)
+		})
+	})
+
+	Context("Deploying limitador object with redis cached storage", func() {
+		redisSecret := &v1.Secret{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: LimitadorNamespace},
+			StringData: map[string]string{"URL": "redis://example.com:6379"},
+			Type:       v1.SecretTypeOpaque,
+		}
+
+		BeforeEach(func() {
+			deployRedis()
+
+			err := k8sClient.Create(context.Background(), redisSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() bool {
+				secret := &v1.Secret{}
+				err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(redisSecret), secret)
+				if err != nil {
+					if errors.IsNotFound(err) {
+						fmt.Fprintln(GinkgoWriter, "redis secret not found")
+					} else {
+						fmt.Fprintln(GinkgoWriter, "cannot read redis secret", "error", err)
+					}
+
+					return false
+				}
+
+				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		AfterEach(func() {
+			unDeployRedis()
+			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret))
+			err := k8sClient.Delete(context.TODO(), limitadorObj)
+			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(func() bool {
+				var l limitadorv1alpha1.Limitador
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+
+			err = k8sClient.Delete(context.TODO(), redisSecret)
+			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(func() bool {
+				var s v1.Secret
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(redisSecret), &s)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+
+		})
+
+		It("command line is correct", func() {
+			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret))
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+
+			deploymentObj := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&deploymentObj)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+				Equal(
+					[]string{
+						"limitador-server",
+						"/home/limitador/etc/limitador-config.yaml",
+						"redis_cached",
+						"redis://example.com:6379",
+						"--ttl", "1",
+						"--ratio", "2",
+						"--flush-period", "3",
+						"--max-cached", "4",
+					},
+				),
+			)
+		})
+	})
+
+	Context("Deploying limitador object with disk storage", func() {
+		AfterEach(func() {
+			limitadorObj := limitadorWithDiskStorage()
+			err := k8sClient.Delete(context.TODO(), limitadorObj)
+			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(func() bool {
+				var l limitadorv1alpha1.Limitador
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
+				return errors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("deployment is correct", func() {
+			limitadorObj := limitadorWithDiskStorage()
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+
+			deploymentObj := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&deploymentObj)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(len(deploymentObj.Spec.Template.Spec.Volumes)).To(Equal(2))
+			Expect(deploymentObj.Spec.Template.Spec.Volumes[1]).To(
+				Equal(
+					v1.Volume{
+						Name: limitador.DiskVolumeName,
+						VolumeSource: v1.VolumeSource{
+							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+								ClaimName: limitador.PVCName(limitadorObj),
+								ReadOnly:  false,
+							},
+						},
+					},
+				))
+
+			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+				Equal(
+					[]string{
+						"limitador-server",
+						"/home/limitador/etc/limitador-config.yaml",
+						"disk",
+						limitador.DiskPath,
+					},
+				),
+			)
+			Expect(len(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts)).To(Equal(2))
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts[1]).To(
+				Equal(
+					v1.VolumeMount{
+						ReadOnly:  false,
+						Name:      limitador.DiskVolumeName,
+						MountPath: limitador.DiskPath,
+					},
+				),
+			)
+		})
+
+		It("pvc is correct", func() {
+			limitadorObj := limitadorWithDiskStorage()
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+
+			pvc := &v1.PersistentVolumeClaim{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Name:      limitador.PVCName(limitadorObj),
+						Namespace: LimitadorNamespace,
+					},
+					pvc)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(len(pvc.GetOwnerReferences())).To(Equal(1))
+		})
+	})
 })
+
+func limitadorWithRedisStorage(redisKey client.ObjectKey) *limitadorv1alpha1.Limitador {
+	return &limitadorv1alpha1.Limitador{
+		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-redis-storage", Namespace: LimitadorNamespace},
+		Spec: limitadorv1alpha1.LimitadorSpec{
+			Storage: &limitadorv1alpha1.Storage{
+				Redis: &limitadorv1alpha1.Redis{
+					ConfigSecretRef: &v1.ObjectReference{
+						Name:      redisKey.Name,
+						Namespace: redisKey.Namespace,
+					},
+				},
+			},
+		},
+	}
+}
+
+func limitadorWithRedisCachedStorage(key client.ObjectKey) *limitadorv1alpha1.Limitador {
+	return &limitadorv1alpha1.Limitador{
+		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-redis-cached-storage", Namespace: LimitadorNamespace},
+		Spec: limitadorv1alpha1.LimitadorSpec{
+			Storage: &limitadorv1alpha1.Storage{
+				RedisCached: &limitadorv1alpha1.RedisCached{
+					ConfigSecretRef: &v1.ObjectReference{
+						Name:      key.Name,
+						Namespace: key.Namespace,
+					},
+					Options: &limitadorv1alpha1.RedisCachedOptions{
+						TTL:         &[]int{1}[0],
+						Ratio:       &[]int{2}[0],
+						FlushPeriod: &[]int{3}[0],
+						MaxCached:   &[]int{4}[0],
+					},
+				},
+			},
+		},
+	}
+}
+
+func limitadorWithDiskStorage() *limitadorv1alpha1.Limitador {
+	return &limitadorv1alpha1.Limitador{
+		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-disk-storage", Namespace: LimitadorNamespace},
+		Spec: limitadorv1alpha1.LimitadorSpec{
+			Storage: &limitadorv1alpha1.Storage{
+				Disk: &limitadorv1alpha1.DiskSpec{},
+			},
+		},
+	}
+}
 
 func limitadorWithInvalidDiskReplicas() *limitadorv1alpha1.Limitador {
 	return &limitadorv1alpha1.Limitador{
 		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-invalid-disk-replicas", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-invalid-disk-replicas", Namespace: LimitadorNamespace},
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Replicas: &[]int{2}[0],
 			Storage: &limitadorv1alpha1.Storage{
 				Disk: &limitadorv1alpha1.DiskSpec{},
+			},
+		},
+	}
+}
+
+func deployRedis() {
+	deployment := redisDeployment()
+	Expect(k8sClient.Create(context.TODO(), deployment)).Should(Succeed())
+	Eventually(func() bool {
+		d := &appsv1.Deployment{}
+		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(deployment), d)
+		return err == nil
+	}, timeout, interval).Should(BeTrue())
+
+	service := redisService()
+	Expect(k8sClient.Create(context.TODO(), service)).Should(Succeed())
+	Eventually(func() bool {
+		s := &v1.Service{}
+		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(service), s)
+		return err == nil
+	}, timeout, interval).Should(BeTrue())
+}
+
+func unDeployRedis() {
+	deployment := redisDeployment()
+	err := k8sClient.Delete(context.TODO(), deployment)
+	Expect(err == nil || errors.IsNotFound(err))
+	Eventually(func() bool {
+		var d appsv1.Deployment
+		err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(deployment), &d)
+		return errors.IsNotFound(err)
+	}, timeout, interval).Should(BeTrue())
+
+	service := redisService()
+	err = k8sClient.Delete(context.TODO(), service)
+	Expect(err == nil || errors.IsNotFound(err))
+	Eventually(func() bool {
+		s := &v1.Service{}
+		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(service), s)
+		return errors.IsNotFound(err)
+	}, timeout, interval).Should(BeTrue())
+}
+
+func redisDeployment() *appsv1.Deployment {
+	return &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "redis",
+			Namespace: LimitadorNamespace,
+			Labels:    map[string]string{"app": "redis"},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": "redis"},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": "redis"},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{Name: "redis", Image: "redis"}},
+				},
+			},
+		},
+	}
+}
+
+func redisService() *v1.Service {
+	return &v1.Service{
+		TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "redis",
+			Namespace: LimitadorNamespace,
+		},
+		Spec: v1.ServiceSpec{
+			Selector: map[string]string{"app": "redis"},
+			Ports: []v1.ServicePort{
+				{
+					Name:       "redis",
+					Protocol:   v1.ProtocolTCP,
+					Port:       6379,
+					TargetPort: intstr.FromInt(6379),
+				},
 			},
 		},
 	}
