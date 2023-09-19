@@ -3,21 +3,24 @@ package limitador
 import (
 	"path/filepath"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
 type DeploymentOptions struct {
-	Command      []string
-	VolumeMounts []v1.VolumeMount
-	Volumes      []v1.Volume
+	Command            []string
+	VolumeMounts       []v1.VolumeMount
+	Volumes            []v1.Volume
+	DeploymentStrategy appsv1.DeploymentStrategy
 }
 
 type DeploymentStorageOptions struct {
-	Command      []string
-	VolumeMounts []v1.VolumeMount
-	Volumes      []v1.Volume
+	Command            []string
+	VolumeMounts       []v1.VolumeMount
+	Volumes            []v1.Volume
+	DeploymentStrategy appsv1.DeploymentStrategy
 }
 
 const (

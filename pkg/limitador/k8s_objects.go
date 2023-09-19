@@ -77,6 +77,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
+			Strategy: deploymentOptions.DeploymentStrategy,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: Labels(limitador),
 			},

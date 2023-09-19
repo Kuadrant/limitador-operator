@@ -1,6 +1,7 @@
 package limitador
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
@@ -24,6 +25,11 @@ func DiskDeploymentOptions(limObj *limitadorv1alpha1.Limitador, diskObj limitado
 		Command:      command,
 		VolumeMounts: diskVolumeMounts(),
 		Volumes:      diskVolumes(limObj),
+		// Disk storage requires killing all existing pods before creating a new one, as the PV canont be shared.
+		// Limitador adds a lock to the disk. If the lock is not released before the new pod is created,
+		// the new pod will panic and never start. Seen error:
+		// thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error { message: "IO error: While lock file: /var/lib/limitador/data/LOCK: Resource temporarily unavailable" }', /usr/src/limitador/limitador/src/storage/disk/rocksdb_storage.rs:155:40
+		DeploymentStrategy: appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 	}, nil
 }
 

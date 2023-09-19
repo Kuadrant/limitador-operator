@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gotest.tools/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,6 +41,7 @@ func TestDiskDeploymentOptions(t *testing.T) {
 						},
 					},
 				},
+				DeploymentStrategy: appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 			})
 	})
 
@@ -67,6 +69,7 @@ func TestDiskDeploymentOptions(t *testing.T) {
 						},
 					},
 				},
+				DeploymentStrategy: appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType},
 			})
 	})
 }
