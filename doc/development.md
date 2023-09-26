@@ -24,8 +24,8 @@
 * [kind] version v0.20.0
 * [git][git_tool]
 * [go] version 1.20+
-* [kubernetes] version v1.26+
-* [kubectl] version v1.26+
+* [kubernetes] version v1.25+
+* [kubectl] version v1.25+
 
 ## Build
 
