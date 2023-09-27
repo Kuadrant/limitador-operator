@@ -88,6 +88,11 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(IMAGE_TAG)
 # Image URL to use all building/pushing image targets
 DEFAULT_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_TAG)
 IMG ?= $(DEFAULT_IMG)
+
+# Limitador Operator replaced version
+DEFAULT_REPLACES_VERSION = 0.0.0-alpha
+REPLACES_VERSION ?= $(DEFAULT_REPLACES_VERSION)
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.22
 
@@ -289,6 +294,7 @@ bundle: $(OPM) $(YQ) manifests kustomize operator-sdk ## Generate bundle manifes
 	V="limitador-operator.v$(BUNDLE_VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	V="$(BUNDLE_VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	V="$(IMG)" $(YQ) eval '.metadata.annotations.containerImage = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
+	V="limitador-operator.v$(REPLACES_VERSION)" $(YQ) eval '.spec.replaces = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	# Generate bundle
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 	# Validate bundle manifests
