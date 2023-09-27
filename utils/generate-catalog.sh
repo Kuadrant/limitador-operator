@@ -12,6 +12,7 @@ DEFAULT_CHANNEL=preview
 OPM="${1?:Error \$OPM not set. Bye}"
 YQ="${2?:Error \$YQ not set. Bye}"
 BUNDLE_IMG="${3?:Error \$BUNDLE_IMG not set. Bye}"
+REPLACES="${3?:Error \$REPLACES not set. Bye}"
 CHANNELS="${4:-$DEFAULT_CHANNEL}"
 CATALOG_FILE="${5?:Error \$CATALOG_FILE not set. Bye}"
 
@@ -34,7 +35,8 @@ ${OPM} init limitador-operator --default-channel=${CHANNELS} --output yaml >> ${
 cat ${TMP_DIR}/limitador-operator-bundle.yaml >> ${CATALOG_FILE}
 # Add a channel entry for the bundle
 V=`${YQ} eval '.name' ${TMP_DIR}/limitador-operator-bundle.yaml` \
+REPLACES=limitador-operator.v${REPLACES_VERSION} \
 CHANNELS=${CHANNELS} \
-    ${YQ} eval '(.entries[0].name = strenv(V)) | (.name = strenv(CHANNELS))' ${CATALOG_BASEDIR}/limitador-operator-channel-entry.yaml >> ${CATALOG_FILE}
+    ${YQ} eval '(.entries[0].name = strenv(V)) | (.entries[0].replaces = strenv(REPLACES)) | (.name = strenv(CHANNELS))' ${CATALOG_BASEDIR}/limitador-operator-channel-entry.yaml >> ${CATALOG_FILE}
 
 rm -rf $TMP_DIR
