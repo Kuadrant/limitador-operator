@@ -15,6 +15,10 @@ on:
         description: Limitador version
         default: latest
         type: string
+      replacesVersion:
+        description: Limitador Operator replaced version
+        default: 0.0.0-alpha
+        type: string
       channels:
         description: Bundle and catalog channels, comma separated
         default: preview
@@ -32,6 +36,10 @@ on:
       limitadorVersion:
         description: Limitador version
         default: latest
+        type: string
+      replacesVersion:
+        description: Limitador Operator replaced version
+        default: 0.0.0-alpha
         type: string
       channels:
         description: Bundle and catalog channels, comma separated
@@ -104,6 +112,7 @@ jobs:
             VERSION=${{ env.VERSION }} \
             IMAGE_TAG=${{ inputs.operatorTag }} \
             LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
+            REPLACES_VERSION=${{ inputs.replacesVersion }} \
             CHANNELS=${{ inputs.channels }}
       - name: Build Image
         id: build-image
@@ -145,6 +154,7 @@ jobs:
             REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
             VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} \
             LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
+            REPLACES_VERSION=${{ inputs.replacesVersion }} \
             CHANNELS=${{ inputs.channels }}
       - name: Install qemu dependency
         run: |
