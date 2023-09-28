@@ -137,9 +137,13 @@ The `make catalog` target accepts the following variables:
 | **Makefile Variable** | **Description**           | **Default value**                                   |
 |-----------------------|---------------------------|-----------------------------------------------------|
 | `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
+| `REPLACES_VERSION`    | Previous operator version | `0.0.0-alpha`                                       |
+| `CHANNELS`            | Catalog channels          | `preview`                                           |
 
 ```sh
-make catalog [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
+make catalog [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest] \
+             [REPLACES_VERSION=0.0.0-alpha] \
+             [CHANNELS=preview]
 ```
 
 * Build the catalog image from the manifests
