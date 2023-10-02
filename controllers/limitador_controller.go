@@ -45,10 +45,9 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
-//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=services;configmaps;secrets;persistentvolumeclaims,verbs=get;list;watch;create;update;delete
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
@@ -103,6 +102,10 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 
 func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
 	if err := r.reconcileService(ctx, limitadorObj); err != nil {
+		return err
+	}
+
+	if err := r.reconcilePVC(ctx, limitadorObj); err != nil {
 		return err
 	}
 
@@ -165,16 +168,9 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		return err
 	}
 
-	limitadorStorage := limitadorObj.Spec.Storage
-	var storageConfigSecret *v1.Secret
-	if limitadorStorage != nil {
-		if limitadorStorage.Validate() {
-			if storageConfigSecret, err = getStorageConfigSecret(ctx, r.Client(), limitadorObj.Namespace, limitadorStorage.SecretRef()); err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("there's no ConfigSecretRef set")
-		}
+	deploymentOptions, err := r.getDeploymentOptions(ctx, limitadorObj)
+	if err != nil {
+		return err
 	}
 
 	deploymentMutators := make([]reconcilers.DeploymentMutateFn, 0)
@@ -188,9 +184,11 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentCommandMutator,
 		reconcilers.DeploymentAffinityMutator,
 		reconcilers.DeploymentResourcesMutator,
+		reconcilers.DeploymentVolumesMutator,
+		reconcilers.DeploymentVolumeMountsMutator,
 	)
 
-	deployment := limitador.Deployment(limitadorObj, storageConfigSecret)
+	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
 		return err
@@ -225,6 +223,28 @@ func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj
 	return nil
 }
 
+func (r *LimitadorReconciler) reconcilePVC(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	pvc := limitador.PVC(limitadorObj)
+	// controller reference
+	if err := r.SetOwnerReference(limitadorObj, pvc); err != nil {
+		return err
+	}
+
+	// Not reconciling updates PVCs for now.
+	err = r.ReconcilePersistentVolumeClaim(ctx, pvc, reconcilers.CreateOnlyMutator)
+	logger.V(1).Info("reconcile pvc", "error", err)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
@@ -247,16 +267,6 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 	}
 
 	return nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&limitadorv1alpha1.Limitador{}).
-		Owns(&appsv1.Deployment{}).
-		Owns(&v1.ConfigMap{}).
-		Owns(&policyv1.PodDisruptionBudget{}).
-		Complete(r)
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
@@ -295,26 +305,48 @@ func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) 
 	return updated, nil
 }
 
-func getStorageConfigSecret(ctx context.Context, client client.Client, limitadorNamespace string, secretRef *v1.ObjectReference) (*v1.Secret, error) {
-	storageConfigSecret := &v1.Secret{}
-	if err := client.Get(
-		ctx,
-		types.NamespacedName{
-			Name: secretRef.Name,
-			Namespace: func() string {
-				if secretRef.Namespace != "" {
-					return secretRef.Namespace
-				}
-				return limitadorNamespace
-			}(),
-		},
-		storageConfigSecret,
-	); err != nil {
-		return nil, err
+func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *limitadorv1alpha1.Limitador) (limitador.DeploymentOptions, error) {
+	deploymentOptions := limitador.DeploymentOptions{}
+
+	deploymentStorageOptions, err := r.getDeploymentStorageOptions(ctx, limObj)
+	if err != nil {
+		return deploymentOptions, err
 	}
 
-	if len(storageConfigSecret.Data) > 0 && storageConfigSecret.Data["URL"] != nil {
-		return storageConfigSecret, nil
+	deploymentOptions.Command = limitador.DeploymentCommand(limObj, deploymentStorageOptions)
+	deploymentOptions.VolumeMounts = limitador.DeploymentVolumeMounts(deploymentStorageOptions)
+	deploymentOptions.Volumes = limitador.DeploymentVolumes(limObj, deploymentStorageOptions)
+	deploymentOptions.DeploymentStrategy = deploymentStorageOptions.DeploymentStrategy
+
+	return deploymentOptions, nil
+}
+
+func (r *LimitadorReconciler) getDeploymentStorageOptions(ctx context.Context, limObj *limitadorv1alpha1.Limitador) (limitador.DeploymentStorageOptions, error) {
+	if limObj.Spec.Storage != nil {
+		if limObj.Spec.Storage.Redis != nil {
+			return limitador.RedisDeploymentOptions(ctx, r.Client(), limObj.Namespace, *limObj.Spec.Storage.Redis)
+		}
+
+		if limObj.Spec.Storage.RedisCached != nil {
+			return limitador.RedisCachedDeploymentOptions(ctx, r.Client(), limObj.Namespace, *limObj.Spec.Storage.RedisCached)
+		}
+
+		if limObj.Spec.Storage.Disk != nil {
+			return limitador.DiskDeploymentOptions(limObj, *limObj.Spec.Storage.Disk)
+		}
+
+		// if all of them are nil, fallback to InMemory
 	}
-	return nil, errors.NewBadRequest("the storage config Secret doesn't have the `URL` field")
+
+	return limitador.InMemoryDeploymentOptions()
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&limitadorv1alpha1.Limitador{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&v1.ConfigMap{}).
+		Owns(&policyv1.PodDisruptionBudget{}).
+		Complete(r)
 }

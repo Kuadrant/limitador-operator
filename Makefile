@@ -285,7 +285,7 @@ rm -rf $$TMP_DIR ;\
 endef
 
 .PHONY: bundle
-bundle: $(OPM) $(YQ) manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+bundle: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	# Set desired operator image and related limitador image
 	V="$(RELATED_IMAGE_LIMITADOR)" $(YQ) eval '(select(.kind == "Deployment").spec.template.spec.containers[].env[] | select(.name == "RELATED_IMAGE_LIMITADOR").value) = strenv(V)' -i config/manager/manager.yaml

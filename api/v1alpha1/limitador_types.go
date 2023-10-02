@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -95,6 +94,8 @@ type Limitador struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="(!has(self.storage) || !has(self.storage.disk)) || (!has(self.replicas) || self.replicas < 2)",message="disk storage does not allow multiple replicas"
 	Spec   LimitadorSpec   `json:"spec,omitempty"`
 	Status LimitadorStatus `json:"status,omitempty"`
 }
@@ -148,16 +149,6 @@ type LimitadorList struct {
 // +kubebuilder:validation:Enum=NONE;DRAFT_VERSION_03
 type RateLimitHeadersType string
 
-// StorageType defines the valid options for storage
-// +kubebuilder:validation:Enum=memory;redis;redis_cached
-type StorageType string
-
-const (
-	StorageTypeInMemory    StorageType = "memory"
-	StorageTypeRedis       StorageType = "redis"
-	StorageTypeRedisCached StorageType = "redis_cached"
-)
-
 // Storage contains the options for Limitador counters database or in-memory data storage
 type Storage struct {
 	// +optional
@@ -165,47 +156,9 @@ type Storage struct {
 
 	// +optional
 	RedisCached *RedisCached `json:"redis-cached,omitempty"`
-}
 
-func (s *Storage) Validate() bool {
-	return s.Redis != nil && s.Redis.ConfigSecretRef != nil ||
-		s.RedisCached != nil && s.RedisCached.ConfigSecretRef != nil
-}
-
-func (s *Storage) SecretRef() *corev1.ObjectReference {
-	if s.Redis != nil {
-		return s.Redis.ConfigSecretRef
-	}
-	return s.RedisCached.ConfigSecretRef
-}
-
-func (s *Storage) Config(url string) []string {
-	if s.Redis != nil {
-		return []string{string(StorageTypeRedis), url}
-	}
-
-	if s.RedisCached != nil {
-		params := []string{string(StorageTypeRedisCached), url}
-
-		if s.RedisCached.Options != nil {
-			options := reflect.ValueOf(*s.RedisCached.Options)
-			typesOf := options.Type()
-			for i := 0; i < options.NumField(); i++ {
-				if !options.Field(i).IsNil() {
-					var value interface{} = options.Field(i).Elem()
-					params = append(
-						params,
-						fmt.Sprintf(
-							"--%s %d",
-							helpers.ToKebabCase(typesOf.Field(i).Name),
-							value))
-				}
-			}
-		}
-		return params
-	}
-
-	return []string{string(StorageTypeInMemory)}
+	// +optional
+	Disk *DiskSpec `json:"disk,omitempty"`
 }
 
 type Redis struct {
@@ -239,6 +192,44 @@ type RedisCached struct {
 
 	// +optional
 	Options *RedisCachedOptions `json:"options,omitempty"`
+}
+
+// PersistentVolumeClaimResources defines the resources configuration
+// of the backup data destination PersistentVolumeClaim
+type PersistentVolumeClaimResources struct {
+	// Storage Resource requests to be used on the PersistentVolumeClaim.
+	// To learn more about resource requests see:
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	Requests resource.Quantity `json:"requests"` // Should this be a string or a resoure.Quantity? it seems it is serialized as a string
+}
+
+type PVCGenericSpec struct {
+	// +optional
+	StorageClassName *string `json:"storageClassName,omitempty"`
+	// Resources represents the minimum resources the volume should have.
+	// Ignored when VolumeName field is set
+	// +optional
+	Resources *PersistentVolumeClaimResources `json:"resources,omitempty"`
+	// VolumeName is the binding reference to the PersistentVolume backing this claim.
+	// +optional
+	VolumeName *string `json:"volumeName,omitempty"`
+}
+
+// DiskOptimizeType defines the valid options for "optimize" option of the disk persistence type
+// +kubebuilder:validation:Enum=throughput;disk
+type DiskOptimizeType string
+
+const (
+	DiskOptimizeTypeThroughput DiskOptimizeType = "throughput"
+	DiskOptimizeTypeDisk       DiskOptimizeType = "disk"
+)
+
+type DiskSpec struct {
+	// +optional
+	PVC *PVCGenericSpec `json:"persistentVolumeClaim,omitempty"`
+
+	// +optional
+	Optimize *DiskOptimizeType `json:"optimize,omitempty"`
 }
 
 type Listener struct {
@@ -292,6 +283,21 @@ type Ports struct {
 	GRPC int32 `json:"grpc,omitempty"`
 }
 
+type PodDisruptionBudgetType struct {
+	// An eviction is allowed if at most "maxUnavailable" limitador pods
+	// are unavailable after the eviction, i.e. even in absence of
+	// the evicted pod. For example, one can prevent all voluntary evictions
+	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// An eviction is allowed if at least "minAvailable" limitador pods will
+	// still be available after the eviction, i.e. even in the absence of
+	// the evicted pod.  So for example you can prevent all voluntary
+	// evictions by specifying "100%".
+	// +optional
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+}
+
 func (s *LimitadorStatus) Equals(other *LimitadorStatus, logger logr.Logger) bool {
 	if s.ObservedGeneration != other.ObservedGeneration {
 		diff := cmp.Diff(s.ObservedGeneration, other.ObservedGeneration)
@@ -319,19 +325,4 @@ func (s *LimitadorStatus) Equals(other *LimitadorStatus, logger logr.Logger) boo
 
 func init() {
 	SchemeBuilder.Register(&Limitador{}, &LimitadorList{})
-}
-
-type PodDisruptionBudgetType struct {
-	// An eviction is allowed if at most "maxUnavailable" limitador pods
-	// are unavailable after the eviction, i.e. even in absence of
-	// the evicted pod. For example, one can prevent all voluntary evictions
-	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
-	// +optional
-	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
-	// An eviction is allowed if at least "minAvailable" limitador pods will
-	// still be available after the eviction, i.e. even in the absence of
-	// the evicted pod.  So for example you can prevent all voluntary
-	// evictions by specifying "100%".
-	// +optional
-	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 }

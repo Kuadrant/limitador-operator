@@ -6,20 +6,19 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 )
 
 const (
-	DefaultReplicas         = 1
-	LimitadorRepository     = "quay.io/kuadrant/limitador"
-	StatusEndpoint          = "/status"
-	LimitadorConfigFileName = "limitador-config.yaml"
-	LimitsCMNamePrefix      = "limits-config-"
-	LimitadorCMMountPath    = "/home/limitador/etc/"
+	DefaultReplicas     = 1
+	LimitadorRepository = "quay.io/kuadrant/limitador"
+	StatusEndpoint      = "/status"
 )
 
 func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
@@ -55,7 +54,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 	}
 }
 
-func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.Secret) *appsv1.Deployment {
+func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions DeploymentOptions) *appsv1.Deployment {
 	var replicas int32 = DefaultReplicas
 	if limitador.Spec.Replicas != nil {
 		replicas = int32(*limitador.Spec.Replicas)
@@ -78,6 +77,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
+			Strategy: deploymentOptions.DeploymentStrategy,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: Labels(limitador),
 			},
@@ -91,7 +91,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 						{
 							Name:    "limitador",
 							Image:   image,
-							Command: deploymentContainerCommand(limitador.Spec.Storage, storageConfigSecret, limitador.Spec.RateLimitHeaders),
+							Command: deploymentOptions.Command,
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
@@ -132,36 +132,20 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, storageConfigSecret *v1.
 								SuccessThreshold:    1,
 								FailureThreshold:    3,
 							},
-							Resources: *limitador.GetResourceRequirements(),
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "config-file",
-									MountPath: LimitadorCMMountPath,
-								},
-							},
+							Resources:       *limitador.GetResourceRequirements(),
+							VolumeMounts:    deploymentOptions.VolumeMounts,
 							ImagePullPolicy: v1.PullIfNotPresent,
 						},
 					},
-					Volumes: []v1.Volume{
-						{
-							Name: "config-file",
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &v1.ConfigMapVolumeSource{
-									LocalObjectReference: v1.LocalObjectReference{
-										Name: LimitsCMNamePrefix + limitador.Name,
-									},
-								},
-							},
-						},
-					},
+					Volumes: deploymentOptions.Volumes,
 				},
 			},
 		},
 	}
 }
 
-func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, error) {
-	limitsMarshalled, marshallErr := yaml.Marshal(limitador.Limits())
+func LimitsConfigMap(limitadorObj *limitadorv1alpha1.Limitador) (*v1.ConfigMap, error) {
+	limitsMarshalled, marshallErr := yaml.Marshal(limitadorObj.Limits())
 	if marshallErr != nil {
 		return nil, marshallErr
 	}
@@ -171,14 +155,22 @@ func LimitsConfigMap(limitador *limitadorv1alpha1.Limitador) (*v1.ConfigMap, err
 			LimitadorConfigFileName: string(limitsMarshalled),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      LimitsCMNamePrefix + limitador.Name,
-			Namespace: limitador.Namespace,
-			Labels:    Labels(limitador),
+			Name:      LimitsConfigMapName(limitadorObj),
+			Namespace: limitadorObj.Namespace,
+			Labels:    Labels(limitadorObj),
 		},
 	}, nil
 }
 
+func LimitsConfigMapName(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("limits-config-%s", limitadorObj.Name)
+}
+
 func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
+func PVCName(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
 }
 
@@ -217,22 +209,48 @@ func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
 	}
 }
 
-func deploymentContainerCommand(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret, rateLimitHeaders *limitadorv1alpha1.RateLimitHeadersType) []string {
-	command := []string{"limitador-server"}
-
-	// stick to the same default as Limitador
-	if rateLimitHeaders != nil {
-		command = append(command, "--rate-limit-headers", string(*rateLimitHeaders))
+func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
+	pvc := &v1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PersistentVolumeClaim",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      PVCName(limitador),
+			Namespace: limitador.ObjectMeta.Namespace,
+			Labels:    Labels(limitador),
+		},
+		Spec: v1.PersistentVolumeClaimSpec{
+			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			Resources: v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					// Default value for resources
+					v1.ResourceStorage: resource.MustParse("1Gi"),
+				},
+			},
+		},
 	}
 
-	command = append(command, fmt.Sprintf("%s%s", LimitadorCMMountPath, LimitadorConfigFileName))
-
-	return append(command, storageConfig(storage, storageConfigSecret)...)
-}
-
-func storageConfig(storage *limitadorv1alpha1.Storage, storageConfigSecret *v1.Secret) []string {
-	if storage == nil {
-		return []string{string(limitadorv1alpha1.StorageTypeInMemory)}
+	if limitador.Spec.Storage == nil || limitador.Spec.Storage.Disk == nil {
+		helpers.TagObjectToDelete(pvc)
+		return pvc
 	}
-	return storage.Config(string(storageConfigSecret.Data["URL"]))
+
+	if limitador.Spec.Storage.Disk.PVC != nil {
+		pvc.Spec.StorageClassName = limitador.Spec.Storage.Disk.PVC.StorageClassName
+		if limitador.Spec.Storage.Disk.PVC.VolumeName != nil {
+			pvc.Spec.VolumeName = *limitador.Spec.Storage.Disk.PVC.VolumeName
+		}
+
+		// Default value for resources
+		if limitador.Spec.Storage.Disk.PVC.Resources != nil {
+			pvc.Spec.Resources = v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceStorage: limitador.Spec.Storage.Disk.PVC.Resources.Requests,
+				},
+			}
+		}
+	}
+
+	return pvc
 }

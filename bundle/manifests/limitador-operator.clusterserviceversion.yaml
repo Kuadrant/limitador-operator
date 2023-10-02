@@ -63,7 +63,9 @@ spec:
           - ""
           resources:
           - configmaps
+          - persistentvolumeclaims
           - secrets
+          - services
           verbs:
           - create
           - delete
@@ -75,17 +77,6 @@ spec:
           - apps
           resources:
           - deployments
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - update
-          - watch
-        - apiGroups:
-          - ""
-          resources:
-          - services
           verbs:
           - create
           - delete
@@ -234,7 +225,7 @@ spec:
   - email: didier@redhat.com
     name: Didier Di Cesare
   maturity: alpha
-  minKubeVersion: 1.8.0
+  minKubeVersion: 1.25.0
   provider:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator

@@ -24,8 +24,8 @@
 * [kind] version v0.20.0
 * [git][git_tool]
 * [go] version 1.20+
-* [kubernetes] version v1.26+
-* [kubectl] version v1.26+
+* [kubernetes] version v1.25+
+* [kubectl] version v1.25+
 
 ## Build
 
@@ -193,6 +193,14 @@ make test-unit TEST_NAME=TestLimitIndexEquals/empty_indexes_are_equal
 
 ### Integration tests
 
+You need an active session open to a kubernetes cluster.
+
+Optionally, run local cluster with kind
+
+```sh
+make local-env-setup
+```
+
 Run integration tests
 
 ```sh
@@ -200,6 +208,14 @@ make test-integration
 ```
 
 ### All tests
+
+You need an active session open to a kubernetes cluster.
+
+Optionally, run local cluster with kind
+
+```sh
+make local-env-setup
+```
 
 Run all tests
 

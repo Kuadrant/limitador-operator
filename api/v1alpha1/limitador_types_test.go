@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -91,84 +89,6 @@ func TestLimitadorLimits(t *testing.T) {
 		limits := []RateLimit{{Conditions: []string{"test"}}}
 		l := Limitador{Spec: LimitadorSpec{Limits: limits}}
 		assert.DeepEqual(subT, l.Limits(), limits)
-	})
-}
-
-func TestStorageSecretRef(t *testing.T) {
-	t.Run("test redis secret ref is returned if not nil", func(subT *testing.T) {
-		var redisSecretRef = &corev1.ObjectReference{Name: "redis"}
-		s := Storage{Redis: &Redis{ConfigSecretRef: redisSecretRef}}
-		assert.DeepEqual(subT, s.SecretRef(), redisSecretRef)
-	})
-
-	t.Run("test redis cached ref is returned if redis nil", func(subT *testing.T) {
-		var redisCachedSecretRef = &corev1.ObjectReference{Name: "redisCached"}
-		s := Storage{RedisCached: &RedisCached{ConfigSecretRef: redisCachedSecretRef}}
-		assert.DeepEqual(subT, s.SecretRef(), redisCachedSecretRef)
-	})
-}
-
-func TestStorageValidate(t *testing.T) {
-	t.Run("test false if redis is nil", func(subT *testing.T) {
-		s := Storage{}
-		assert.Equal(subT, s.Validate(), false)
-	})
-
-	t.Run("test false if redis secret ref is nil", func(subT *testing.T) {
-		s := Storage{Redis: &Redis{}}
-		assert.Equal(subT, s.Validate(), false)
-	})
-
-	t.Run("test true if redis secret ref is not nil", func(subT *testing.T) {
-		s := Storage{Redis: &Redis{ConfigSecretRef: &corev1.ObjectReference{}}}
-		assert.Equal(subT, s.Validate(), true)
-	})
-
-	t.Run("test false if redis cached is nil", func(subT *testing.T) {
-		s := Storage{Redis: &Redis{}}
-		assert.Equal(subT, s.Validate(), false)
-	})
-
-	t.Run("test false if redis cached secret ref is nil", func(subT *testing.T) {
-		s := Storage{RedisCached: &RedisCached{}}
-		assert.Equal(subT, s.Validate(), false)
-	})
-
-	t.Run("test true if redis secret ref is not nil", func(subT *testing.T) {
-		s := Storage{RedisCached: &RedisCached{ConfigSecretRef: &corev1.ObjectReference{}}}
-		assert.Equal(subT, s.Validate(), true)
-	})
-}
-
-func TestStorageConfig(t *testing.T) {
-	const url = "test"
-
-	t.Run("test redis storage type returned if redis is not nil", func(subT *testing.T) {
-		s := Storage{Redis: &Redis{}}
-		assert.DeepEqual(subT, s.Config(url), []string{string(StorageTypeRedis), url})
-	})
-
-	t.Run("test redis cached storage type returned if redis cached is not nil", func(subT *testing.T) {
-		s := Storage{RedisCached: &RedisCached{}}
-		assert.DeepEqual(subT, s.Config(url), []string{string(StorageTypeRedisCached), url})
-	})
-
-	t.Run("test redis cached storage type with options returned", func(subT *testing.T) {
-		var option = 4040
-		s := Storage{RedisCached: &RedisCached{Options: &RedisCachedOptions{
-			TTL:         &option,
-			Ratio:       &option,
-			FlushPeriod: &option,
-			MaxCached:   &option,
-		}}}
-		assert.DeepEqual(subT, s.Config(url), []string{string(StorageTypeRedisCached), url, fmt.Sprintf("--ttl %s", strconv.Itoa(option)),
-			fmt.Sprintf("--ratio %s", strconv.Itoa(option)), fmt.Sprintf("--flush-period %s", strconv.Itoa(option)),
-			fmt.Sprintf("--max-cached %s", strconv.Itoa(option))})
-	})
-
-	t.Run("test redis cached storage type returned if redis cached is not nil", func(subT *testing.T) {
-		s := Storage{}
-		assert.DeepEqual(subT, s.Config(url), []string{string(StorageTypeInMemory)})
 	})
 }
 
