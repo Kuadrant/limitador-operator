@@ -86,7 +86,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"redis_cached", "redis://example.com:6379"},
+				Command: []string{"redis_cached", "$(URL)"},
 			},
 		)
 	})
@@ -116,7 +116,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 			DeploymentStorageOptions{
 				Command: []string{
 					"redis_cached",
-					"redis://example.com:6379",
+					"$(URL)",
 					"--ttl", "1",
 					"--ratio", "2",
 					"--flush-period", "3",

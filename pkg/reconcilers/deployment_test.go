@@ -136,6 +136,44 @@ func TestDeploymentResourcesMutator(t *testing.T) {
 	})
 }
 
+func TestDeploymentEnvMutator(t *testing.T) {
+	deploymentFactory := func(env []corev1.EnvVar) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Env: env,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	envFactory := func(name string) []corev1.EnvVar {
+		return []corev1.EnvVar{
+			{
+				Name: name,
+			},
+		}
+	}
+
+	envA := envFactory("envA")
+	envB := envFactory("envB")
+
+	t.Run("test false when desired and existing are the same", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentEnvMutator(deploymentFactory(envA), deploymentFactory(envA)), false)
+	})
+
+	t.Run("test true when desired and existing are different", func(subT *testing.T) {
+		assert.Equal(subT, reconcilers.DeploymentEnvMutator(deploymentFactory(envA), deploymentFactory(envB)), true)
+	})
+}
+
 func TestDeploymentVolumesMutator(t *testing.T) {
 	deploymentFactory := func(volumes []corev1.Volume) *appsv1.Deployment {
 		return &appsv1.Deployment{

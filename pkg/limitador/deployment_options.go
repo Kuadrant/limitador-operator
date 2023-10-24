@@ -14,6 +14,7 @@ type DeploymentOptions struct {
 	VolumeMounts       []v1.VolumeMount
 	Volumes            []v1.Volume
 	DeploymentStrategy appsv1.DeploymentStrategy
+	EnvVar             []v1.EnvVar
 }
 
 type DeploymentStorageOptions struct {

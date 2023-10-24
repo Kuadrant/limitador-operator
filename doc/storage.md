@@ -53,11 +53,11 @@ spec:
     redis:
       configSecretRef: # The secret reference storing the URL for Redis
         name: redisconfig
-        namespace: default # optional
 ```
 
 The URL of the Redis service is provided inside a K8s opaque
 [Secret](https://kubernetes.io/docs/concepts/configuration/secret/).
+The secret is required to be in the same namespace as the `Limitador` CR.
 
 ```yaml
 apiVersion: v1
@@ -87,12 +87,11 @@ spec:
     redis-cached:
       configSecretRef: # The secret reference storing the URL for Redis
         name: redisconfig
-        namespace: default # optional
 ```
 
 The URL of the Redis service is provided inside a K8s opaque
 [Secret](https://kubernetes.io/docs/concepts/configuration/secret/).
-
+The secret is required to be in the same namespace as the `Limitador` CR.
 ```yaml
 apiVersion: v1
 kind: Secret

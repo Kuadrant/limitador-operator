@@ -186,6 +186,7 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentResourcesMutator,
 		reconcilers.DeploymentVolumesMutator,
 		reconcilers.DeploymentVolumeMountsMutator,
+		reconcilers.DeploymentEnvMutator,
 	)
 
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
@@ -317,6 +318,10 @@ func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *
 	deploymentOptions.VolumeMounts = limitador.DeploymentVolumeMounts(deploymentStorageOptions)
 	deploymentOptions.Volumes = limitador.DeploymentVolumes(limObj, deploymentStorageOptions)
 	deploymentOptions.DeploymentStrategy = deploymentStorageOptions.DeploymentStrategy
+	deploymentOptions.EnvVar, err = r.getDeploymentEnvVar(ctx, limObj)
+	if err != nil {
+		return deploymentOptions, err
+	}
 
 	return deploymentOptions, nil
 }
@@ -339,6 +344,20 @@ func (r *LimitadorReconciler) getDeploymentStorageOptions(ctx context.Context, l
 	}
 
 	return limitador.InMemoryDeploymentOptions()
+}
+
+func (r *LimitadorReconciler) getDeploymentEnvVar(ctx context.Context, limObj *limitadorv1alpha1.Limitador) ([]v1.EnvVar, error) {
+	if limObj.Spec.Storage != nil {
+		if limObj.Spec.Storage.Redis != nil {
+			return limitador.DeploymentEnvVar(ctx, r.Client(), limObj.Namespace, limObj.Spec.Storage.Redis.ConfigSecretRef)
+		}
+
+		if limObj.Spec.Storage.RedisCached != nil {
+			return limitador.DeploymentEnvVar(ctx, r.Client(), limObj.Namespace, limObj.Spec.Storage.RedisCached.ConfigSecretRef)
+		}
+	}
+
+	return nil, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

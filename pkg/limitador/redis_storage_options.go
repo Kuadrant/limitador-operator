@@ -26,6 +26,32 @@ func RedisDeploymentOptions(ctx context.Context, cl client.Client, defSecretName
 	}, nil
 }
 
+func DeploymentEnvVar(ctx context.Context, cl client.Client, defSecretNamespace string, configSecretRef *v1.ObjectReference) ([]v1.EnvVar, error) {
+	if configSecretRef == nil {
+		return nil, errors.New("there's no ConfigSecretRef set")
+	}
+
+	_, err := getURLFromRedisSecret(ctx, cl, defSecretNamespace, *configSecretRef)
+	if err != nil {
+		return nil, err
+	}
+
+	env := []v1.EnvVar{
+		{
+			Name: "URL",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					Key: "URL",
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: configSecretRef.Name,
+					},
+				},
+			},
+		},
+	}
+	return env, nil
+}
+
 func getURLFromRedisSecret(ctx context.Context, cl client.Client, defSecretNamespace string, secretRef v1.ObjectReference) (string, error) {
 	secret := &v1.Secret{}
 	if err := cl.Get(
@@ -46,8 +72,8 @@ func getURLFromRedisSecret(ctx context.Context, cl client.Client, defSecretNames
 	}
 
 	// nil map behaves as empty map when reading
-	if url, ok := secret.Data["URL"]; ok {
-		return string(url), nil
+	if _, ok := secret.Data["URL"]; ok {
+		return "$(URL)", nil
 	}
 
 	return "", errors.New("the storage config Secret doesn't have the `URL` field")

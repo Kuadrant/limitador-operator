@@ -839,7 +839,7 @@ var _ = Describe("Limitador controller", func() {
 						"limitador-server",
 						"/home/limitador/etc/limitador-config.yaml",
 						"redis",
-						"redis://example.com:6379",
+						"$(URL)",
 					},
 				),
 			)
@@ -922,7 +922,7 @@ var _ = Describe("Limitador controller", func() {
 						"limitador-server",
 						"/home/limitador/etc/limitador-config.yaml",
 						"redis_cached",
-						"redis://example.com:6379",
+						"$(URL)",
 						"--ttl", "1",
 						"--ratio", "2",
 						"--flush-period", "3",

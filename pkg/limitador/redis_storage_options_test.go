@@ -2,6 +2,8 @@ package limitador
 
 import (
 	"context"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -94,8 +96,99 @@ func TestRedisDeploymentOptions(t *testing.T) {
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"redis", "redis://example.com:6379"},
+				Command: []string{"redis", "$(URL)"},
 			},
 		)
 	})
+}
+
+func TestDeploymentEnvVar(t *testing.T) {
+	type args struct {
+		ctx                context.Context
+		cl                 client.Client
+		defSecretNamespace string
+		configSecretRef    *v1.ObjectReference
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []v1.EnvVar
+		wantErr bool
+		error   string
+	}{
+		{
+			name:    "Nil object passed",
+			want:    nil,
+			wantErr: true,
+			error:   "there's no ConfigSecretRef set",
+		},
+		{
+			name:    "Getting URL from Redis Secret fails",
+			want:    nil,
+			wantErr: true,
+			error:   "doesn't have the `URL` field",
+			args: args{
+				ctx: context.TODO(),
+				cl: fake.NewClientBuilder().WithObjects(&v1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+				}).Build(),
+				defSecretNamespace: "test",
+				configSecretRef: &v1.ObjectReference{
+					Name: "test",
+				},
+			},
+		},
+		{
+			name: "Receive correct Env settings",
+			want: []v1.EnvVar{
+				{
+					Name: "URL",
+					ValueFrom: &v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: "test",
+							},
+							Key: "URL",
+						},
+					},
+				},
+			},
+			wantErr: false,
+			args: args{
+				ctx: context.TODO(),
+				cl: fake.NewClientBuilder().WithObjects(&v1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+					},
+					Data: map[string][]byte{
+						"URL": []byte("cmVkaXM6Ly9yZWRpcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsLzA="),
+					},
+				}).Build(),
+				defSecretNamespace: "test",
+				configSecretRef: &v1.ObjectReference{
+					Name: "test",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := DeploymentEnvVar(tt.args.ctx, tt.args.cl, tt.args.defSecretNamespace, tt.args.configSecretRef)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DeploymentEnvVar() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if (err != nil) && !strings.Contains(err.Error(), tt.error) {
+				t.Errorf("DeploymentEnvVar() error = %v, expected error = %v", err, tt.error)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DeploymentEnvVar() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
