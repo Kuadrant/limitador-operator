@@ -873,6 +873,8 @@ spec:
                       type: array
                     max_value:
                       type: integer
+                    name:
+                      type: string
                     namespace:
                       type: string
                     seconds:

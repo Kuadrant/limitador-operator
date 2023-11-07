@@ -252,6 +252,7 @@ type RateLimit struct {
 	Namespace  string   `json:"namespace"`
 	Seconds    int      `json:"seconds"`
 	Variables  []string `json:"variables"`
+	Name       string   `json:"name,omitempty"`
 }
 
 // LimitadorStatus defines the observed state of Limitador

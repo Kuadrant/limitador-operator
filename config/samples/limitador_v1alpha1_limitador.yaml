@@ -14,3 +14,4 @@ spec:
       namespace: toystore-app
       seconds: 30
       variables: []
+      name: "toy_get_route"

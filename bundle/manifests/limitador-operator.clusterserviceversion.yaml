@@ -17,6 +17,7 @@ metadata:
                   "get_toy == 'yes'"
                 ],
                 "max_value": 2,
+                "name": "toy_get_route",
                 "namespace": "toystore-app",
                 "seconds": 30,
                 "variables": []
@@ -36,7 +37,7 @@ metadata:
     capabilities: Basic Install
     categories: Integration & Delivery
     containerImage: quay.io/kuadrant/limitador-operator:latest
-    createdAt: "2023-09-27T14:09:01Z"
+    createdAt: "2023-11-08T14:01:55Z"
     operators.operatorframework.io/builder: operator-sdk-v1.28.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/Kuadrant/limitador-operator
