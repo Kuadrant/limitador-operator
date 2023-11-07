@@ -26,19 +26,14 @@ func RedisDeploymentOptions(ctx context.Context, cl client.Client, defSecretName
 	}, nil
 }
 
-func DeploymentEnvVar(ctx context.Context, cl client.Client, defSecretNamespace string, configSecretRef *v1.ObjectReference) ([]v1.EnvVar, error) {
+func DeploymentEnvVar(configSecretRef *v1.ObjectReference) ([]v1.EnvVar, error) {
 	if configSecretRef == nil {
 		return nil, errors.New("there's no ConfigSecretRef set")
 	}
 
-	_, err := getURLFromRedisSecret(ctx, cl, defSecretNamespace, *configSecretRef)
-	if err != nil {
-		return nil, err
-	}
-
 	env := []v1.EnvVar{
 		{
-			Name: "URL",
+			Name: "LIMITADOR_OPERATOR_REDIS_URL",
 			ValueFrom: &v1.EnvVarSource{
 				SecretKeyRef: &v1.SecretKeySelector{
 					Key: "URL",
@@ -73,7 +68,7 @@ func getURLFromRedisSecret(ctx context.Context, cl client.Client, defSecretNames
 
 	// nil map behaves as empty map when reading
 	if _, ok := secret.Data["URL"]; ok {
-		return "$(URL)", nil
+		return "$(LIMITADOR_OPERATOR_REDIS_URL)", nil
 	}
 
 	return "", errors.New("the storage config Secret doesn't have the `URL` field")
