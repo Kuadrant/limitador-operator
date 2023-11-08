@@ -1,23 +1,5 @@
 # Development Guide
 
-<!--ts-->
-   * [Technology stack required for development](#technology-stack-required-for-development)
-   * [Build](#build)
-   * [Run locally](#run-locally)
-   * [Deploy the operator in a deployment object](#deploy-the-operator-in-a-deployment-object)
-   * [Deploy the operator using OLM](#deploy-the-operator-using-olm)
-   * [Build custom OLM catalog](#build-custom-olm-catalog)
-      * [Build operator bundle image](#build-operator-bundle-image)
-      * [Build custom catalog](#build-custom-catalog)
-   * [Cleaning up](#cleaning-up)
-   * [Run tests](#run-tests)
-      * [Lint tests](#lint-tests)
-   * [(Un)Install Limitador CRD](#uninstall-limitador-crd)
-
-<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
-
-<!--te-->
-
 ## Technology stack required for development
 
 * [operator-sdk] version v1.28.1
