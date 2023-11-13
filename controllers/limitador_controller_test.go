@@ -82,6 +82,7 @@ var _ = Describe("Limitador controller", func() {
 			Namespace:  "test-namespace",
 			Seconds:    60,
 			Variables:  []string{"user_id"},
+			Name:       "useless",
 		},
 		{
 			Conditions: []string{"req.method == 'POST'"},

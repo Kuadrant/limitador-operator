@@ -254,6 +254,7 @@ func TestLimitsConfigMap(t *testing.T) {
 				MaxValue:   1000,
 				Namespace:  "my-ns",
 				Seconds:    60,
+				Name:       "useless",
 			},
 			{
 				Conditions: []string{"cond == '1'"},
