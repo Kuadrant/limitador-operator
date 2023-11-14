@@ -567,7 +567,7 @@ var _ = Describe("Limitador controller", func() {
 		})
 	})
 
-	Context("Reconciling command line args", func() {
+	Context("Reconciling command line args for rate limit headers", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
@@ -622,6 +622,68 @@ var _ = Describe("Limitador controller", func() {
 						"limitador-server",
 						"--rate-limit-headers",
 						"DRAFT_VERSION_03",
+						"/home/limitador/etc/limitador-config.yaml",
+						"memory",
+					})
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
+	Context("Reconciling command line args for telemetry", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = newLimitador()
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+		})
+
+		AfterEach(func() {
+			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
+			Expect(err == nil || errors.IsNotFound(err))
+		})
+
+		It("Should modify the limitador deployment command line args", func() {
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)
+
+				if err != nil {
+					return false
+				}
+
+				if updatedLimitador.Spec.Telemetry != nil {
+					return false
+				}
+				telemetry := limitadorv1alpha1.Telemetry("exhaustive")
+				updatedLimitador.Spec.Telemetry = &telemetry
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				updatedLimitadorDeployment := appsv1.Deployment{}
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: LimitadorNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitadorDeployment)
+
+				if err != nil {
+					return false
+				}
+
+				return reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Command,
+					[]string{
+						"limitador-server",
+						"--limit-name-in-labels",
 						"/home/limitador/etc/limitador-config.yaml",
 						"memory",
 					})

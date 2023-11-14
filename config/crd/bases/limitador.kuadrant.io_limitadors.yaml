@@ -1179,6 +1179,13 @@ spec:
                         type: object
                     type: object
                 type: object
+              telemetry:
+                description: Telemetry defines the level of metrics Limitador will
+                  expose to the user
+                enum:
+                - basic
+                - exhaustive
+                type: string
               version:
                 type: string
             type: object

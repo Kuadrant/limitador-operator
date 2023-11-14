@@ -77,6 +77,9 @@ type LimitadorSpec struct {
 	RateLimitHeaders *RateLimitHeadersType `json:"rateLimitHeaders,omitempty"`
 
 	// +optional
+	Telemetry *Telemetry `json:"telemetry,omitempty"`
+
+	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
 
 	// +optional
@@ -148,6 +151,10 @@ type LimitadorList struct {
 // RateLimitHeadersType defines the valid options for the --rate-limit-headers arg
 // +kubebuilder:validation:Enum=NONE;DRAFT_VERSION_03
 type RateLimitHeadersType string
+
+// Telemetry defines the level of metrics Limitador will expose to the user
+// +kubebuilder:validation:Enum=basic;exhaustive
+type Telemetry string
 
 // Storage contains the options for Limitador counters database or in-memory data storage
 type Storage struct {

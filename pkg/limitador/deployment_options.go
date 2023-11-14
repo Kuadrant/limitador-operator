@@ -37,6 +37,10 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 		command = append(command, "--rate-limit-headers", string(*limObj.Spec.RateLimitHeaders))
 	}
 
+	if limObj.Spec.Telemetry != nil && *limObj.Spec.Telemetry == "exhaustive" {
+		command = append(command, "--limit-name-in-labels")
+	}
+
 	command = append(command, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
 	command = append(command, storageOptions.Command...)
 
