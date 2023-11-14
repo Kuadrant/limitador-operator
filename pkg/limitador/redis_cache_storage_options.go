@@ -14,12 +14,12 @@ func RedisCachedDeploymentOptions(ctx context.Context, cl client.Client, defSecr
 		return DeploymentStorageOptions{}, errors.New("there's no ConfigSecretRef set")
 	}
 
-	redisURL, err := getURLFromRedisSecret(ctx, cl, defSecretNamespace, *redisCachedObj.ConfigSecretRef)
+	err := validateRedisSecret(ctx, cl, defSecretNamespace, *redisCachedObj.ConfigSecretRef)
 	if err != nil {
 		return DeploymentStorageOptions{}, err
 	}
 
-	command := []string{"redis_cached", redisURL}
+	command := []string{"redis_cached", "$(LIMITADOR_OPERATOR_REDIS_URL)"}
 	if redisCachedObj.Options != nil {
 		if redisCachedObj.Options.TTL != nil {
 			command = append(command, "--ttl", strconv.Itoa(*redisCachedObj.Options.TTL))

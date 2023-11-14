@@ -104,7 +104,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 
 func TestDeploymentEnvVar(t *testing.T) {
 	type args struct {
-		configSecretRef    *v1.ObjectReference
+		configSecretRef *v1.ObjectReference
 	}
 	tests := []struct {
 		name    string
