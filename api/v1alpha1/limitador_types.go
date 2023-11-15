@@ -152,9 +152,19 @@ type LimitadorList struct {
 // +kubebuilder:validation:Enum=NONE;DRAFT_VERSION_03
 type RateLimitHeadersType string
 
+const (
+	RateLimitHeadersTypeNONE    RateLimitHeadersType = "NONE"
+	RateLimitHeadersTypeDraft03 RateLimitHeadersType = "DRAFT_VERSION_03"
+)
+
 // Telemetry defines the level of metrics Limitador will expose to the user
 // +kubebuilder:validation:Enum=basic;exhaustive
 type Telemetry string
+
+const (
+	TelemetryBasic      Telemetry = "basic"
+	TelemetryExhaustive Telemetry = "exhaustive"
+)
 
 // Storage contains the options for Limitador counters database or in-memory data storage
 type Storage struct {
