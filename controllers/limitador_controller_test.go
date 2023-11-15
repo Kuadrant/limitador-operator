@@ -839,7 +839,7 @@ var _ = Describe("Limitador controller", func() {
 						"limitador-server",
 						"/home/limitador/etc/limitador-config.yaml",
 						"redis",
-						"redis://example.com:6379",
+						"$(LIMITADOR_OPERATOR_REDIS_URL)",
 					},
 				),
 			)
@@ -922,7 +922,7 @@ var _ = Describe("Limitador controller", func() {
 						"limitador-server",
 						"/home/limitador/etc/limitador-config.yaml",
 						"redis_cached",
-						"redis://example.com:6379",
+						"$(LIMITADOR_OPERATOR_REDIS_URL)",
 						"--ttl", "1",
 						"--ratio", "2",
 						"--flush-period", "3",
@@ -1028,9 +1028,8 @@ func limitadorWithRedisStorage(redisKey client.ObjectKey) *limitadorv1alpha1.Lim
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				Redis: &limitadorv1alpha1.Redis{
-					ConfigSecretRef: &v1.ObjectReference{
-						Name:      redisKey.Name,
-						Namespace: redisKey.Namespace,
+					ConfigSecretRef: &v1.LocalObjectReference{
+						Name: redisKey.Name,
 					},
 				},
 			},
@@ -1045,9 +1044,8 @@ func limitadorWithRedisCachedStorage(key client.ObjectKey) *limitadorv1alpha1.Li
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				RedisCached: &limitadorv1alpha1.RedisCached{
-					ConfigSecretRef: &v1.ObjectReference{
-						Name:      key.Name,
-						Namespace: key.Namespace,
+					ConfigSecretRef: &v1.LocalObjectReference{
+						Name: key.Name,
 					},
 					Options: &limitadorv1alpha1.RedisCachedOptions{
 						TTL:         &[]int{1}[0],

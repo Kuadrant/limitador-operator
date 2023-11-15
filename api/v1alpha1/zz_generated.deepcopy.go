@@ -161,6 +161,11 @@ func (in *LimitadorSpec) DeepCopyInto(out *LimitadorSpec) {
 		*out = new(RateLimitHeadersType)
 		**out = **in
 	}
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
+		*out = new(Telemetry)
+		**out = **in
+	}
 	if in.Limits != nil {
 		in, out := &in.Limits, &out.Limits
 		*out = make([]RateLimit, len(*in))
@@ -358,7 +363,7 @@ func (in *Redis) DeepCopyInto(out *Redis) {
 	*out = *in
 	if in.ConfigSecretRef != nil {
 		in, out := &in.ConfigSecretRef, &out.ConfigSecretRef
-		*out = new(v1.ObjectReference)
+		*out = new(v1.LocalObjectReference)
 		**out = **in
 	}
 }
@@ -378,7 +383,7 @@ func (in *RedisCached) DeepCopyInto(out *RedisCached) {
 	*out = *in
 	if in.ConfigSecretRef != nil {
 		in, out := &in.ConfigSecretRef, &out.ConfigSecretRef
-		*out = new(v1.ObjectReference)
+		*out = new(v1.LocalObjectReference)
 		**out = **in
 	}
 	if in.Options != nil {

@@ -92,6 +92,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 							Name:    "limitador",
 							Image:   image,
 							Command: deploymentOptions.Command,
+							Env:     deploymentOptions.EnvVar,
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",

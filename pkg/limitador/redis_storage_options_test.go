@@ -2,6 +2,8 @@ package limitador
 
 import (
 	"context"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -55,7 +57,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 	t.Run("redis secret resource missing", func(subT *testing.T) {
 		cl := clientFactory(subT, nil)
 		redisObj := limitadorv1alpha1.Redis{
-			ConfigSecretRef: &v1.ObjectReference{Name: "notexisting", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "notexisting"},
 		}
 		_, err := RedisDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.Assert(subT, errors.IsNotFound(err))
@@ -71,7 +73,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 		}
 		cl := clientFactory(subT, []client.Object{emptySecret})
 		redisObj := limitadorv1alpha1.Redis{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 		}
 		_, err := RedisDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.Error(subT, err, "the storage config Secret doesn't have the `URL` field")
@@ -88,14 +90,72 @@ func TestRedisDeploymentOptions(t *testing.T) {
 
 		cl := clientFactory(subT, []client.Object{redisSecret})
 		redisObj := limitadorv1alpha1.Redis{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 		}
 		options, err := RedisDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"redis", "redis://example.com:6379"},
+				Command: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
 			},
 		)
 	})
+}
+
+func TestDeploymentEnvVar(t *testing.T) {
+	type args struct {
+		configSecretRef *v1.LocalObjectReference
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []v1.EnvVar
+		wantErr bool
+		error   string
+	}{
+		{
+			name:    "Nil object passed",
+			want:    nil,
+			wantErr: true,
+			error:   "there's no ConfigSecretRef set",
+		},
+		{
+			name: "Receive correct Env settings",
+			want: []v1.EnvVar{
+				{
+					Name: "LIMITADOR_OPERATOR_REDIS_URL",
+					ValueFrom: &v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: "test",
+							},
+							Key: "URL",
+						},
+					},
+				},
+			},
+			wantErr: false,
+			args: args{
+				configSecretRef: &v1.LocalObjectReference{
+					Name: "test",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := DeploymentEnvVar(tt.args.configSecretRef)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DeploymentEnvVar() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if (err != nil) && !strings.Contains(err.Error(), tt.error) {
+				t.Errorf("DeploymentEnvVar() error = %v, expected error = %v", err, tt.error)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DeploymentEnvVar() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

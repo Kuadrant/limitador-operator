@@ -16,39 +16,55 @@ func RedisDeploymentOptions(ctx context.Context, cl client.Client, defSecretName
 		return DeploymentStorageOptions{}, errors.New("there's no ConfigSecretRef set")
 	}
 
-	redisURL, err := getURLFromRedisSecret(ctx, cl, defSecretNamespace, *redisObj.ConfigSecretRef)
+	err := validateRedisSecret(ctx, cl, defSecretNamespace, *redisObj.ConfigSecretRef)
 	if err != nil {
 		return DeploymentStorageOptions{}, err
 	}
 
 	return DeploymentStorageOptions{
-		Command: []string{"redis", redisURL},
+		Command: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
 	}, nil
 }
 
-func getURLFromRedisSecret(ctx context.Context, cl client.Client, defSecretNamespace string, secretRef v1.ObjectReference) (string, error) {
+func DeploymentEnvVar(configSecretRef *v1.LocalObjectReference) ([]v1.EnvVar, error) {
+	if configSecretRef == nil {
+		return nil, errors.New("there's no ConfigSecretRef set")
+	}
+
+	env := []v1.EnvVar{
+		{
+			Name: "LIMITADOR_OPERATOR_REDIS_URL",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					Key: "URL",
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: configSecretRef.Name,
+					},
+				},
+			},
+		},
+	}
+	return env, nil
+}
+
+func validateRedisSecret(ctx context.Context, cl client.Client, defSecretNamespace string, secretRef v1.LocalObjectReference) error {
 	secret := &v1.Secret{}
 	if err := cl.Get(
 		ctx,
 		types.NamespacedName{
-			Name: secretRef.Name,
-			Namespace: func() string {
-				if secretRef.Namespace != "" {
-					return secretRef.Namespace
-				}
-				return defSecretNamespace
-			}(),
+			Name:      secretRef.Name,
+			Namespace: defSecretNamespace,
 		},
 		secret,
 	); err != nil {
 		// Must exist, so if it does not, also return err
-		return "", err
+		return err
 	}
 
 	// nil map behaves as empty map when reading
-	if url, ok := secret.Data["URL"]; ok {
-		return string(url), nil
+	if _, ok := secret.Data["URL"]; ok {
+		return nil
 	}
 
-	return "", errors.New("the storage config Secret doesn't have the `URL` field")
+	return errors.New("the storage config Secret doesn't have the `URL` field")
 }
