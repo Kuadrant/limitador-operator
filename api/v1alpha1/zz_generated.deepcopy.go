@@ -161,6 +161,11 @@ func (in *LimitadorSpec) DeepCopyInto(out *LimitadorSpec) {
 		*out = new(RateLimitHeadersType)
 		**out = **in
 	}
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
+		*out = new(Telemetry)
+		**out = **in
+	}
 	if in.Limits != nil {
 		in, out := &in.Limits, &out.Limits
 		*out = make([]RateLimit, len(*in))
