@@ -57,7 +57,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 	t.Run("redis secret resource missing", func(subT *testing.T) {
 		cl := clientFactory(subT, nil)
 		redisObj := limitadorv1alpha1.Redis{
-			ConfigSecretRef: &v1.ObjectReference{Name: "notexisting", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "notexisting"},
 		}
 		_, err := RedisDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.Assert(subT, errors.IsNotFound(err))
@@ -73,7 +73,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 		}
 		cl := clientFactory(subT, []client.Object{emptySecret})
 		redisObj := limitadorv1alpha1.Redis{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 		}
 		_, err := RedisDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.Error(subT, err, "the storage config Secret doesn't have the `URL` field")
@@ -90,7 +90,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 
 		cl := clientFactory(subT, []client.Object{redisSecret})
 		redisObj := limitadorv1alpha1.Redis{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 		}
 		options, err := RedisDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.NilError(subT, err)
@@ -104,7 +104,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 
 func TestDeploymentEnvVar(t *testing.T) {
 	type args struct {
-		configSecretRef *v1.ObjectReference
+		configSecretRef *v1.LocalObjectReference
 	}
 	tests := []struct {
 		name    string
@@ -136,7 +136,7 @@ func TestDeploymentEnvVar(t *testing.T) {
 			},
 			wantErr: false,
 			args: args{
-				configSecretRef: &v1.ObjectReference{
+				configSecretRef: &v1.LocalObjectReference{
 					Name: "test",
 				},
 			},

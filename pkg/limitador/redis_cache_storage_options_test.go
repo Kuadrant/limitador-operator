@@ -47,7 +47,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 	t.Run("redis secret resource missing", func(subT *testing.T) {
 		cl := clientFactory(subT, nil)
 		redisObj := limitadorv1alpha1.RedisCached{
-			ConfigSecretRef: &v1.ObjectReference{Name: "notexisting", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "notexisting"},
 		}
 		_, err := RedisCachedDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.Assert(subT, errors.IsNotFound(err))
@@ -63,7 +63,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 		}
 		cl := clientFactory(subT, []client.Object{emptySecret})
 		redisObj := limitadorv1alpha1.RedisCached{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 		}
 		_, err := RedisCachedDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.Error(subT, err, "the storage config Secret doesn't have the `URL` field")
@@ -80,7 +80,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 
 		cl := clientFactory(subT, []client.Object{redisSecret})
 		redisObj := limitadorv1alpha1.RedisCached{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 		}
 		options, err := RedisCachedDeploymentOptions(ctx, cl, namespace, redisObj)
 		assert.NilError(subT, err)
@@ -102,7 +102,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 
 		cl := clientFactory(subT, []client.Object{redisSecret})
 		redisObj := limitadorv1alpha1.RedisCached{
-			ConfigSecretRef: &v1.ObjectReference{Name: "redisSecret", Namespace: namespace},
+			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 			Options: &limitadorv1alpha1.RedisCachedOptions{
 				TTL:         &[]int{1}[0],
 				Ratio:       &[]int{2}[0],

@@ -26,7 +26,7 @@ func RedisDeploymentOptions(ctx context.Context, cl client.Client, defSecretName
 	}, nil
 }
 
-func DeploymentEnvVar(configSecretRef *v1.ObjectReference) ([]v1.EnvVar, error) {
+func DeploymentEnvVar(configSecretRef *v1.LocalObjectReference) ([]v1.EnvVar, error) {
 	if configSecretRef == nil {
 		return nil, errors.New("there's no ConfigSecretRef set")
 	}
@@ -47,18 +47,13 @@ func DeploymentEnvVar(configSecretRef *v1.ObjectReference) ([]v1.EnvVar, error) 
 	return env, nil
 }
 
-func validateRedisSecret(ctx context.Context, cl client.Client, defSecretNamespace string, secretRef v1.ObjectReference) error {
+func validateRedisSecret(ctx context.Context, cl client.Client, defSecretNamespace string, secretRef v1.LocalObjectReference) error {
 	secret := &v1.Secret{}
 	if err := cl.Get(
 		ctx,
 		types.NamespacedName{
-			Name: secretRef.Name,
-			Namespace: func() string {
-				if secretRef.Namespace != "" {
-					return secretRef.Namespace
-				}
-				return defSecretNamespace
-			}(),
+			Name:      secretRef.Name,
+			Namespace: defSecretNamespace,
 		},
 		secret,
 	); err != nil {

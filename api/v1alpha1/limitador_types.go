@@ -171,7 +171,7 @@ type Storage struct {
 type Redis struct {
 	// +ConfigSecretRef refers to the secret holding the URL for Redis.
 	// +optional
-	ConfigSecretRef *corev1.ObjectReference `json:"configSecretRef,omitempty"`
+	ConfigSecretRef *corev1.LocalObjectReference `json:"configSecretRef,omitempty"`
 }
 
 type RedisCachedOptions struct {
@@ -195,7 +195,7 @@ type RedisCachedOptions struct {
 type RedisCached struct {
 	// +ConfigSecretRef refers to the secret holding the URL for Redis.
 	// +optional
-	ConfigSecretRef *corev1.ObjectReference `json:"configSecretRef,omitempty"`
+	ConfigSecretRef *corev1.LocalObjectReference `json:"configSecretRef,omitempty"`
 
 	// +optional
 	Options *RedisCachedOptions `json:"options,omitempty"`
