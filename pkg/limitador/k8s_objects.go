@@ -71,7 +71,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      limitador.ObjectMeta.Name,      // TODO: revisit later. For now assume same.
+			Name:      DeploymentName(limitador),
 			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
 			Labels:    Labels(limitador),
 		},
@@ -164,7 +164,7 @@ func LimitsConfigMap(limitadorObj *limitadorv1alpha1.Limitador) (*v1.ConfigMap, 
 }
 
 func LimitsConfigMapName(limitadorObj *limitadorv1alpha1.Limitador) string {
-	return fmt.Sprintf("limits-config-%s", limitadorObj.Name)
+	return fmt.Sprintf("limitador-limits-config-%s", limitadorObj.Name)
 }
 
 func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
@@ -172,6 +172,10 @@ func ServiceName(limitadorObj *limitadorv1alpha1.Limitador) string {
 }
 
 func PVCName(limitadorObj *limitadorv1alpha1.Limitador) string {
+	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
+func DeploymentName(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
 }
 

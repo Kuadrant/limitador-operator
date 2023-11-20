@@ -179,7 +179,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&createdLimitadorDeployment)
 
@@ -353,7 +353,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
 
@@ -396,7 +396,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
 
@@ -544,7 +544,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&createdLimitadorDeployment)
 
@@ -609,7 +609,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
 
@@ -672,7 +672,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
 
@@ -711,7 +711,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
 
@@ -730,7 +730,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updateDeploymentObj)
 
@@ -825,7 +825,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
 
@@ -908,7 +908,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
 
@@ -955,7 +955,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Namespace: LimitadorNamespace,
-						Name:      limitadorObj.Name,
+						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
 

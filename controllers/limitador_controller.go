@@ -35,6 +35,7 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
+	upgrades "github.com/kuadrant/limitador-operator/pkg/upgrades"
 )
 
 // LimitadorReconciler reconciles a Limitador object
@@ -79,7 +80,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	specErr := r.reconcileSpec(ctx, limitadorObj)
+	specResult, specErr := r.reconcileSpec(ctx, limitadorObj)
 
 	statusResult, statusErr := r.reconcileStatus(ctx, limitadorObj, specErr)
 
@@ -91,6 +92,11 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, statusErr
 	}
 
+	if specResult.Requeue {
+		logger.V(1).Info("Reconciling spec not finished. Requeueing.")
+		return specResult, nil
+	}
+
 	if statusResult.Requeue {
 		logger.V(1).Info("Reconciling status not finished. Requeueing.")
 		return statusResult, nil
@@ -100,24 +106,31 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
 	if err := r.reconcileService(ctx, limitadorObj); err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcilePVC(ctx, limitadorObj); err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileDeployment(ctx, limitadorObj); err != nil {
-		return err
+	result, err := r.reconcileDeployment(ctx, limitadorObj)
+	if result.Requeue {
+		return result, nil
+	}
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcileLimitsConfigMap(ctx, limitadorObj); err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
-	return r.reconcilePdb(ctx, limitadorObj)
+	if err := r.reconcilePdb(ctx, limitadorObj); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
 }
 
 func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -162,15 +175,15 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 	return nil
 }
 
-func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
 	deploymentOptions, err := r.getDeploymentOptions(ctx, limitadorObj)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
 	deploymentMutators := make([]reconcilers.DeploymentMutateFn, 0)
@@ -192,15 +205,16 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 	err = r.ReconcileDeployment(ctx, deployment, reconcilers.DeploymentMutator(deploymentMutators...))
 	logger.V(1).Info("reconcile deployment", "error", err)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
-	return nil
+	// TODO: To be deleted when the upgrade path is no longer needed.
+	return upgrades.UpgradeDeploymentTov070(ctx, r.Client(), limitadorObj, client.ObjectKeyFromObject(deployment))
 }
 
 func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -263,6 +277,12 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 
 	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
 	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
+	if err != nil {
+		return err
+	}
+
+	// TODO: To be deleted when the upgrade path is no longer needed.
+	err = upgrades.UpgradeConfigMapTov070(ctx, r.Client(), limitadorObj)
 	if err != nil {
 		return err
 	}
