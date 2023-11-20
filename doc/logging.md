@@ -1,6 +1,7 @@
 # Logging
 
 The limitador operator outputs 3 levels of log messages: (from lowest to highest level)
+
 1. `debug`
 2. `info` (default)
 3. `error`
