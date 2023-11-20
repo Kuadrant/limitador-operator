@@ -12,6 +12,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,16 +27,15 @@ import (
 )
 
 const (
-	LimitadorNamespace = "default"
-	timeout            = time.Second * 10
-	interval           = time.Millisecond * 250
+	timeout  = time.Second * 10
+	interval = time.Millisecond * 250
 )
 
 var _ = Describe("Limitador controller", func() {
 	const (
 		LimitadorReplicas              = 2
 		LimitadorImage                 = "quay.io/kuadrant/limitador"
-		LimitadorVersion               = "0.3.0"
+		LimitadorVersion               = "latest"
 		LimitadorHTTPPort              = 8000
 		LimitadorGRPCPort              = 8001
 		LimitadorMaxUnavailable        = 1
@@ -93,7 +94,7 @@ var _ = Describe("Limitador controller", func() {
 		},
 	}
 
-	newLimitador := func() *limitadorv1alpha1.Limitador {
+	newLimitador := func(ns string) *limitadorv1alpha1.Limitador {
 		// The name can't start with a number.
 		name := "a" + string(uuid.NewUUID())
 
@@ -104,7 +105,7 @@ var _ = Describe("Limitador controller", func() {
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: LimitadorNamespace,
+				Namespace: ns,
 			},
 			Spec: limitadorv1alpha1.LimitadorSpec{
 				Replicas: &replicas,
@@ -122,21 +123,24 @@ var _ = Describe("Limitador controller", func() {
 		}
 	}
 
-	deletePropagationPolicy := client.PropagationPolicy(metav1.DeletePropagationForeground)
+	var testNamespace string
+
+	BeforeEach(func() {
+		CreateNamespace(&testNamespace)
+	})
+
+	AfterEach(DeleteNamespaceCallback(&testNamespace))
 
 	Context("Creating a new empty Limitador object", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 			limitadorObj.Spec = limitadorv1alpha1.LimitadorSpec{}
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
 
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a Limitador service with default ports", func() {
@@ -145,7 +149,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.ServiceName(limitadorObj),
 					},
 					&createdLimitadorService)
@@ -163,13 +167,8 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
 		})
 
 		It("Should create a new deployment with the right settings", func() {
@@ -178,7 +177,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&createdLimitadorDeployment)
@@ -226,7 +225,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.ServiceName(limitadorObj),
 					},
 					&createdLimitadorService)
@@ -264,7 +263,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.LimitsConfigMapName(limitadorObj),
 					},
 					&createdConfigMap)
@@ -284,7 +283,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
 					},
 					&createdPdb)
@@ -300,19 +299,14 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the limitador deployment", func() {
 			updatedLimitador := limitadorv1alpha1.Limitador{}
 			replicas = LimitadorReplicas + 1
-			version = "latest"
 			resourceRequirements := &v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceCPU:    resource.MustParse("200m"),
@@ -330,7 +324,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitadorObj.Name,
 					},
 					&updatedLimitador)
@@ -339,7 +333,7 @@ var _ = Describe("Limitador controller", func() {
 				}
 
 				updatedLimitador.Spec.Replicas = &replicas
-				updatedLimitador.Spec.Version = &version
+				updatedLimitador.Spec.Version = &[]string{"other"}[0]
 				updatedLimitador.Spec.ResourceRequirements = resourceRequirements
 				affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 99
 				updatedLimitador.Spec.Affinity = affinity
@@ -352,7 +346,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
@@ -362,7 +356,7 @@ var _ = Describe("Limitador controller", func() {
 				}
 
 				correctReplicas := *updatedLimitadorDeployment.Spec.Replicas == LimitadorReplicas+1
-				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == LimitadorImage+":latest"
+				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == fmt.Sprintf("%s:other", LimitadorImage)
 				correctResources := reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources, *resourceRequirements)
 				correctAffinity := updatedLimitadorDeployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight == 99
 
@@ -376,7 +370,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitadorObj.Name,
 					},
 					&updatedLimitador)
@@ -395,7 +389,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
@@ -416,7 +410,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.LimitsConfigMapName(limitadorObj),
 					},
 					&originalCM)
@@ -438,7 +432,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitadorObj.Name,
 					},
 					&updatedLimitador)
@@ -457,7 +451,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.LimitsConfigMapName(limitadorObj),
 					},
 					&updatedLimitadorConfigMap)
@@ -478,7 +472,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
 					},
 					&originalPdb)
@@ -492,7 +486,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitadorObj.Name,
 					},
 					&updatedLimitador)
@@ -510,7 +504,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
 					},
 					&updatedPdb)
@@ -526,15 +520,11 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 			limitadorObj.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a new deployment with rate limit headers command line arg", func() {
@@ -543,7 +533,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&createdLimitadorDeployment)
@@ -571,14 +561,10 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the limitador deployment command line args", func() {
@@ -587,7 +573,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitadorObj.Name,
 					},
 					&updatedLimitador)
@@ -608,7 +594,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
@@ -633,14 +619,10 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the limitador deployment command line args", func() {
@@ -649,7 +631,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitadorObj.Name,
 					},
 					&updatedLimitador)
@@ -671,7 +653,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)
@@ -695,13 +677,9 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador()
+			limitadorObj = newLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			err := k8sClient.Delete(context.TODO(), limitadorObj, deletePropagationPolicy)
-			Expect(err == nil || errors.IsNotFound(err))
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("User tries adding side-cars to deployment CR", func() {
@@ -710,7 +688,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
@@ -719,7 +697,7 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
-			containerObj := v1.Container{Name: LimitadorNamespace, Image: LimitadorNamespace}
+			containerObj := v1.Container{Name: testNamespace, Image: testNamespace}
 
 			deploymentObj.Spec.Template.Spec.Containers = append(deploymentObj.Spec.Template.Spec.Containers, containerObj)
 
@@ -729,7 +707,7 @@ var _ = Describe("Limitador controller", func() {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updateDeploymentObj)
@@ -745,19 +723,8 @@ var _ = Describe("Limitador controller", func() {
 	// used to validate custom resources using Common Expression Language (CEL)
 	// https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules
 	Context("Disk storage does not allow multiple replicas", func() {
-		AfterEach(func() {
-			limitadorObj := limitadorWithInvalidDiskReplicas()
-			err := k8sClient.Delete(context.TODO(), limitadorObj)
-			Expect(err == nil || errors.IsNotFound(err))
-			Eventually(func() bool {
-				var l limitadorv1alpha1.Limitador
-				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-
 		It("resource is rejected", func() {
-			limitadorObj := limitadorWithInvalidDiskReplicas()
+			limitadorObj := limitadorWithInvalidDiskReplicas(testNamespace)
 			err := k8sClient.Create(context.TODO(), limitadorObj)
 			Expect(err).To(HaveOccurred())
 			Expect(errors.IsInvalid(err)).To(BeTrue())
@@ -767,13 +734,13 @@ var _ = Describe("Limitador controller", func() {
 	Context("Deploying limitador object with redis storage", func() {
 		redisSecret := &v1.Secret{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: LimitadorNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
 			StringData: map[string]string{"URL": "redis://example.com:6379"},
 			Type:       v1.SecretTypeOpaque,
 		}
 
 		BeforeEach(func() {
-			deployRedis()
+			deployRedis(testNamespace)
 
 			err := k8sClient.Create(context.Background(), redisSecret)
 			Expect(err).ToNot(HaveOccurred())
@@ -795,36 +762,17 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		AfterEach(func() {
-			unDeployRedis()
-			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret))
-			err := k8sClient.Delete(context.TODO(), limitadorObj)
-			Expect(err == nil || errors.IsNotFound(err))
-			Eventually(func() bool {
-				var l limitadorv1alpha1.Limitador
-				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-
-			err = k8sClient.Delete(context.TODO(), redisSecret)
-			Expect(err == nil || errors.IsNotFound(err))
-			Eventually(func() bool {
-				var s v1.Secret
-				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(redisSecret), &s)
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-
 		It("command line is correct", func() {
-			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret))
+			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
@@ -849,13 +797,13 @@ var _ = Describe("Limitador controller", func() {
 	Context("Deploying limitador object with redis cached storage", func() {
 		redisSecret := &v1.Secret{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: LimitadorNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
 			StringData: map[string]string{"URL": "redis://example.com:6379"},
 			Type:       v1.SecretTypeOpaque,
 		}
 
 		BeforeEach(func() {
-			deployRedis()
+			deployRedis(testNamespace)
 
 			err := k8sClient.Create(context.Background(), redisSecret)
 			Expect(err).ToNot(HaveOccurred())
@@ -877,37 +825,17 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		AfterEach(func() {
-			unDeployRedis()
-			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret))
-			err := k8sClient.Delete(context.TODO(), limitadorObj)
-			Expect(err == nil || errors.IsNotFound(err))
-			Eventually(func() bool {
-				var l limitadorv1alpha1.Limitador
-				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-
-			err = k8sClient.Delete(context.TODO(), redisSecret)
-			Expect(err == nil || errors.IsNotFound(err))
-			Eventually(func() bool {
-				var s v1.Secret
-				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(redisSecret), &s)
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-
-		})
-
 		It("command line is correct", func() {
-			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret))
+			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
@@ -934,27 +862,17 @@ var _ = Describe("Limitador controller", func() {
 	})
 
 	Context("Deploying limitador object with disk storage", func() {
-		AfterEach(func() {
-			limitadorObj := limitadorWithDiskStorage()
-			err := k8sClient.Delete(context.TODO(), limitadorObj)
-			Expect(err == nil || errors.IsNotFound(err))
-			Eventually(func() bool {
-				var l limitadorv1alpha1.Limitador
-				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(limitadorObj), &l)
-				return errors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
-		})
-
 		It("deployment is correct", func() {
-			limitadorObj := limitadorWithDiskStorage()
+			limitadorObj := limitadorWithDiskStorage(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
 					types.NamespacedName{
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)
@@ -1000,8 +918,9 @@ var _ = Describe("Limitador controller", func() {
 		})
 
 		It("pvc is correct", func() {
-			limitadorObj := limitadorWithDiskStorage()
+			limitadorObj := limitadorWithDiskStorage(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			pvc := &v1.PersistentVolumeClaim{}
 			Eventually(func() bool {
@@ -1009,7 +928,7 @@ var _ = Describe("Limitador controller", func() {
 					context.TODO(),
 					types.NamespacedName{
 						Name:      limitador.PVCName(limitadorObj),
-						Namespace: LimitadorNamespace,
+						Namespace: testNamespace,
 					},
 					pvc)
 
@@ -1021,10 +940,10 @@ var _ = Describe("Limitador controller", func() {
 	})
 })
 
-func limitadorWithRedisStorage(redisKey client.ObjectKey) *limitadorv1alpha1.Limitador {
+func limitadorWithRedisStorage(redisKey client.ObjectKey, ns string) *limitadorv1alpha1.Limitador {
 	return &limitadorv1alpha1.Limitador{
 		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-redis-storage", Namespace: LimitadorNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-redis-storage", Namespace: ns},
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				Redis: &limitadorv1alpha1.Redis{
@@ -1037,10 +956,10 @@ func limitadorWithRedisStorage(redisKey client.ObjectKey) *limitadorv1alpha1.Lim
 	}
 }
 
-func limitadorWithRedisCachedStorage(key client.ObjectKey) *limitadorv1alpha1.Limitador {
+func limitadorWithRedisCachedStorage(key client.ObjectKey, ns string) *limitadorv1alpha1.Limitador {
 	return &limitadorv1alpha1.Limitador{
 		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-redis-cached-storage", Namespace: LimitadorNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-redis-cached-storage", Namespace: ns},
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				RedisCached: &limitadorv1alpha1.RedisCached{
@@ -1059,10 +978,10 @@ func limitadorWithRedisCachedStorage(key client.ObjectKey) *limitadorv1alpha1.Li
 	}
 }
 
-func limitadorWithDiskStorage() *limitadorv1alpha1.Limitador {
+func limitadorWithDiskStorage(ns string) *limitadorv1alpha1.Limitador {
 	return &limitadorv1alpha1.Limitador{
 		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-disk-storage", Namespace: LimitadorNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-disk-storage", Namespace: ns},
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				Disk: &limitadorv1alpha1.DiskSpec{},
@@ -1071,10 +990,10 @@ func limitadorWithDiskStorage() *limitadorv1alpha1.Limitador {
 	}
 }
 
-func limitadorWithInvalidDiskReplicas() *limitadorv1alpha1.Limitador {
+func limitadorWithInvalidDiskReplicas(ns string) *limitadorv1alpha1.Limitador {
 	return &limitadorv1alpha1.Limitador{
 		TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
-		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-invalid-disk-replicas", Namespace: LimitadorNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "limitador-with-invalid-disk-replicas", Namespace: ns},
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Replicas: &[]int{2}[0],
 			Storage: &limitadorv1alpha1.Storage{
@@ -1084,8 +1003,8 @@ func limitadorWithInvalidDiskReplicas() *limitadorv1alpha1.Limitador {
 	}
 }
 
-func deployRedis() {
-	deployment := redisDeployment()
+func deployRedis(ns string) {
+	deployment := redisDeployment(ns)
 	Expect(k8sClient.Create(context.TODO(), deployment)).Should(Succeed())
 	Eventually(func() bool {
 		d := &appsv1.Deployment{}
@@ -1093,7 +1012,7 @@ func deployRedis() {
 		return err == nil
 	}, timeout, interval).Should(BeTrue())
 
-	service := redisService()
+	service := redisService(ns)
 	Expect(k8sClient.Create(context.TODO(), service)).Should(Succeed())
 	Eventually(func() bool {
 		s := &v1.Service{}
@@ -1102,32 +1021,12 @@ func deployRedis() {
 	}, timeout, interval).Should(BeTrue())
 }
 
-func unDeployRedis() {
-	deployment := redisDeployment()
-	err := k8sClient.Delete(context.TODO(), deployment)
-	Expect(err == nil || errors.IsNotFound(err))
-	Eventually(func() bool {
-		var d appsv1.Deployment
-		err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(deployment), &d)
-		return errors.IsNotFound(err)
-	}, timeout, interval).Should(BeTrue())
-
-	service := redisService()
-	err = k8sClient.Delete(context.TODO(), service)
-	Expect(err == nil || errors.IsNotFound(err))
-	Eventually(func() bool {
-		s := &v1.Service{}
-		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(service), s)
-		return errors.IsNotFound(err)
-	}, timeout, interval).Should(BeTrue())
-}
-
-func redisDeployment() *appsv1.Deployment {
+func redisDeployment(ns string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{Kind: "Deployment", APIVersion: "apps/v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "redis",
-			Namespace: LimitadorNamespace,
+			Namespace: ns,
 			Labels:    map[string]string{"app": "redis"},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -1146,12 +1045,12 @@ func redisDeployment() *appsv1.Deployment {
 	}
 }
 
-func redisService() *v1.Service {
+func redisService(ns string) *v1.Service {
 	return &v1.Service{
 		TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "redis",
-			Namespace: LimitadorNamespace,
+			Namespace: ns,
 		},
 		Spec: v1.ServiceSpec{
 			Selector: map[string]string{"app": "redis"},
@@ -1164,5 +1063,54 @@ func redisService() *v1.Service {
 				},
 			},
 		},
+	}
+}
+
+func testLimitadorIsReady(l *limitadorv1alpha1.Limitador) func() bool {
+	return func() bool {
+		existing := &limitadorv1alpha1.Limitador{}
+		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(l), existing)
+		return err == nil && meta.IsStatusConditionTrue(existing.Status.Conditions, "Ready")
+	}
+}
+
+func CreateNamespace(namespace *string) {
+	var generatedTestNamespace = "test-namespace-" + string(uuid.NewUUID())
+
+	nsObject := &v1.Namespace{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+		ObjectMeta: metav1.ObjectMeta{Name: generatedTestNamespace},
+	}
+
+	err := k8sClient.Create(context.Background(), nsObject)
+	Expect(err).ToNot(HaveOccurred())
+
+	existingNamespace := &v1.Namespace{}
+	Eventually(func() bool {
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: generatedTestNamespace}, existingNamespace)
+		if err != nil {
+			return false
+		}
+		return true
+	}, time.Minute, 5*time.Second).Should(BeTrue())
+
+	*namespace = existingNamespace.Name
+}
+
+func DeleteNamespaceCallback(namespace *string) func() {
+	return func() {
+		desiredTestNamespace := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *namespace}}
+		err := k8sClient.Delete(context.Background(), desiredTestNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
+
+		Expect(err).ToNot(HaveOccurred())
+
+		existingNamespace := &v1.Namespace{}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: *namespace}, existingNamespace)
+			if err != nil && apierrors.IsNotFound(err) {
+				return true
+			}
+			return false
+		}, 3*time.Minute, 2*time.Second).Should(BeTrue())
 	}
 }
