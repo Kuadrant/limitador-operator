@@ -112,7 +112,7 @@ func (r *LimitadorReconciler) checkLimitadorAvailable(ctx context.Context, limit
 	deployment := &appsv1.Deployment{}
 	dKey := client.ObjectKey{ // Its deployment is built after the same name and namespace
 		Namespace: limitadorObj.Namespace,
-		Name:      limitadorObj.Name,
+		Name:      limitador.DeploymentName(limitadorObj),
 	}
 	err := r.Client().Get(ctx, dKey, deployment)
 	if err != nil && !apierrors.IsNotFound(err) {

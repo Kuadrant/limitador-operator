@@ -147,3 +147,45 @@ func DeploymentVolumeMountsMutator(desired, existing *appsv1.Deployment) bool {
 
 	return update
 }
+
+func DeploymentPortsMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	existingContainer := &existing.Spec.Template.Spec.Containers[0]
+	desiredContainer := &desired.Spec.Template.Spec.Containers[0]
+
+	if !reflect.DeepEqual(existingContainer.Ports, desiredContainer.Ports) {
+		existingContainer.Ports = desiredContainer.Ports
+		update = true
+	}
+
+	return update
+}
+
+func DeploymentLivenessProbeMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	existingContainer := &existing.Spec.Template.Spec.Containers[0]
+	desiredContainer := &desired.Spec.Template.Spec.Containers[0]
+
+	if !reflect.DeepEqual(existingContainer.LivenessProbe, desiredContainer.LivenessProbe) {
+		existingContainer.LivenessProbe = desiredContainer.LivenessProbe
+		update = true
+	}
+
+	return update
+}
+
+func DeploymentReadinessProbeMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+
+	existingContainer := &existing.Spec.Template.Spec.Containers[0]
+	desiredContainer := &desired.Spec.Template.Spec.Containers[0]
+
+	if !reflect.DeepEqual(existingContainer.ReadinessProbe, desiredContainer.ReadinessProbe) {
+		existingContainer.ReadinessProbe = desiredContainer.ReadinessProbe
+		update = true
+	}
+
+	return update
+}

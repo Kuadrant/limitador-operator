@@ -200,6 +200,9 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentVolumesMutator,
 		reconcilers.DeploymentVolumeMountsMutator,
 		reconcilers.DeploymentEnvMutator,
+		reconcilers.DeploymentPortsMutator,
+		reconcilers.DeploymentLivenessProbeMutator,
+		reconcilers.DeploymentReadinessProbeMutator,
 	)
 
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
@@ -229,7 +232,9 @@ func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj
 		return err
 	}
 
-	err = r.ReconcileService(ctx, limitadorService, reconcilers.CreateOnlyMutator)
+	serviceMutator := reconcilers.ServiceMutator(reconcilers.ServicePortsMutator)
+
+	err = r.ReconcileService(ctx, limitadorService, serviceMutator)
 	logger.V(1).Info("reconcile service", "error", err)
 	if err != nil {
 		return err

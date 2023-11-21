@@ -1,6 +1,7 @@
 package limitador
 
 import (
+	"strconv"
 	"testing"
 
 	"gotest.tools/assert"
@@ -19,12 +20,16 @@ func TestDeploymentCommand(t *testing.T) {
 		}
 	}
 
-	t.Run("when no rate limit headers set in the spec command line args does not include --rate-limit-headers", func(subT *testing.T) {
+	t.Run("when default spec", func(subT *testing.T) {
 		limObj := basicLimitador()
 		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
 		assert.DeepEqual(subT, command,
 			[]string{
 				"limitador-server",
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
 				"/home/limitador/etc/limitador-config.yaml",
 				"memory",
 			})
@@ -40,6 +45,10 @@ func TestDeploymentCommand(t *testing.T) {
 				"limitador-server",
 				"--rate-limit-headers",
 				"DRAFT_VERSION_03",
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
 				"/home/limitador/etc/limitador-config.yaml",
 				"memory",
 			})
@@ -51,6 +60,10 @@ func TestDeploymentCommand(t *testing.T) {
 		assert.DeepEqual(subT, command,
 			[]string{
 				"limitador-server",
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
 				"/home/limitador/etc/limitador-config.yaml",
 			})
 	})
@@ -63,6 +76,10 @@ func TestDeploymentCommand(t *testing.T) {
 		assert.DeepEqual(subT, command,
 			[]string{
 				"limitador-server",
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
 				"/home/limitador/etc/limitador-config.yaml",
 				"a", "b", "c",
 			})

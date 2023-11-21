@@ -2,6 +2,7 @@ package limitador
 
 import (
 	"path/filepath"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -41,6 +42,14 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 	if limObj.Spec.Telemetry != nil && *limObj.Spec.Telemetry == "exhaustive" {
 		command = append(command, "--limit-name-in-labels")
 	}
+
+	// let's set explicitly the HTTP port,
+	// as it is being set in the readiness and liveness probe and in the service
+	command = append(command, "--http-port", strconv.Itoa(int(limObj.HTTPPort())))
+
+	// let's set explicitly the GRPC port,
+	// as it is being set in the service
+	command = append(command, "--rls-port", strconv.Itoa(int(limObj.GRPCPort())))
 
 	command = append(command, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
 	command = append(command, storageOptions.Command...)
