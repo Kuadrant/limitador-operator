@@ -1080,6 +1080,11 @@ spec:
                 - basic
                 - exhaustive
                 type: string
+              verbosity:
+                description: Sets the level of verbosity
+                maximum: 4
+                minimum: 1
+                type: integer
               version:
                 type: string
             type: object

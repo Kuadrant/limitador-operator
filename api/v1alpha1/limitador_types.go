@@ -50,6 +50,10 @@ var (
 	}
 )
 
+// +kubebuilder:validation:Minimum=1
+// +kubebuilder:validation:Maximum=4
+type VerbosityLevel int
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -87,6 +91,10 @@ type LimitadorSpec struct {
 
 	// +optional
 	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
+
+	// Sets the level of verbosity
+	// +optional
+	Verbosity *VerbosityLevel `json:"verbosity,omitempty"`
 }
 
 //+kubebuilder:object:root=true

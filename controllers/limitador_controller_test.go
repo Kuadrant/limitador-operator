@@ -345,6 +345,132 @@ var _ = Describe("Limitador controller", func() {
 		})
 	})
 
+	Context("Creating a new Limitador object with verbosity", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = basicLimitador(testNamespace)
+			limitadorObj.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{3}[0]
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+		})
+
+		It("Should create a new deployment with verbosity level command line arg", func() {
+			deployment := &appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(),
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					}, deployment)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(
+				HaveExactElements(
+					"limitador-server",
+					"-vvv",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"memory",
+				),
+			)
+		})
+	})
+
+	Context("Creating a new Limitador object with too high verbosity level", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		It("Should be rejected by k8s", func() {
+			limitadorObj = basicLimitador(testNamespace)
+			limitadorObj.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{6}[0]
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).NotTo(Succeed())
+		})
+	})
+
+	Context("Reconciling command line args for verbosity", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func() {
+			limitadorObj = basicLimitador(testNamespace)
+
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+		})
+
+		It("Should modify the limitador deployment command line args", func() {
+			deployment := &appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(),
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					}, deployment)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			// verbosity level command line arg should be missing
+			Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(
+				HaveExactElements(
+					"limitador-server",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"memory",
+				),
+			)
+
+			// Let's add verbosity level
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(),
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitadorObj.Name,
+					}, &updatedLimitador)
+
+				if err != nil {
+					return false
+				}
+
+				updatedLimitador.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{3}[0]
+				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Eventually(func() bool {
+				newDeployment := &appsv1.Deployment{}
+				err := k8sClient.Get(context.TODO(),
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					}, newDeployment)
+
+				if err != nil {
+					return false
+				}
+
+				return reflect.DeepEqual(newDeployment.Spec.Template.Spec.Containers[0].Command,
+					[]string{
+						"limitador-server",
+						"-vvv",
+						"--http-port",
+						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+						"--rls-port",
+						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+						"/home/limitador/etc/limitador-config.yaml",
+						"memory",
+					})
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+
 	Context("Modifying limitador deployment objects", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
