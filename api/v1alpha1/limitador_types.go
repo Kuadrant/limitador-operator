@@ -279,7 +279,7 @@ type LimitadorStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Represents the observations of a foo's current state.
-	// Known .status.conditions.type are: "Available"
+	// Known .status.conditions.type are: "Ready"
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map

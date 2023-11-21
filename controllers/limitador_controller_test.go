@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,66 +32,11 @@ const (
 	interval = time.Millisecond * 250
 )
 
+var (
+	ExpectedDefaultImage = fmt.Sprintf("%s:%s", limitador.LimitadorRepository, "latest")
+)
+
 var _ = Describe("Limitador controller", func() {
-	//const (
-	//	LimitadorImage                 = "quay.io/kuadrant/limitador"
-	//	LimitadorVersion               = "latest"
-	//	LimitadorHTTPPort              = 8000
-	//	LimitadorGRPCPort              = 8001
-	//	LimitadorMaxUnavailable        = 1
-	//	LimitdaorUpdatedMaxUnavailable = 3
-	//)
-
-	//httpPortNumber := int32(LimitadorHTTPPort)
-	//grpcPortNumber := int32(LimitadorGRPCPort)
-
-	//maxUnavailable := &intstr.IntOrString{
-	//	Type:   0,
-	//	IntVal: LimitadorMaxUnavailable,
-	//}
-	//updatedMaxUnavailable := &intstr.IntOrString{
-	//	Type:   0,
-	//	IntVal: LimitdaorUpdatedMaxUnavailable,
-	//}
-
-	//version := LimitadorVersion
-	//httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
-	//grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
-	//affinity := &v1.Affinity{
-	//	PodAntiAffinity: &v1.PodAntiAffinity{
-	//		PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
-	//			{
-	//				Weight: 100,
-	//				PodAffinityTerm: v1.PodAffinityTerm{
-	//					LabelSelector: &metav1.LabelSelector{
-	//						MatchLabels: map[string]string{
-	//							"pod": "label",
-	//						},
-	//					},
-	//					TopologyKey: "kubernetes.io/hostname",
-	//				},
-	//			},
-	//		},
-	//	},
-	//}
-
-	//limits := []limitadorv1alpha1.RateLimit{
-	//	{
-	//		Conditions: []string{"req.method == 'GET'"},
-	//		MaxValue:   10,
-	//		Namespace:  "test-namespace",
-	//		Seconds:    60,
-	//		Variables:  []string{"user_id"},
-	//		Name:       "useless",
-	//	},
-	//	{
-	//		Conditions: []string{"req.method == 'POST'"},
-	//		MaxValue:   5,
-	//		Namespace:  "test-namespace",
-	//		Seconds:    60,
-	//		Variables:  []string{"user_id"},
-	//	},
-	//}
 
 	var testNamespace string
 
@@ -128,8 +75,7 @@ var _ = Describe("Limitador controller", func() {
 		})
 
 		It("Should create a new deployment with default settings", func() {
-			expectedDefaultReplicas := 1
-			expectedDefaultImage := fmt.Sprintf("%s:%s", limitador.LimitadorRepository, "latest")
+			var expectedDefaultReplicas int32 = 1
 			expectedDefaultResourceRequirements := v1.ResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceCPU:    resource.MustParse("250m"),
@@ -157,12 +103,7 @@ var _ = Describe("Limitador controller", func() {
 			Expect(*createdLimitadorDeployment.Spec.Replicas).Should(Equal(expectedDefaultReplicas))
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
-				Equal(expectedDefaultImage),
-			)
-			// It should contain at least the limits file
-			Expect(len(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command) > 1).Should(BeTrue())
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command[1]).Should(
-				Equal("/home/limitador/etc/limitador-config.yaml"),
+				Equal(ExpectedDefaultImage),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).Should(
 				Equal("/home/limitador/etc"),
@@ -172,12 +113,14 @@ var _ = Describe("Limitador controller", func() {
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
 				// asserts no additional command line arg is added
-				Equal(
-					[]string{
-						"limitador-server",
-						"/home/limitador/etc/limitador-config.yaml",
-						"memory",
-					},
+				HaveExactElements(
+					"limitador-server",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"memory",
 				),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources).To(
@@ -227,6 +170,17 @@ var _ = Describe("Limitador controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cmLimits).To(BeEmpty())
 		})
+
+		It("Should have not created PodDisruptionBudget", func() {
+			pdb := &policyv1.PodDisruptionBudget{}
+			err := k8sClient.Get(context.TODO(),
+				types.NamespacedName{
+					Namespace: testNamespace,
+					Name:      limitador.PodDisruptionBudgetName(limitadorObj),
+				}, pdb)
+			// returns false when err is nil
+			Expect(errors.IsNotFound(err)).To(BeTrue())
+		})
 	})
 
 	Context("Creating a new Limitador object with rate limit headers", func() {
@@ -254,15 +208,17 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
-				Equal(
-					[]string{
-						"limitador-server",
-						"--rate-limit-headers",
-						"DRAFT_VERSION_03",
-						"/home/limitador/etc/limitador-config.yaml",
-						"memory",
-					},
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).To(
+				HaveExactElements(
+					"limitador-server",
+					"--rate-limit-headers",
+					"DRAFT_VERSION_03",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"memory",
 				),
 			)
 		})
@@ -318,6 +274,10 @@ var _ = Describe("Limitador controller", func() {
 						"limitador-server",
 						"--rate-limit-headers",
 						"DRAFT_VERSION_03",
+						"--http-port",
+						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+						"--rls-port",
+						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
 						"/home/limitador/etc/limitador-config.yaml",
 						"memory",
 					})
@@ -375,6 +335,10 @@ var _ = Describe("Limitador controller", func() {
 					[]string{
 						"limitador-server",
 						"--limit-name-in-labels",
+						"--http-port",
+						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+						"--rls-port",
+						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
 						"/home/limitador/etc/limitador-config.yaml",
 						"memory",
 					})
@@ -406,7 +370,7 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			containerObj := v1.Container{Name: "newContainer", Image: "someImage"}
+			containerObj := v1.Container{Name: "newcontainer", Image: "someImage"}
 
 			deploymentObj.Spec.Template.Spec.Containers = append(deploymentObj.Spec.Template.Spec.Containers, containerObj)
 
@@ -440,15 +404,19 @@ var _ = Describe("Limitador controller", func() {
 	})
 
 	Context("Deploying limitador object with redis storage", func() {
-		redisSecret := &v1.Secret{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
-			StringData: map[string]string{"URL": "redis://example.com:6379"},
-			Type:       v1.SecretTypeOpaque,
-		}
+		var redisSecret *v1.Secret
 
 		BeforeEach(func() {
 			deployRedis(testNamespace)
+
+			redisSecret = &v1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+				ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
+				StringData: map[string]string{
+					"URL": fmt.Sprintf("redis://%s.%s.svc.cluster.local:6379", redisService(testNamespace).Name, testNamespace),
+				},
+				Type: v1.SecretTypeOpaque,
+			}
 
 			err := k8sClient.Create(context.Background(), redisSecret)
 			Expect(err).ToNot(HaveOccurred())
@@ -490,28 +458,34 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
-				Equal(
-					[]string{
-						"limitador-server",
-						"/home/limitador/etc/limitador-config.yaml",
-						"redis",
-						"$(LIMITADOR_OPERATOR_REDIS_URL)",
-					},
+				HaveExactElements(
+					"limitador-server",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"redis",
+					"$(LIMITADOR_OPERATOR_REDIS_URL)",
 				),
 			)
 		})
 	})
 
 	Context("Deploying limitador object with redis cached storage", func() {
-		redisSecret := &v1.Secret{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
-			ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
-			StringData: map[string]string{"URL": "redis://example.com:6379"},
-			Type:       v1.SecretTypeOpaque,
-		}
+		var redisSecret *v1.Secret
 
 		BeforeEach(func() {
 			deployRedis(testNamespace)
+
+			redisSecret = &v1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
+				ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
+				StringData: map[string]string{
+					"URL": fmt.Sprintf("redis://%s.%s.svc.cluster.local:6379", redisService(testNamespace).Name, testNamespace),
+				},
+				Type: v1.SecretTypeOpaque,
+			}
 
 			err := k8sClient.Create(context.Background(), redisSecret)
 			Expect(err).ToNot(HaveOccurred())
@@ -553,17 +527,19 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
-				Equal(
-					[]string{
-						"limitador-server",
-						"/home/limitador/etc/limitador-config.yaml",
-						"redis_cached",
-						"$(LIMITADOR_OPERATOR_REDIS_URL)",
-						"--ttl", "1",
-						"--ratio", "2",
-						"--flush-period", "3",
-						"--max-cached", "4",
-					},
+				HaveExactElements(
+					"limitador-server",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"redis_cached",
+					"$(LIMITADOR_OPERATOR_REDIS_URL)",
+					"--ttl", "1",
+					"--ratio", "2",
+					"--flush-period", "3",
+					"--max-cached", "4",
 				),
 			)
 		})
@@ -604,13 +580,15 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
-				Equal(
-					[]string{
-						"limitador-server",
-						"/home/limitador/etc/limitador-config.yaml",
-						"disk",
-						limitador.DiskPath,
-					},
+				HaveExactElements(
+					"limitador-server",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"disk",
+					limitador.DiskPath,
 				),
 			)
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(2))
