@@ -100,13 +100,12 @@ func TestDeploymentCommand(t *testing.T) {
 		for _, tt := range tests {
 			subT.Run(tt.Name, func(subTest *testing.T) {
 				limObj := basicLimitador()
-				limObj.Spec.Verbosity = &tt.VerbosityLevel
+				limObj.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{tt.VerbosityLevel}[0]
 				command := DeploymentCommand(limObj, DeploymentStorageOptions{})
 				assert.Assert(subTest, is.Contains(command, tt.ExpectedArg))
 			})
 		}
 	})
-
 }
 
 func TestDeploymentVolumeMounts(t *testing.T) {
