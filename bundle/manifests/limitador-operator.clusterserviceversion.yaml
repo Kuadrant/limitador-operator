@@ -36,8 +36,8 @@ metadata:
       ]
     capabilities: Basic Install
     categories: Integration & Delivery
-    containerImage: quay.io/kuadrant/limitador-operator:latest
-    createdAt: "2023-11-21T15:45:03Z"
+    containerImage: quay.io/kuadrant/limitador-operator:v0.7.0
+    createdAt: "2023-11-21T19:48:54Z"
     operators.operatorframework.io/builder: operator-sdk-v1.28.1
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/Kuadrant/limitador-operator
