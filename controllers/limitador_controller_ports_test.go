@@ -32,8 +32,8 @@ var _ = Describe("Limitador controller manages ports", func() {
 	Context("Creating a new Limitador object with specific ports", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
-		var httpPortNumber int32 = 8000
-		var grpcPortNumber int32 = 8001
+		var httpPortNumber int32 = limitadorv1alpha1.DefaultServiceHTTPPort + 100
+		var grpcPortNumber int32 = limitadorv1alpha1.DefaultServiceGRPCPort + 100
 
 		httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 		grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
@@ -131,8 +131,8 @@ var _ = Describe("Limitador controller manages ports", func() {
 	Context("Updating limitador object with new custom ports", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
-		var httpPortNumber int32 = 8000
-		var grpcPortNumber int32 = 8001
+		var httpPortNumber int32 = limitadorv1alpha1.DefaultServiceHTTPPort + 100
+		var grpcPortNumber int32 = limitadorv1alpha1.DefaultServiceGRPCPort + 100
 
 		httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 		grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
@@ -209,12 +209,14 @@ var _ = Describe("Limitador controller manages ports", func() {
 				Name:      limitador.ServiceName(limitadorObj),
 			}, service)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ContainElements(
-				v1.ContainerPort{
-					Name: "http", ContainerPort: httpPortNumber, Protocol: v1.ProtocolTCP,
+			Expect(service.Spec.Ports).To(ContainElements(
+				v1.ServicePort{
+					Name: "http", Port: limitadorv1alpha1.DefaultServiceHTTPPort,
+					Protocol: v1.ProtocolTCP, TargetPort: intstr.FromString("http"),
 				},
-				v1.ContainerPort{
-					Name: "grpc", ContainerPort: grpcPortNumber, Protocol: v1.ProtocolTCP,
+				v1.ServicePort{
+					Name: "grpc", Port: limitadorv1alpha1.DefaultServiceGRPCPort,
+					Protocol: v1.ProtocolTCP, TargetPort: intstr.FromString("grpc"),
 				},
 			))
 
@@ -266,10 +268,10 @@ var _ = Describe("Limitador controller manages ports", func() {
 						"/home/limitador/etc/limitador-config.yaml",
 						"memory",
 					})
-				livenessProbeMatch := deployment.Spec.Template.Spec.Containers[0].LivenessProbe.
-					ProbeHandler.HTTPGet.Port == intstr.FromInt(int(httpPortNumber))
-				readinessProbeMatch := deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.
-					ProbeHandler.HTTPGet.Port == intstr.FromInt(int(httpPortNumber))
+				livenessProbeMatch := reflect.DeepEqual(newDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.
+					ProbeHandler.HTTPGet.Port, intstr.FromInt(int(httpPortNumber)))
+				readinessProbeMatch := reflect.DeepEqual(newDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.
+					ProbeHandler.HTTPGet.Port, intstr.FromInt(int(httpPortNumber)))
 
 				return !slices.Contains(
 					[]bool{
