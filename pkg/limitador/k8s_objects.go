@@ -180,20 +180,28 @@ func DeploymentName(limitadorObj *limitadorv1alpha1.Limitador) string {
 }
 
 func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.PodDisruptionBudget {
-	return &policyv1.PodDisruptionBudget{
+	pdb := &policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PodDisruptionBudgetName(limitadorObj),
 			Namespace: limitadorObj.ObjectMeta.Namespace,
 			Labels:    Labels(limitadorObj),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: limitadorObj.Spec.PodDisruptionBudget.MaxUnavailable,
-			MinAvailable:   limitadorObj.Spec.PodDisruptionBudget.MinAvailable,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: Labels(limitadorObj),
 			},
 		},
 	}
+
+	if limitadorObj.Spec.PodDisruptionBudget == nil {
+		helpers.TagObjectToDelete(pdb)
+		return pdb
+	}
+
+	pdb.Spec.MaxUnavailable = limitadorObj.Spec.PodDisruptionBudget.MaxUnavailable
+	pdb.Spec.MinAvailable = limitadorObj.Spec.PodDisruptionBudget.MinAvailable
+
+	return pdb
 }
 
 func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {

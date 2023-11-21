@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -137,25 +136,6 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
-	}
-	if limitadorObj.Spec.PodDisruptionBudget == nil {
-		pdb := &policyv1.PodDisruptionBudget{}
-		if err := r.GetResource(ctx,
-			types.NamespacedName{
-				Namespace: limitadorObj.Namespace,
-				Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-			}, pdb); err != nil {
-			if errors.IsNotFound(err) {
-				return nil
-			}
-			return err
-		}
-		if pdb.ObjectMeta.DeletionTimestamp == nil {
-			if err = r.DeleteResource(ctx, pdb); err != nil {
-				return err
-			}
-		}
-		return nil
 	}
 
 	pdb := limitador.PodDisruptionBudget(limitadorObj)
