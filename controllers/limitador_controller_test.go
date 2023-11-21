@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -179,7 +178,7 @@ var _ = Describe("Limitador controller", func() {
 					Name:      limitador.PodDisruptionBudgetName(limitadorObj),
 				}, pdb)
 			// returns false when err is nil
-			Expect(errors.IsNotFound(err)).To(BeTrue())
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
 		})
 	})
 
@@ -399,7 +398,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj := limitadorWithInvalidDiskReplicas(testNamespace)
 			err := k8sClient.Create(context.TODO(), limitadorObj)
 			Expect(err).To(HaveOccurred())
-			Expect(errors.IsInvalid(err)).To(BeTrue())
+			Expect(apierrors.IsInvalid(err)).To(BeTrue())
 		})
 	})
 
@@ -425,7 +424,7 @@ var _ = Describe("Limitador controller", func() {
 				secret := &v1.Secret{}
 				err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(redisSecret), secret)
 				if err != nil {
-					if errors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						fmt.Fprintln(GinkgoWriter, "==== redis secret not found")
 					} else {
 						fmt.Fprintln(GinkgoWriter, "==== cannot read redis secret", "error", err)
@@ -494,7 +493,7 @@ var _ = Describe("Limitador controller", func() {
 				secret := &v1.Secret{}
 				err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(redisSecret), secret)
 				if err != nil {
-					if errors.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						fmt.Fprintln(GinkgoWriter, "redis secret not found")
 					} else {
 						fmt.Fprintln(GinkgoWriter, "cannot read redis secret", "error", err)
@@ -788,10 +787,7 @@ func CreateNamespace(namespace *string) {
 	existingNamespace := &v1.Namespace{}
 	Eventually(func() bool {
 		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: generatedTestNamespace}, existingNamespace)
-		if err != nil {
-			return false
-		}
-		return true
+		return err == nil
 	}, time.Minute, 5*time.Second).Should(BeTrue())
 
 	*namespace = existingNamespace.Name
