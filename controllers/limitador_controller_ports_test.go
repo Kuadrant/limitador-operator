@@ -32,8 +32,8 @@ var _ = Describe("Limitador controller manages ports", func() {
 	Context("Creating a new Limitador object with specific ports", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
-		var httpPortNumber int32 = limitadorv1alpha1.DefaultServiceHTTPPort + 100
-		var grpcPortNumber int32 = limitadorv1alpha1.DefaultServiceGRPCPort + 100
+		httpPortNumber := limitadorv1alpha1.DefaultServiceHTTPPort + 100
+		grpcPortNumber := limitadorv1alpha1.DefaultServiceGRPCPort + 100
 
 		httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 		grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
@@ -131,8 +131,8 @@ var _ = Describe("Limitador controller manages ports", func() {
 	Context("Updating limitador object with new custom ports", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
-		var httpPortNumber int32 = limitadorv1alpha1.DefaultServiceHTTPPort + 100
-		var grpcPortNumber int32 = limitadorv1alpha1.DefaultServiceGRPCPort + 100
+		httpPortNumber := limitadorv1alpha1.DefaultServiceHTTPPort + 100
+		grpcPortNumber := limitadorv1alpha1.DefaultServiceGRPCPort + 100
 
 		httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
 		grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
