@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -32,96 +31,65 @@ const (
 )
 
 var _ = Describe("Limitador controller", func() {
-	const (
-		LimitadorReplicas              = 2
-		LimitadorImage                 = "quay.io/kuadrant/limitador"
-		LimitadorVersion               = "latest"
-		LimitadorHTTPPort              = 8000
-		LimitadorGRPCPort              = 8001
-		LimitadorMaxUnavailable        = 1
-		LimitdaorUpdatedMaxUnavailable = 3
-	)
+	//const (
+	//	LimitadorImage                 = "quay.io/kuadrant/limitador"
+	//	LimitadorVersion               = "latest"
+	//	LimitadorHTTPPort              = 8000
+	//	LimitadorGRPCPort              = 8001
+	//	LimitadorMaxUnavailable        = 1
+	//	LimitdaorUpdatedMaxUnavailable = 3
+	//)
 
-	httpPortNumber := int32(LimitadorHTTPPort)
-	grpcPortNumber := int32(LimitadorGRPCPort)
+	//httpPortNumber := int32(LimitadorHTTPPort)
+	//grpcPortNumber := int32(LimitadorGRPCPort)
 
-	maxUnavailable := &intstr.IntOrString{
-		Type:   0,
-		IntVal: LimitadorMaxUnavailable,
-	}
-	updatedMaxUnavailable := &intstr.IntOrString{
-		Type:   0,
-		IntVal: LimitdaorUpdatedMaxUnavailable,
-	}
+	//maxUnavailable := &intstr.IntOrString{
+	//	Type:   0,
+	//	IntVal: LimitadorMaxUnavailable,
+	//}
+	//updatedMaxUnavailable := &intstr.IntOrString{
+	//	Type:   0,
+	//	IntVal: LimitdaorUpdatedMaxUnavailable,
+	//}
 
-	replicas := LimitadorReplicas
-	version := LimitadorVersion
-	httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
-	grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
-	affinity := &v1.Affinity{
-		PodAntiAffinity: &v1.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
-				{
-					Weight: 100,
-					PodAffinityTerm: v1.PodAffinityTerm{
-						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"pod": "label",
-							},
-						},
-						TopologyKey: "kubernetes.io/hostname",
-					},
-				},
-			},
-		},
-	}
+	//version := LimitadorVersion
+	//httpPort := &limitadorv1alpha1.TransportProtocol{Port: &httpPortNumber}
+	//grpcPort := &limitadorv1alpha1.TransportProtocol{Port: &grpcPortNumber}
+	//affinity := &v1.Affinity{
+	//	PodAntiAffinity: &v1.PodAntiAffinity{
+	//		PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
+	//			{
+	//				Weight: 100,
+	//				PodAffinityTerm: v1.PodAffinityTerm{
+	//					LabelSelector: &metav1.LabelSelector{
+	//						MatchLabels: map[string]string{
+	//							"pod": "label",
+	//						},
+	//					},
+	//					TopologyKey: "kubernetes.io/hostname",
+	//				},
+	//			},
+	//		},
+	//	},
+	//}
 
-	limits := []limitadorv1alpha1.RateLimit{
-		{
-			Conditions: []string{"req.method == 'GET'"},
-			MaxValue:   10,
-			Namespace:  "test-namespace",
-			Seconds:    60,
-			Variables:  []string{"user_id"},
-			Name:       "useless",
-		},
-		{
-			Conditions: []string{"req.method == 'POST'"},
-			MaxValue:   5,
-			Namespace:  "test-namespace",
-			Seconds:    60,
-			Variables:  []string{"user_id"},
-		},
-	}
-
-	newLimitador := func(ns string) *limitadorv1alpha1.Limitador {
-		// The name can't start with a number.
-		name := "a" + string(uuid.NewUUID())
-
-		return &limitadorv1alpha1.Limitador{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Limitador",
-				APIVersion: "limitador.kuadrant.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: ns,
-			},
-			Spec: limitadorv1alpha1.LimitadorSpec{
-				Replicas: &replicas,
-				Version:  &version,
-				Affinity: affinity,
-				Listener: &limitadorv1alpha1.Listener{
-					HTTP: httpPort,
-					GRPC: grpcPort,
-				},
-				Limits: limits,
-				PodDisruptionBudget: &limitadorv1alpha1.PodDisruptionBudgetType{
-					MaxUnavailable: maxUnavailable,
-				},
-			},
-		}
-	}
+	//limits := []limitadorv1alpha1.RateLimit{
+	//	{
+	//		Conditions: []string{"req.method == 'GET'"},
+	//		MaxValue:   10,
+	//		Namespace:  "test-namespace",
+	//		Seconds:    60,
+	//		Variables:  []string{"user_id"},
+	//		Name:       "useless",
+	//	},
+	//	{
+	//		Conditions: []string{"req.method == 'POST'"},
+	//		MaxValue:   5,
+	//		Namespace:  "test-namespace",
+	//		Seconds:    60,
+	//		Variables:  []string{"user_id"},
+	//	},
+	//}
 
 	var testNamespace string
 
@@ -131,15 +99,12 @@ var _ = Describe("Limitador controller", func() {
 
 	AfterEach(DeleteNamespaceCallback(&testNamespace))
 
-	Context("Creating a new empty Limitador object", func() {
+	Context("Creating a new basic limitador CR", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
-			limitadorObj.Spec = limitadorv1alpha1.LimitadorSpec{}
-
+			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-
 			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
@@ -155,23 +120,27 @@ var _ = Describe("Limitador controller", func() {
 					&createdLimitadorService)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(len(createdLimitadorService.Spec.Ports)).Should(Equal(2))
+			Expect(createdLimitadorService.Spec.Ports).To(HaveLen(2))
 			Expect(createdLimitadorService.Spec.Ports[0].Name).Should(Equal("http"))
 			Expect(createdLimitadorService.Spec.Ports[0].Port).Should(Equal(limitadorv1alpha1.DefaultServiceHTTPPort))
 			Expect(createdLimitadorService.Spec.Ports[1].Name).Should(Equal("grpc"))
 			Expect(createdLimitadorService.Spec.Ports[1].Port).Should(Equal(limitadorv1alpha1.DefaultServiceGRPCPort))
 		})
-	})
 
-	Context("Creating a new Limitador object", func() {
-		var limitadorObj *limitadorv1alpha1.Limitador
+		It("Should create a new deployment with default settings", func() {
+			expectedDefaultReplicas := 1
+			expectedDefaultImage := fmt.Sprintf("%s:%s", limitador.LimitadorRepository, "latest")
+			expectedDefaultResourceRequirements := v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceCPU:    resource.MustParse("250m"),
+					v1.ResourceMemory: resource.MustParse("32Mi"),
+				},
+				Limits: v1.ResourceList{
+					v1.ResourceCPU:    resource.MustParse("500m"),
+					v1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+			}
 
-		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-		})
-
-		It("Should create a new deployment with the right settings", func() {
 			createdLimitadorDeployment := appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -185,11 +154,10 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(*createdLimitadorDeployment.Spec.Replicas).Should(
-				Equal((int32)(LimitadorReplicas)),
-			)
+			Expect(*createdLimitadorDeployment.Spec.Replicas).Should(Equal(expectedDefaultReplicas))
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Image).Should(
-				Equal(LimitadorImage + ":" + LimitadorVersion),
+				Equal(expectedDefaultImage),
 			)
 			// It should contain at least the limits file
 			Expect(len(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command) > 1).Should(BeTrue())
@@ -203,7 +171,7 @@ var _ = Describe("Limitador controller", func() {
 				Equal(limitador.LimitsConfigMapName(limitadorObj)),
 			)
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
-				// asserts request headers command line arg is not there
+				// asserts no additional command line arg is added
 				Equal(
 					[]string{
 						"limitador-server",
@@ -212,25 +180,9 @@ var _ = Describe("Limitador controller", func() {
 					},
 				),
 			)
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources).Should(
-				Equal(*limitadorObj.GetResourceRequirements()))
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Affinity).Should(
-				Equal(affinity),
-			)
-		})
-
-		It("Should create a Limitador service", func() {
-			createdLimitadorService := v1.Service{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.ServiceName(limitadorObj),
-					},
-					&createdLimitadorService)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources).To(
+				Equal(expectedDefaultResourceRequirements))
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Affinity).To(BeNil())
 		})
 
 		It("Should build the correct Status", func() {
@@ -248,16 +200,15 @@ var _ = Describe("Limitador controller", func() {
 				}
 				return createdLimitador.Status.Service
 			}, timeout, interval).Should(Equal(&limitadorv1alpha1.LimitadorService{
-				Host: "limitador-" + limitadorObj.Name + ".default.svc.cluster.local",
+				Host: fmt.Sprintf("%s.%s.svc.cluster.local", limitador.ServiceName(limitadorObj), testNamespace),
 				Ports: limitadorv1alpha1.Ports{
-					GRPC: grpcPortNumber,
-					HTTP: httpPortNumber,
+					GRPC: limitadorv1alpha1.DefaultServiceGRPCPort,
+					HTTP: limitadorv1alpha1.DefaultServiceHTTPPort,
 				},
 			}))
-
 		})
 
-		It("Should create a ConfigMap with the correct limits", func() {
+		It("Should create a ConfigMap with empty limits", func() {
 			createdConfigMap := v1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
@@ -273,246 +224,8 @@ var _ = Describe("Limitador controller", func() {
 
 			var cmLimits []limitadorv1alpha1.RateLimit
 			err := yaml.Unmarshal([]byte(createdConfigMap.Data[limitador.LimitadorConfigFileName]), &cmLimits)
-			Expect(err == nil)
-			Expect(cmLimits).To(Equal(limits))
-		})
-
-		It("Should create a PodDisruptionBudget", func() {
-			createdPdb := policyv1.PodDisruptionBudget{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-					},
-					&createdPdb)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdPdb.Spec.MaxUnavailable).To(Equal(maxUnavailable))
-			Expect(createdPdb.Spec.Selector.MatchLabels).To(Equal(limitador.Labels(limitadorObj)))
-		})
-	})
-
-	Context("Updating a limitador object", func() {
-		var limitadorObj *limitadorv1alpha1.Limitador
-
-		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
-		})
-
-		It("Should modify the limitador deployment", func() {
-			updatedLimitador := limitadorv1alpha1.Limitador{}
-			replicas = LimitadorReplicas + 1
-			resourceRequirements := &v1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse("200m"),
-					v1.ResourceMemory: resource.MustParse("30Mi"),
-				},
-				Limits: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse("400m"),
-					v1.ResourceMemory: resource.MustParse("60Mi"),
-				},
-			}
-
-			// Sometimes there can be a conflict due to stale resource if controller is still reconciling resource
-			// from create event
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&updatedLimitador)
-				if err != nil {
-					return false
-				}
-
-				updatedLimitador.Spec.Replicas = &replicas
-				updatedLimitador.Spec.Version = &[]string{"other"}[0]
-				updatedLimitador.Spec.ResourceRequirements = resourceRequirements
-				affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight = 99
-				updatedLimitador.Spec.Affinity = affinity
-
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-			}, timeout, interval).Should(BeTrue())
-
-			updatedLimitadorDeployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.DeploymentName(limitadorObj),
-					},
-					&updatedLimitadorDeployment)
-
-				if err != nil {
-					return false
-				}
-
-				correctReplicas := *updatedLimitadorDeployment.Spec.Replicas == LimitadorReplicas+1
-				correctImage := updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Image == fmt.Sprintf("%s:other", LimitadorImage)
-				correctResources := reflect.DeepEqual(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Resources, *resourceRequirements)
-				correctAffinity := updatedLimitadorDeployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].Weight == 99
-
-				return correctReplicas && correctImage && correctResources && correctAffinity
-			}, timeout, interval).Should(BeTrue())
-		})
-
-		It("Should modify limitador deployments if nil object set", func() {
-			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&updatedLimitador)
-
-				if err != nil {
-					return false
-				}
-				updatedLimitador.Spec.Affinity = nil
-
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-
-			}, timeout, interval).Should(BeTrue())
-
-			updatedLimitadorDeployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.DeploymentName(limitadorObj),
-					},
-					&updatedLimitadorDeployment)
-
-				if err != nil {
-					return false
-				}
-
-				correctAffinity := updatedLimitadorDeployment.Spec.Template.Spec.Affinity == nil
-
-				return correctAffinity
-			}, timeout, interval).Should(BeTrue())
-		})
-
-		It("Should modify the ConfigMap accordingly", func() {
-			originalCM := v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.LimitsConfigMapName(limitadorObj),
-					},
-					&originalCM)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			updatedLimitador := limitadorv1alpha1.Limitador{}
-			newLimits := []limitadorv1alpha1.RateLimit{
-				{
-					Conditions: []string{"req.method == GET"},
-					MaxValue:   100,
-					Namespace:  "test-namespace",
-					Seconds:    60,
-					Variables:  []string{"user_id"},
-				},
-			}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&updatedLimitador)
-
-				updatedLimitador.Spec.Limits = newLimits
-
-				if err != nil {
-					return false
-				}
-
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-			}, timeout, interval).Should(BeTrue())
-
-			updatedLimitadorConfigMap := v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.LimitsConfigMapName(limitadorObj),
-					},
-					&updatedLimitadorConfigMap)
-				// wait until the CM has changed
-				return err == nil && updatedLimitadorConfigMap.ResourceVersion != originalCM.ResourceVersion
-			}, timeout, interval).Should(BeTrue())
-
-			var cmLimits []limitadorv1alpha1.RateLimit
-			err := yaml.Unmarshal([]byte(updatedLimitadorConfigMap.Data[limitador.LimitadorConfigFileName]), &cmLimits)
-			Expect(err == nil)
-			Expect(cmLimits).To(Equal(newLimits))
-		})
-
-		It("Updates the PodDisruptionBudget accordingly", func() {
-			originalPdb := policyv1.PodDisruptionBudget{}
-
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-					},
-					&originalPdb)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-
-			updatedLimitador := limitadorv1alpha1.Limitador{}
-
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitadorObj.Name,
-					},
-					&updatedLimitador)
-
-				if err != nil {
-					return false
-				}
-				updatedLimitador.Spec.PodDisruptionBudget.MaxUnavailable = updatedMaxUnavailable
-
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-			}, timeout, interval).Should(BeTrue())
-
-			updatedPdb := policyv1.PodDisruptionBudget{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-					},
-					&updatedPdb)
-
-				return err == nil && updatedPdb.ResourceVersion != originalPdb.ResourceVersion
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(updatedPdb.Spec.MaxUnavailable).To(Equal(updatedMaxUnavailable))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cmLimits).To(BeEmpty())
 		})
 	})
 
@@ -520,7 +233,7 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
+			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
@@ -541,9 +254,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			// It should contain at least the limits file
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
-				// asserts request headers command line arg is not there
 				Equal(
 					[]string{
 						"limitador-server",
@@ -561,7 +272,7 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
+			limitadorObj = basicLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
@@ -582,9 +293,8 @@ var _ = Describe("Limitador controller", func() {
 					return false
 				}
 
-				if updatedLimitador.Spec.RateLimitHeaders != nil {
-					return false
-				}
+				Expect(updatedLimitador.Spec.RateLimitHeaders).To(BeNil())
+
 				updatedLimitador.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
 				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
 			}, timeout, interval).Should(BeTrue())
@@ -619,7 +329,7 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
+			limitadorObj = basicLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
@@ -640,9 +350,8 @@ var _ = Describe("Limitador controller", func() {
 					return false
 				}
 
-				if updatedLimitador.Spec.Telemetry != nil {
-					return false
-				}
+				Expect(updatedLimitador.Spec.Telemetry).To(BeNil())
+
 				telemetry := limitadorv1alpha1.Telemetry("exhaustive")
 				updatedLimitador.Spec.Telemetry = &telemetry
 				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
@@ -677,7 +386,7 @@ var _ = Describe("Limitador controller", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
 		BeforeEach(func() {
-			limitadorObj = newLimitador(testNamespace)
+			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
@@ -696,8 +405,8 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
-			containerObj := v1.Container{Name: testNamespace, Image: testNamespace}
+			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
+			containerObj := v1.Container{Name: "newContainer", Image: "someImage"}
 
 			deploymentObj.Spec.Template.Spec.Containers = append(deploymentObj.Spec.Template.Spec.Containers, containerObj)
 
@@ -714,7 +423,6 @@ var _ = Describe("Limitador controller", func() {
 
 				return err == nil && len(updateDeploymentObj.Spec.Template.Spec.Containers) == 1
 			}, timeout, interval).Should(BeTrue())
-
 		})
 	})
 
@@ -780,7 +488,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
 				Equal(
 					[]string{
@@ -843,7 +551,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
 				Equal(
 					[]string{
@@ -880,7 +588,7 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(len(deploymentObj.Spec.Template.Spec.Volumes)).To(Equal(2))
+			Expect(deploymentObj.Spec.Template.Spec.Volumes).To(HaveLen(2))
 			Expect(deploymentObj.Spec.Template.Spec.Volumes[1]).To(
 				Equal(
 					v1.Volume{
@@ -894,7 +602,7 @@ var _ = Describe("Limitador controller", func() {
 					},
 				))
 
-			Expect(len(deploymentObj.Spec.Template.Spec.Containers)).To(Equal(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
 				Equal(
 					[]string{
@@ -905,7 +613,7 @@ var _ = Describe("Limitador controller", func() {
 					},
 				),
 			)
-			Expect(len(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts)).To(Equal(2))
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(2))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts[1]).To(
 				Equal(
 					v1.VolumeMount{
@@ -935,10 +643,24 @@ var _ = Describe("Limitador controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(len(pvc.GetOwnerReferences())).To(Equal(1))
+			Expect(pvc.GetOwnerReferences()).To(HaveLen(1))
 		})
 	})
 })
+
+func basicLimitador(ns string) *limitadorv1alpha1.Limitador {
+	// The name can't start with a number.
+	name := "a" + string(uuid.NewUUID())
+
+	return &limitadorv1alpha1.Limitador{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Limitador",
+			APIVersion: "limitador.kuadrant.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+		Spec:       limitadorv1alpha1.LimitadorSpec{},
+	}
+}
 
 func limitadorWithRedisStorage(redisKey client.ObjectKey, ns string) *limitadorv1alpha1.Limitador {
 	return &limitadorv1alpha1.Limitador{
