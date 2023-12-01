@@ -1,8 +1,10 @@
 package limitador
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -41,6 +43,10 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 
 	if limObj.Spec.Telemetry != nil && *limObj.Spec.Telemetry == "exhaustive" {
 		command = append(command, "--limit-name-in-labels")
+	}
+
+	if limObj.Spec.Verbosity != nil {
+		command = append(command, fmt.Sprintf("-%s", strings.Repeat("v", int(*limObj.Spec.Verbosity))))
 	}
 
 	// let's set explicitly the HTTP port,

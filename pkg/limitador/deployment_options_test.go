@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -83,6 +84,27 @@ func TestDeploymentCommand(t *testing.T) {
 				"/home/limitador/etc/limitador-config.yaml",
 				"a", "b", "c",
 			})
+	})
+
+	t.Run("when verbosity is set in the spec command line args includes -v*", func(subT *testing.T) {
+		tests := []struct {
+			Name           string
+			VerbosityLevel limitadorv1alpha1.VerbosityLevel
+			ExpectedArg    string
+		}{
+			{"log level 1", 1, "-v"},
+			{"log level 2", 2, "-vv"},
+			{"log level 3", 3, "-vvv"},
+			{"log level 4", 4, "-vvvv"},
+		}
+		for _, tt := range tests {
+			subT.Run(tt.Name, func(subTest *testing.T) {
+				limObj := basicLimitador()
+				limObj.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{tt.VerbosityLevel}[0]
+				command := DeploymentCommand(limObj, DeploymentStorageOptions{})
+				assert.Assert(subTest, is.Contains(command, tt.ExpectedArg))
+			})
+		}
 	})
 }
 
