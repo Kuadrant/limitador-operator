@@ -1,6 +1,6 @@
 # Resource Requirements
 
-The default resource requirement for _**Limitador**_ deployments is specified in [Limitador v1alpha1 API reference](../api/v1alpha1/limitador_types.go)
+The default resource requirement for _**Limitador**_ deployments is specified in [Limitador v1alpha1 API reference](https://github.com/Kuadrant/limitador-operator/blob/main/api/v1alpha1/limitador_types.go)
 and will be applied if the resource requirement is not set in the spec.
 
 ```yaml
