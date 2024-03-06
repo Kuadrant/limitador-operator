@@ -13,7 +13,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,7 +50,7 @@ var _ = Describe("Limitador controller", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a Limitador service with default ports", func() {
@@ -190,7 +189,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a new deployment with rate limit headers command line arg", func() {
@@ -230,7 +229,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj = basicLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the limitador deployment command line args", func() {
@@ -291,7 +290,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj = basicLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the limitador deployment command line args", func() {
@@ -353,7 +352,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{3}[0]
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a new deployment with verbosity level command line arg", func() {
@@ -400,7 +399,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj = basicLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the limitador deployment command line args", func() {
@@ -477,7 +476,7 @@ var _ = Describe("Limitador controller", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("User tries adding side-cars to deployment CR", func() {
@@ -566,7 +565,7 @@ var _ = Describe("Limitador controller", func() {
 		It("command line is correct", func() {
 			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func() bool {
@@ -635,7 +634,7 @@ var _ = Describe("Limitador controller", func() {
 		It("command line is correct", func() {
 			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func() bool {
@@ -674,7 +673,7 @@ var _ = Describe("Limitador controller", func() {
 		It("deployment is correct", func() {
 			limitadorObj := limitadorWithDiskStorage(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func() bool {
@@ -731,7 +730,7 @@ var _ = Describe("Limitador controller", func() {
 		It("pvc is correct", func() {
 			limitadorObj := limitadorWithDiskStorage(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
 			pvc := &v1.PersistentVolumeClaim{}
 			Eventually(func() bool {
@@ -891,11 +890,19 @@ func redisService(ns string) *v1.Service {
 	}
 }
 
-func testLimitadorIsReady(l *limitadorv1alpha1.Limitador) func() bool {
+func testLimitadorIsReadyAndAvailable(l *limitadorv1alpha1.Limitador) func() bool {
 	return func() bool {
 		existing := &limitadorv1alpha1.Limitador{}
 		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(l), existing)
-		return err == nil && meta.IsStatusConditionTrue(existing.Status.Conditions, "Ready")
+		return err == nil && existing.IsReady() && existing.IsAvailable()
+	}
+}
+
+func testLimitadorIsAvailable(l *limitadorv1alpha1.Limitador) func() bool {
+	return func() bool {
+		existing := &limitadorv1alpha1.Limitador{}
+		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(l), existing)
+		return err == nil && existing.IsAvailable()
 	}
 }
 

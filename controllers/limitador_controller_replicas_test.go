@@ -33,7 +33,7 @@ var _ = Describe("Limitador controller manages replicas", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.Replicas = &[]int{int(replicas)}[0]
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a new deployment with the custom replicas", func() {
@@ -60,7 +60,7 @@ var _ = Describe("Limitador controller manages replicas", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify deployment replicas", func() {

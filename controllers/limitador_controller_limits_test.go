@@ -50,7 +50,7 @@ var _ = Describe("Limitador controller manages limits", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.Limits = limits
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create configmap with the custom limits", func() {
@@ -96,7 +96,7 @@ var _ = Describe("Limitador controller manages limits", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify configmap with the new limits", func() {
@@ -152,6 +152,12 @@ var _ = Describe("Limitador controller manages limits", func() {
 
 				return reflect.DeepEqual(cmLimits, limits)
 			}, timeout, interval).Should(BeTrue())
+
+			// Updating limits should transition available condition to first false due to config map loaded in pod is out of sync
+			Eventually(testLimitadorIsAvailable(limitadorObj), timeout, interval).Should(BeFalse())
+
+			// Status should be ready and available once config map limits are in sync
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), 3*time.Minute, interval).Should(BeTrue())
 		})
 	})
 })

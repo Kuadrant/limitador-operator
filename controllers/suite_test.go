@@ -84,6 +84,7 @@ var _ = BeforeSuite(func() {
 
 	err = (&LimitadorReconciler{
 		BaseReconciler: limitadorBaseReconciler,
+		RestConfig:     mgr.GetConfig(),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 

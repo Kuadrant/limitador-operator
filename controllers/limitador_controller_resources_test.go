@@ -37,7 +37,7 @@ var _ = Describe("Limitador controller manages resource requirements", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.ResourceRequirements = &resourceRequirements
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a new deployment with the custom resource requirements", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Limitador controller manages resource requirements", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify deployment resource requirements", func() {

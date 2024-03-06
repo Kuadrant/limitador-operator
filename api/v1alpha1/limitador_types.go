@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -34,7 +35,8 @@ const (
 	DefaultServiceGRPCPort int32 = 8081
 
 	// Status conditions
-	StatusConditionReady string = "Ready"
+	StatusConditionReady     string = "Ready"
+	StatusConditionAvailable string = "Available"
 )
 
 var (
@@ -145,6 +147,14 @@ func (l *Limitador) GetResourceRequirements() *corev1.ResourceRequirements {
 	}
 
 	return l.Spec.ResourceRequirements
+}
+
+func (l *Limitador) IsReady() bool {
+	return meta.IsStatusConditionTrue(l.Status.Conditions, StatusConditionReady)
+}
+
+func (l *Limitador) IsAvailable() bool {
+	return meta.IsStatusConditionTrue(l.Status.Conditions, StatusConditionAvailable)
 }
 
 //+kubebuilder:object:root=true

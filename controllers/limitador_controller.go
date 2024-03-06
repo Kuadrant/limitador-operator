@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -34,12 +35,13 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
-	upgrades "github.com/kuadrant/limitador-operator/pkg/upgrades"
+	"github.com/kuadrant/limitador-operator/pkg/upgrades"
 )
 
 // LimitadorReconciler reconciles a Limitador object
 type LimitadorReconciler struct {
 	*reconcilers.BaseReconciler
+	RestConfig *rest.Config
 }
 
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors,verbs=get;list;watch;create;update;patch;delete

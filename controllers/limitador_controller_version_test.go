@@ -60,7 +60,7 @@ var _ = Describe("Limitador controller manages image version", func() {
 			limitadorObj = basicLimitador(testNamespace)
 
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the deployment with the custom image", func() {

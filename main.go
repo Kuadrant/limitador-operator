@@ -104,6 +104,7 @@ func main() {
 
 	if err = (&controllers.LimitadorReconciler{
 		BaseReconciler: limitadorBaseReconciler,
+		RestConfig:     mgr.GetConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create Limitador controller")
 		os.Exit(1)

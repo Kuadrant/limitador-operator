@@ -44,7 +44,7 @@ var _ = Describe("Limitador controller manages ports", func() {
 				HTTP: httpPort, GRPC: grpcPort,
 			}
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should configure k8s resources with the custom ports", func() {
@@ -140,7 +140,7 @@ var _ = Describe("Limitador controller manages ports", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the k8s resources with the custom ports", func() {

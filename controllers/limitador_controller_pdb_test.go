@@ -36,7 +36,7 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.PodDisruptionBudget = pdbType
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create PodDisruptionBudget", func() {
@@ -64,7 +64,7 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify pdb object with the new limits", func() {

@@ -51,7 +51,7 @@ var _ = Describe("Limitador controller manages affinity", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.Affinity = affinity
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should create a new deployment with the custom affinity", func() {
@@ -96,7 +96,7 @@ var _ = Describe("Limitador controller manages affinity", func() {
 		BeforeEach(func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Eventually(testLimitadorIsReadyAndAvailable(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 		})
 
 		It("Should modify the deployment with the affinity custom settings", func() {
