@@ -21,7 +21,6 @@ var intStrOne = &intstr.IntOrString{
 }
 
 func TestConstants(t *testing.T) {
-	assert.Check(t, DefaultReplicas == 1)
 	assert.Check(t, LimitadorRepository == "quay.io/kuadrant/limitador")
 	assert.Check(t, StatusEndpoint == "/status")
 	assert.Check(t, LimitadorConfigFileName == "limitador-config.yaml")

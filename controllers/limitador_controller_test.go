@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -56,7 +56,7 @@ var _ = Describe("Limitador controller", func() {
 		})
 
 		It("Should create a Limitador service with default ports", func() {
-			createdLimitadorService := v1.Service{}
+			createdLimitadorService := corev1.Service{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
@@ -76,14 +76,14 @@ var _ = Describe("Limitador controller", func() {
 
 		It("Should create a new deployment with default settings", func() {
 			var expectedDefaultReplicas int32 = 1
-			expectedDefaultResourceRequirements := v1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse("250m"),
-					v1.ResourceMemory: resource.MustParse("32Mi"),
+			expectedDefaultResourceRequirements := corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("32Mi"),
 				},
-				Limits: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse("500m"),
-					v1.ResourceMemory: resource.MustParse("64Mi"),
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
 				},
 			}
 
@@ -152,7 +152,7 @@ var _ = Describe("Limitador controller", func() {
 		})
 
 		It("Should create a ConfigMap with empty limits", func() {
-			createdConfigMap := v1.ConfigMap{}
+			createdConfigMap := corev1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
@@ -496,7 +496,7 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			containerObj := v1.Container{Name: "newcontainer", Image: "someImage"}
+			containerObj := corev1.Container{Name: "newcontainer", Image: "someImage"}
 
 			deploymentObj.Spec.Template.Spec.Containers = append(deploymentObj.Spec.Template.Spec.Containers, containerObj)
 
@@ -530,25 +530,25 @@ var _ = Describe("Limitador controller", func() {
 	})
 
 	Context("Deploying limitador object with redis storage", func() {
-		var redisSecret *v1.Secret
+		var redisSecret *corev1.Secret
 
 		BeforeEach(func() {
 			deployRedis(testNamespace)
 
-			redisSecret = &v1.Secret{
+			redisSecret = &corev1.Secret{
 				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 				ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
 				StringData: map[string]string{
 					"URL": fmt.Sprintf("redis://%s.%s.svc.cluster.local:6379", redisService(testNamespace).Name, testNamespace),
 				},
-				Type: v1.SecretTypeOpaque,
+				Type: corev1.SecretTypeOpaque,
 			}
 
 			err := k8sClient.Create(context.Background(), redisSecret)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() bool {
-				secret := &v1.Secret{}
+				secret := &corev1.Secret{}
 				err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(redisSecret), secret)
 				if err != nil {
 					if apierrors.IsNotFound(err) {
@@ -599,25 +599,25 @@ var _ = Describe("Limitador controller", func() {
 	})
 
 	Context("Deploying limitador object with redis cached storage", func() {
-		var redisSecret *v1.Secret
+		var redisSecret *corev1.Secret
 
 		BeforeEach(func() {
 			deployRedis(testNamespace)
 
-			redisSecret = &v1.Secret{
+			redisSecret = &corev1.Secret{
 				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 				ObjectMeta: metav1.ObjectMeta{Name: "redis", Namespace: testNamespace},
 				StringData: map[string]string{
 					"URL": fmt.Sprintf("redis://%s.%s.svc.cluster.local:6379", redisService(testNamespace).Name, testNamespace),
 				},
-				Type: v1.SecretTypeOpaque,
+				Type: corev1.SecretTypeOpaque,
 			}
 
 			err := k8sClient.Create(context.Background(), redisSecret)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() bool {
-				secret := &v1.Secret{}
+				secret := &corev1.Secret{}
 				err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(redisSecret), secret)
 				if err != nil {
 					if apierrors.IsNotFound(err) {
@@ -736,10 +736,10 @@ var _ = Describe("Limitador controller", func() {
 			Expect(deploymentObj.Spec.Template.Spec.Volumes).To(HaveLen(2))
 			Expect(deploymentObj.Spec.Template.Spec.Volumes[1]).To(
 				Equal(
-					v1.Volume{
+					corev1.Volume{
 						Name: limitador.DiskVolumeName,
-						VolumeSource: v1.VolumeSource{
-							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 								ClaimName: limitador.PVCName(limitadorObj),
 								ReadOnly:  false,
 							},
@@ -763,7 +763,7 @@ var _ = Describe("Limitador controller", func() {
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(2))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].VolumeMounts[1]).To(
 				Equal(
-					v1.VolumeMount{
+					corev1.VolumeMount{
 						ReadOnly:  false,
 						Name:      limitador.DiskVolumeName,
 						MountPath: limitador.DiskPath,
@@ -777,7 +777,7 @@ var _ = Describe("Limitador controller", func() {
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
-			pvc := &v1.PersistentVolumeClaim{}
+			pvc := &corev1.PersistentVolumeClaim{}
 			Eventually(func() bool {
 				err := k8sClient.Get(
 					context.TODO(),
@@ -816,7 +816,7 @@ func limitadorWithRedisStorage(redisKey client.ObjectKey, ns string) *limitadorv
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				Redis: &limitadorv1alpha1.Redis{
-					ConfigSecretRef: &v1.LocalObjectReference{
+					ConfigSecretRef: &corev1.LocalObjectReference{
 						Name: redisKey.Name,
 					},
 				},
@@ -832,7 +832,7 @@ func limitadorWithRedisCachedStorage(key client.ObjectKey, ns string) *limitador
 		Spec: limitadorv1alpha1.LimitadorSpec{
 			Storage: &limitadorv1alpha1.Storage{
 				RedisCached: &limitadorv1alpha1.RedisCached{
-					ConfigSecretRef: &v1.LocalObjectReference{
+					ConfigSecretRef: &corev1.LocalObjectReference{
 						Name: key.Name,
 					},
 				},
@@ -878,7 +878,7 @@ func deployRedis(ns string) {
 	service := redisService(ns)
 	Expect(k8sClient.Create(context.TODO(), service)).Should(Succeed())
 	Eventually(func() bool {
-		s := &v1.Service{}
+		s := &corev1.Service{}
 		err := k8sClient.Get(context.Background(), client.ObjectKeyFromObject(service), s)
 		return err == nil
 	}, timeout, interval).Should(BeTrue())
@@ -896,31 +896,31 @@ func redisDeployment(ns string) *appsv1.Deployment {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"app": "redis"},
 			},
-			Template: v1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{"app": "redis"},
 				},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{{Name: "redis", Image: "redis"}},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "redis", Image: "redis"}},
 				},
 			},
 		},
 	}
 }
 
-func redisService(ns string) *v1.Service {
-	return &v1.Service{
+func redisService(ns string) *corev1.Service {
+	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "redis",
 			Namespace: ns,
 		},
-		Spec: v1.ServiceSpec{
+		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{"app": "redis"},
-			Ports: []v1.ServicePort{
+			Ports: []corev1.ServicePort{
 				{
 					Name:       "redis",
-					Protocol:   v1.ProtocolTCP,
+					Protocol:   corev1.ProtocolTCP,
 					Port:       6379,
 					TargetPort: intstr.FromInt(6379),
 				},
@@ -940,7 +940,7 @@ func testLimitadorIsReady(l *limitadorv1alpha1.Limitador) func() bool {
 func CreateNamespace(namespace *string) {
 	var generatedTestNamespace = "test-namespace-" + string(uuid.NewUUID())
 
-	nsObject := &v1.Namespace{
+	nsObject := &corev1.Namespace{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 		ObjectMeta: metav1.ObjectMeta{Name: generatedTestNamespace},
 	}
@@ -948,7 +948,7 @@ func CreateNamespace(namespace *string) {
 	err := k8sClient.Create(context.Background(), nsObject)
 	Expect(err).ToNot(HaveOccurred())
 
-	existingNamespace := &v1.Namespace{}
+	existingNamespace := &corev1.Namespace{}
 	Eventually(func() bool {
 		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: generatedTestNamespace}, existingNamespace)
 		return err == nil
@@ -957,14 +957,32 @@ func CreateNamespace(namespace *string) {
 	*namespace = existingNamespace.Name
 }
 
+func CreateNamespaceWithContext(ctx context.Context, namespace *string) {
+	nsObject := &corev1.Namespace{
+		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+		ObjectMeta: metav1.ObjectMeta{GenerateName: "test-namespace-"},
+	}
+	Expect(k8sClient.Create(ctx, nsObject)).ToNot(HaveOccurred())
+
+	*namespace = nsObject.Name
+}
+
+func DeleteNamespaceWithContext(ctx context.Context, namespace *string) {
+	desiredTestNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *namespace}}
+	Eventually(func() bool {
+		err := k8sClient.Delete(ctx, desiredTestNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		return err != nil && apierrors.IsNotFound(err)
+	}).WithContext(ctx).Should(BeTrue())
+}
+
 func DeleteNamespaceCallback(namespace *string) func() {
 	return func() {
-		desiredTestNamespace := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *namespace}}
+		desiredTestNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *namespace}}
 		err := k8sClient.Delete(context.Background(), desiredTestNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
 
 		Expect(err).ToNot(HaveOccurred())
 
-		existingNamespace := &v1.Namespace{}
+		existingNamespace := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: *namespace}, existingNamespace)
 			if err != nil && apierrors.IsNotFound(err) {

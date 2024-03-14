@@ -20,6 +20,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - list
+  - update
+  - watch
+- apiGroups:
   - apps
   resources:
   - deployments
