@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
@@ -75,7 +76,7 @@ func TestDeployment(t *testing.T) {
 
 	t.Run("replicas", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
-		limObj.Spec.Replicas = &[]int{2}[0]
+		limObj.Spec.Replicas = ptr.To(2)
 		deployment := Deployment(limObj, DeploymentOptions{})
 		assert.Assert(subT, deployment.Spec.Replicas != nil)
 		assert.Assert(subT, *deployment.Spec.Replicas == 2)
@@ -381,9 +382,9 @@ func TestPVC(t *testing.T) {
 	t.Run("custom storage class", func(subT *testing.T) {
 		limObj := newDiskStorageLimitador("some-name")
 		limObj.Spec.Storage.Disk.PVC = &limitadorv1alpha1.PVCGenericSpec{
-			StorageClassName: &[]string{"myCustomStorage"}[0],
+			StorageClassName: ptr.To("myCustomStorage"),
 		}
 		pvc := PVC(limObj)
-		assert.DeepEqual(subT, pvc.Spec.StorageClassName, &[]string{"myCustomStorage"}[0])
+		assert.DeepEqual(subT, pvc.Spec.StorageClassName, ptr.To("myCustomStorage"))
 	})
 }

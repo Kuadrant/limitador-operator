@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"context"
-	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,14 +15,20 @@ import (
 )
 
 var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
+	const (
+		nodeTimeOut = NodeTimeout(time.Second * 30)
+		specTimeOut = SpecTimeout(time.Minute * 2)
+	)
 
 	var testNamespace string
 
-	BeforeEach(func() {
-		CreateNamespace(&testNamespace)
-	})
+	BeforeEach(func(ctx SpecContext) {
+		CreateNamespaceWithContext(ctx, &testNamespace)
+	}, nodeTimeOut)
 
-	AfterEach(DeleteNamespaceCallback(&testNamespace))
+	AfterEach(func(ctx SpecContext) {
+		DeleteNamespaceWithContext(ctx, &testNamespace)
+	}, nodeTimeOut)
 
 	Context("Creating a new Limitador object with specific pdb", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
@@ -32,24 +36,22 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 		maxUnavailable := &intstr.IntOrString{Type: 0, IntVal: 3}
 		pdbType := &limitadorv1alpha1.PodDisruptionBudgetType{MaxUnavailable: maxUnavailable}
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.PodDisruptionBudget = pdbType
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
-		})
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		}, nodeTimeOut)
 
-		It("Should create PodDisruptionBudget", func() {
+		It("Should create PodDisruptionBudget", func(ctx SpecContext) {
 			pdb := &policyv1.PodDisruptionBudget{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(),
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-					}, pdb)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+					}, pdb)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			Expect(pdb.Spec.MaxUnavailable).To(Equal(maxUnavailable))
 		})
@@ -61,15 +63,15 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 		maxUnavailable := &intstr.IntOrString{Type: 0, IntVal: 3}
 		pdbType := &limitadorv1alpha1.PodDisruptionBudgetType{MaxUnavailable: maxUnavailable}
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			limitadorObj = basicLimitador(testNamespace)
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 		})
 
-		It("Should modify pdb object with the new limits", func() {
+		It("Should modify pdb object with the new limits", func(ctx SpecContext) {
 			pdb := &policyv1.PodDisruptionBudget{}
-			err := k8sClient.Get(context.TODO(),
+			err := k8sClient.Get(ctx,
 				types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitador.PodDisruptionBudgetName(limitadorObj),
@@ -78,35 +80,27 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 
 			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitadorObj.Name,
-				}, &updatedLimitador)
-
-				if err != nil {
-					return false
-				}
+				}, &updatedLimitador)).To(Succeed())
 
 				updatedLimitador.Spec.PodDisruptionBudget = pdbType
 
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-			}, timeout, interval).Should(BeTrue())
+				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).To(Succeed())
+			}).Should(Succeed())
 
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 				newPDB := &policyv1.PodDisruptionBudget{}
-				err := k8sClient.Get(context.TODO(),
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.PodDisruptionBudgetName(limitadorObj),
-					}, newPDB)
+					}, newPDB)).To(Succeed())
 
-				if err != nil {
-					return false
-				}
-
-				return reflect.DeepEqual(newPDB.Spec.MaxUnavailable, maxUnavailable)
-			}, timeout, interval).Should(BeTrue())
-		})
+				g.Expect(newPDB.Spec.MaxUnavailable).To(Equal(maxUnavailable))
+			}).WithContext(ctx).Should(Succeed())
+		}, specTimeOut)
 	})
 })

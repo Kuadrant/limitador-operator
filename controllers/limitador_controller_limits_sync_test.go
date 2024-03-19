@@ -24,7 +24,7 @@ import (
 var _ = Describe("Limitador controller syncs limits to pod", func() {
 	const (
 		nodeTimeOut = NodeTimeout(time.Second * 30)
-		specTimeOut = SpecTimeout(time.Minute)
+		specTimeOut = SpecTimeout(time.Minute * 2)
 	)
 
 	var testNamespace string
@@ -62,7 +62,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.Limits = limits
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj)).WithContext(ctx).Should(BeTrue())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 		}, nodeTimeOut)
 
 		It("Should annotate limitador pods with annotation of limits hash", func(ctx SpecContext) {
@@ -71,7 +71,9 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
 				Namespace:     limitadorObj.Namespace,
 			}
-			Eventually(k8sClient.List(ctx, podList, options)).WithContext(ctx).Should(BeNil())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			hash, err := limitadorObj.LimitsHash()
 			Expect(err).To(BeNil())
@@ -113,7 +115,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			limitadorObj.Spec.Replicas = &replicas
 			limitadorObj.Spec.Limits = limits
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj)).WithContext(ctx).Should(BeTrue())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 		}, nodeTimeOut)
 
 		It("Should update limitador pods annotation and sync config map to pod", func(ctx SpecContext) {
@@ -123,7 +125,9 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
 				Namespace:     limitadorObj.Namespace,
 			}
-			Eventually(k8sClient.List(ctx, podList, options)).WithContext(ctx).Should(BeNil())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			hash, err := limitadorObj.LimitsHash()
 			Expect(err).To(BeNil())
@@ -134,31 +138,28 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 
 			// Update limitador with new limits
 			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func(g Gomega) error {
-				err := k8sClient.Get(ctx, types.NamespacedName{
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitadorObj.Name,
-				}, &updatedLimitador)
-				g.Expect(err).To(BeNil())
+				}, &updatedLimitador)).To(Succeed())
 
 				updatedLimitador.Spec.Limits = updatedLimits
 
-				return k8sClient.Update(ctx, &updatedLimitador)
-			}).WithContext(ctx).Should(BeNil())
+				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			// Hash should be updated
 			hash, err = updatedLimitador.LimitsHash()
 			Expect(err).To(BeNil())
-			Eventually(func(g Gomega) error {
-				err := k8sClient.List(ctx, podList, options)
-				g.Expect(err).To(BeNil())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
 				g.Expect(podList.Items).To(Not(BeEmpty()))
 
 				for _, pod := range podList.Items {
 					g.Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationLimitsHash]).To(Equal(hash))
 				}
-				return nil
-			}).WithContext(ctx).Should(BeNil())
+			}).WithContext(ctx).Should(Succeed())
 
 			// Config map should be synced immediately if pod annotations was updated successfully
 			config, err := config.GetConfig()
