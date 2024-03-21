@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	DefaultReplicas     = 1
 	LimitadorRepository = "quay.io/kuadrant/limitador"
 	StatusEndpoint      = "/status"
 )
@@ -55,10 +54,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 }
 
 func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions DeploymentOptions) *appsv1.Deployment {
-	var replicas int32 = DefaultReplicas
-	if limitador.Spec.Replicas != nil {
-		replicas = int32(*limitador.Spec.Replicas)
-	}
+	replicas := limitador.GetReplicas()
 
 	image := GetLimitadorImageVersion()
 	if limitador.Spec.Version != nil {

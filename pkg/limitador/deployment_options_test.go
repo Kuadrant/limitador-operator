@@ -8,6 +8,7 @@ import (
 	is "gotest.tools/assert/cmp"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
@@ -38,7 +39,7 @@ func TestDeploymentCommand(t *testing.T) {
 
 	t.Run("when rate limit headers set in the spec command line args includes --rate-limit-headers", func(subT *testing.T) {
 		limObj := basicLimitador()
-		limObj.Spec.RateLimitHeaders = &[]limitadorv1alpha1.RateLimitHeadersType{"DRAFT_VERSION_03"}[0]
+		limObj.Spec.RateLimitHeaders = ptr.To(limitadorv1alpha1.RateLimitHeadersType("DRAFT_VERSION_03"))
 
 		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
 		assert.DeepEqual(subT, command,
@@ -100,7 +101,7 @@ func TestDeploymentCommand(t *testing.T) {
 		for _, tt := range tests {
 			subT.Run(tt.Name, func(subTest *testing.T) {
 				limObj := basicLimitador()
-				limObj.Spec.Verbosity = &[]limitadorv1alpha1.VerbosityLevel{tt.VerbosityLevel}[0]
+				limObj.Spec.Verbosity = ptr.To(tt.VerbosityLevel)
 				command := DeploymentCommand(limObj, DeploymentStorageOptions{})
 				assert.Assert(subTest, is.Contains(command, tt.ExpectedArg))
 			})

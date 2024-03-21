@@ -7,6 +7,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
@@ -49,17 +50,17 @@ func TestDiskDeploymentOptions(t *testing.T) {
 		limObj := basicLimitador()
 		options, err := DiskDeploymentOptions(
 			limObj,
-			limitadorv1alpha1.DiskSpec{Optimize: &[]limitadorv1alpha1.DiskOptimizeType{limitadorv1alpha1.DiskOptimizeTypeDisk}[0]},
+			limitadorv1alpha1.DiskSpec{Optimize: ptr.To(limitadorv1alpha1.DiskOptimizeTypeDisk)},
 		)
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
 				Command: []string{"disk", "--optimize", string(limitadorv1alpha1.DiskOptimizeTypeDisk), DiskPath},
 				VolumeMounts: []v1.VolumeMount{
-					v1.VolumeMount{ReadOnly: false, Name: DiskVolumeName, MountPath: DiskPath},
+					{ReadOnly: false, Name: DiskVolumeName, MountPath: DiskPath},
 				},
 				Volumes: []v1.Volume{
-					v1.Volume{
+					{
 						Name: DiskVolumeName,
 						VolumeSource: v1.VolumeSource{
 							PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{

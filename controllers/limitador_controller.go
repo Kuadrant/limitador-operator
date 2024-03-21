@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -26,7 +27,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -34,7 +36,7 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
-	upgrades "github.com/kuadrant/limitador-operator/pkg/upgrades"
+	"github.com/kuadrant/limitador-operator/pkg/upgrades"
 )
 
 // LimitadorReconciler reconciles a Limitador object
@@ -48,6 +50,7 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=services;configmaps;secrets;persistentvolumeclaims,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch;update
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
@@ -57,7 +60,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	// Delete Limitador deployment and service if needed
 	limitadorObj := &limitadorv1alpha1.Limitador{}
 	if err := r.Client().Get(ctx, req.NamespacedName, limitadorObj); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			logger.Info("no object found")
 			return ctrl.Result{}, nil
 		}
@@ -129,7 +132,56 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 	if err := r.reconcilePdb(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	if err := r.reconcilePodLimitsHashAnnotation(ctx, limitadorObj); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	podList := &v1.PodList{}
+	options := &client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
+		Namespace:     limitadorObj.Namespace,
+	}
+	if err := r.Client().List(ctx, podList, options); err != nil {
+		return err
+	}
+
+	if len(podList.Items) == 0 {
+		return errors.New("no limitador pods founds")
+	}
+
+	// Replicas won't change if spec.Replicas goes from value to nil
+	if limitadorObj.Spec.Replicas != nil && len(podList.Items) != int(limitadorObj.GetReplicas()) {
+		return errors.New("unexpected number of limitador pods")
+	}
+
+	// Calculate hash once for all pods
+	hash, err := limitadorObj.LimitsHash()
+	if err != nil {
+		return err
+	}
+
+	for idx := range podList.Items {
+		pod := podList.Items[idx]
+		annotations := pod.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		// Update only if there is a change in hash value
+		if annotations[limitadorv1alpha1.PodAnnotationLimitsHash] != hash {
+			annotations[limitadorv1alpha1.PodAnnotationLimitsHash] = hash
+			pod.SetAnnotations(annotations)
+			if err := r.Client().Update(ctx, &pod); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {

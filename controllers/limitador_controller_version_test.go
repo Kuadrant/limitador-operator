@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -9,106 +8,97 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 )
 
 var _ = Describe("Limitador controller manages image version", func() {
-
+	const (
+		nodeTimeOut = NodeTimeout(time.Second * 30)
+		specTimeOut = SpecTimeout(time.Minute * 2)
+	)
 	var testNamespace string
 
-	BeforeEach(func() {
-		CreateNamespace(&testNamespace)
-	})
+	BeforeEach(func(ctx SpecContext) {
+		CreateNamespaceWithContext(ctx, &testNamespace)
+	}, nodeTimeOut)
 
-	AfterEach(DeleteNamespaceCallback(&testNamespace))
+	AfterEach(func(ctx SpecContext) {
+		DeleteNamespaceWithContext(ctx, &testNamespace)
+	}, nodeTimeOut)
 
 	Context("Creating a new Limitador object with specific image version", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			limitadorObj = basicLimitador(testNamespace)
-			limitadorObj.Spec.Version = &[]string{"otherversion"}[0]
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			limitadorObj.Spec.Version = ptr.To("otherversion")
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			// Do not expect to have limitador ready
-		})
+		}, nodeTimeOut)
 
-		It("Should create a new deployment with the custom image", func() {
+		It("Should create a new deployment with the custom image", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(
-					context.TODO(),
-					types.NamespacedName{
-						Namespace: testNamespace,
-						Name:      limitador.DeploymentName(limitadorObj),
-					},
-					&deployment)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: testNamespace,
+					Name:      limitador.DeploymentName(limitadorObj),
+				}, &deployment)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			expectedImage := fmt.Sprintf("%s:%s", limitador.LimitadorRepository, "otherversion")
 			Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(expectedImage))
-		})
+		}, specTimeOut)
 	})
 
 	Context("Updating limitador object with a new image version", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			limitadorObj = basicLimitador(testNamespace)
 
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
-		})
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		}, nodeTimeOut)
 
-		It("Should modify the deployment with the custom image", func() {
+		It("Should modify the deployment with the custom image", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitador.DeploymentName(limitadorObj),
-				}, &deployment)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+				}, &deployment)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			Expect(deployment.Spec.Template.Spec.Containers[0].Image).Should(
 				Equal(ExpectedDefaultImage),
 			)
 
 			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitadorObj.Name,
-				}, &updatedLimitador)
+				}, &updatedLimitador)).Should(Succeed())
 
-				if err != nil {
-					return false
-				}
-
-				updatedLimitador.Spec.Version = &[]string{"otherversion"}[0]
+				updatedLimitador.Spec.Version = ptr.To("otherversion")
 
 				// the new deployment very likely will not be available (image does not exist)
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-			}, timeout, interval).Should(BeTrue())
+				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).Should(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 				newDeployment := appsv1.Deployment{}
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitador.DeploymentName(limitadorObj),
-				}, &newDeployment)
-
-				if err != nil {
-					return false
-				}
+				}, &newDeployment)).To(Succeed())
 
 				expectedImage := fmt.Sprintf("%s:%s", limitador.LimitadorRepository, "otherversion")
-				return expectedImage == newDeployment.Spec.Template.Spec.Containers[0].Image
-			}, timeout, interval).Should(BeTrue())
-		})
+				g.Expect(expectedImage).Should(Equal(newDeployment.Spec.Template.Spec.Containers[0].Image))
+			}).WithContext(ctx).Should(Succeed())
+		}, specTimeOut)
 	})
 })
