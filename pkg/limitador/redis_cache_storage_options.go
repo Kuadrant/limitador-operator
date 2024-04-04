@@ -33,6 +33,9 @@ func RedisCachedDeploymentOptions(ctx context.Context, cl client.Client, defSecr
 		if redisCachedObj.Options.MaxCached != nil {
 			command = append(command, "--max-cached", strconv.Itoa(*redisCachedObj.Options.MaxCached))
 		}
+		if redisCachedObj.Options.ResponseTimeout != nil {
+			command = append(command, "--response-timeout", strconv.Itoa(*redisCachedObj.Options.ResponseTimeout))
+		}
 	}
 
 	return DeploymentStorageOptions{
