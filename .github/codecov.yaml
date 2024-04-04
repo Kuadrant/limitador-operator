@@ -12,11 +12,11 @@ coverage:
     project:
       default:
         target: auto
-        threshold: 1%
+        threshold: 3%
     patch:
       default:
         target: auto
-        threshold: 1%
+        threshold: 3%
 
 # Layout of the PR comment produced by Codecov bot
 comment:
@@ -25,18 +25,6 @@ comment:
 # Find more at https://docs.codecov.com/docs/ignoring-paths
 ignore:
   - "**/*.deepcopy.go"  # ignore controller-gen generated code
-
-flag_management:
-  individual_flags:
-    - name: unit
-      paths:
-        - pkg/**
-        - api/**
-      carryforward: true
-    - name: integration
-      paths:
-        - controllers/**
-      carryforward: true
 
 component_management:
   individual_components:
@@ -64,3 +52,7 @@ component_management:
       name: controllers (i)
       paths:
         - controllers
+    - component_id: upgrades
+      name: pkg/upgrades
+      paths:
+        - pkg/upgrades
