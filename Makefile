@@ -88,6 +88,10 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(IMAGE_TAG)
 DEFAULT_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_TAG)
 IMG ?= $(DEFAULT_IMG)
 
+UNIT_DIRS := ./pkg/... ./api/...
+INTEGRATION_TEST_SUITE_PATHS := ./controllers/...
+INTEGRATION_COVER_PKGS := ./pkg/...,./controllers/...,./api/...
+
 # Limitador Operator replaced version
 DEFAULT_REPLACES_VERSION = 0.0.0-alpha
 REPLACES_VERSION ?= $(DEFAULT_REPLACES_VERSION)
@@ -169,6 +173,17 @@ $(GOLANGCI-LINT):
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.
 
+GINKGO = $(PROJECT_PATH)/bin/ginkgo
+$(GINKGO):
+	# In order to make sure the version of the ginkgo cli installed
+	# is the same as the version of go.mod,
+	# instead of calling go-install-tool,
+	# running go install from the current module will pick version from current go.mod file.
+	GOBIN=$(PROJECT_PATH)/bin go install github.com/onsi/ginkgo/v2/ginkgo
+
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -201,21 +216,28 @@ vet: ## Run go vet against code.
 
 .PHONY: clean-cov
 clean-cov: ## Remove coverage reports
-	rm -rf coverage
+	rm -rf $(PROJECT_PATH)/coverage
 
 .PHONY: test
 test: test-unit test-integration ## Run all tests
 
-test-integration: clean-cov generate fmt vet ## Run Integration tests.
-	mkdir -p coverage/integration
-	go test ./controllers... -coverprofile $(PROJECT_PATH)/coverage/integration/cover.out -ginkgo.v -v -timeout 0
+test-integration: clean-cov generate fmt vet ginkgo ## Run Integration tests.
+	mkdir -p $(PROJECT_PATH)/coverage/integration
+#	Check `ginkgo help run` for command line options. For example to filtering tests.
+	$(GINKGO) \
+		--coverpkg $(INTEGRATION_COVER_PKGS) \
+		--output-dir $(PROJECT_PATH)/coverage/integration \
+		--coverprofile cover.out \
+		--fail-fast \
+		-v \
+		$(INTEGRATION_TEST_SUITE_PATHS)
 
 ifdef TEST_NAME
 test-unit: TEST_PATTERN := --run $(TEST_NAME)
 endif
 test-unit: clean-cov generate fmt vet ## Run Unit tests.
-	mkdir -p coverage/unit
-	go test ./pkg/... ./api/... -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
+	mkdir -p $(PROJECT_PATH)/coverage/unit
+	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
 
 ##@ Build
 
@@ -263,7 +285,6 @@ uninstall-olm:
 	$(OPERATOR_SDK) olm uninstall
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-install-tool
 @[ -f $(1) ] || { \
 set -e ;\
@@ -271,7 +292,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
+GOBIN=$(PROJECT_PATH)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
