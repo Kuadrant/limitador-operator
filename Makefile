@@ -179,7 +179,7 @@ $(GINKGO):
 	# is the same as the version of go.mod,
 	# instead of calling go-install-tool,
 	# running go install from the current module will pick version from current go.mod file.
-	GOBIN=$(PROJECT_DIR)/bin go install github.com/onsi/ginkgo/v2/ginkgo
+	GOBIN=$(PROJECT_PATH)/bin go install github.com/onsi/ginkgo/v2/ginkgo
 
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
@@ -285,7 +285,6 @@ uninstall-olm:
 	$(OPERATOR_SDK) olm uninstall
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-install-tool
 @[ -f $(1) ] || { \
 set -e ;\
@@ -293,7 +292,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go install $(2) ;\
+GOBIN=$(PROJECT_PATH)/bin go install $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
