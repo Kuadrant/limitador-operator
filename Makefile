@@ -1,5 +1,4 @@
 # Setting SHELL to bash allows bash commands to be executed by recipes.
-# This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
@@ -92,9 +91,6 @@ IMG ?= $(DEFAULT_IMG)
 # Limitador Operator replaced version
 DEFAULT_REPLACES_VERSION = 0.0.0-alpha
 REPLACES_VERSION ?= $(DEFAULT_REPLACES_VERSION)
-
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.22
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -210,9 +206,9 @@ clean-cov: ## Remove coverage reports
 .PHONY: test
 test: test-unit test-integration ## Run all tests
 
-test-integration: clean-cov generate fmt vet envtest ## Run Integration tests.
+test-integration: clean-cov generate fmt vet ## Run Integration tests.
 	mkdir -p coverage/integration
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) $(ARCH_PARAM) use $(ENVTEST_K8S_VERSION) -p path)" go test ./controllers... -coverprofile $(PROJECT_PATH)/coverage/integration/cover.out -ginkgo.v -v -timeout 0
+	go test ./controllers... -coverprofile $(PROJECT_PATH)/coverage/integration/cover.out -ginkgo.v -v -timeout 0
 
 ifdef TEST_NAME
 test-unit: TEST_PATTERN := --run $(TEST_NAME)
@@ -265,10 +261,6 @@ install-olm: $(OPERATOR_SDK)
 .PHONY: uninstall-olm
 uninstall-olm:
 	$(OPERATOR_SDK) olm uninstall
-
-ENVTEST = $(shell pwd)/bin/setup-envtest
-envtest: ## Download envtest-setup locally if necessary.
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

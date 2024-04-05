@@ -208,6 +208,10 @@ type RedisCachedOptions struct {
 	// +optional
 	// MaxCached refers to the maximum amount of counters cached [default: 10000]
 	MaxCached *int `json:"max-cached,omitempty"`
+
+	// +optional
+	// ResponseTimeout defines the timeout for Redis commands in milliseconds [default: 350]
+	ResponseTimeout *int `json:"response-timeout,omitempty"`
 }
 
 type RedisCached struct {

@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -632,8 +633,50 @@ var _ = Describe("Limitador controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("command line is correct", func() {
+		It("with all defaults, the command line is correct", func() {
 			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
+			limitadorObj.Spec.Storage.RedisCached.Options = nil
+			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
+
+			deploymentObj := appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(
+					context.TODO(),
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					},
+					&deploymentObj)
+
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+				HaveExactElements(
+					"limitador-server",
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"/home/limitador/etc/limitador-config.yaml",
+					"redis_cached",
+					"$(LIMITADOR_OPERATOR_REDIS_URL)",
+				),
+			)
+		})
+
+		It("with all the optional parameters, the command line is correct", func() {
+			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
+			limitadorObj.Spec.Storage.RedisCached.Options = &limitadorv1alpha1.RedisCachedOptions{
+				TTL:             ptr.To(1),
+				Ratio:           ptr.To(2),
+				FlushPeriod:     ptr.To(3),
+				MaxCached:       ptr.To(4),
+				ResponseTimeout: ptr.To(5),
+			}
+
 			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
 
@@ -665,6 +708,7 @@ var _ = Describe("Limitador controller", func() {
 					"--ratio", "2",
 					"--flush-period", "3",
 					"--max-cached", "4",
+					"--response-timeout", "5",
 				),
 			)
 		})
@@ -790,12 +834,6 @@ func limitadorWithRedisCachedStorage(key client.ObjectKey, ns string) *limitador
 				RedisCached: &limitadorv1alpha1.RedisCached{
 					ConfigSecretRef: &v1.LocalObjectReference{
 						Name: key.Name,
-					},
-					Options: &limitadorv1alpha1.RedisCachedOptions{
-						TTL:         &[]int{1}[0],
-						Ratio:       &[]int{2}[0],
-						FlushPeriod: &[]int{3}[0],
-						MaxCached:   &[]int{4}[0],
 					},
 				},
 			},

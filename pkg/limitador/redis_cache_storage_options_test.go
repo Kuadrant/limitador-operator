@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -104,10 +105,11 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 		redisObj := limitadorv1alpha1.RedisCached{
 			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 			Options: &limitadorv1alpha1.RedisCachedOptions{
-				TTL:         &[]int{1}[0],
-				Ratio:       &[]int{2}[0],
-				FlushPeriod: &[]int{3}[0],
-				MaxCached:   &[]int{4}[0],
+				TTL:             ptr.To(1),
+				Ratio:           ptr.To(2),
+				FlushPeriod:     ptr.To(3),
+				MaxCached:       ptr.To(4),
+				ResponseTimeout: ptr.To(5),
 			},
 		}
 		options, err := RedisCachedDeploymentOptions(ctx, cl, namespace, redisObj)
@@ -121,6 +123,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 					"--ratio", "2",
 					"--flush-period", "3",
 					"--max-cached", "4",
+					"--response-timeout", "5",
 				},
 			},
 		)
