@@ -18,11 +18,9 @@ package v1alpha1
 
 import (
 	"reflect"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
-	"github.com/mitchellh/hashstructure"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +34,7 @@ const (
 	DefaultServiceGRPCPort int32 = 8081
 	DefaultReplicas        int32 = 1
 
-	PodAnnotationLimitsHash string = "limits-hash"
+	PodAnnotationConfigMapResourceVersion string = "limits-cm-resource-version"
 
 	// Status conditions
 	StatusConditionReady string = "Ready"
@@ -158,14 +156,6 @@ func (l *Limitador) GetReplicas() int32 {
 	}
 
 	return int32(*l.Spec.Replicas)
-}
-
-func (l *Limitador) LimitsHash() (string, error) {
-	hash, err := hashstructure.Hash(l.Limits(), nil)
-	if err != nil {
-		return "", err
-	}
-	return strconv.FormatUint(hash, 10), nil
 }
 
 //+kubebuilder:object:root=true

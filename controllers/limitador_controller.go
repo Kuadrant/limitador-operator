@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -29,6 +28,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -133,36 +133,35 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcilePodLimitsHashAnnotation(ctx, limitadorObj); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
+	return r.reconcilePodLimitsHashAnnotation(ctx, limitadorObj)
 }
 
-func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
 	podList := &v1.PodList{}
 	options := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
 		Namespace:     limitadorObj.Namespace,
 	}
 	if err := r.Client().List(ctx, podList, options); err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
 
 	if len(podList.Items) == 0 {
-		return errors.New("no limitador pods founds")
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Replicas won't change if spec.Replicas goes from value to nil
 	if limitadorObj.Spec.Replicas != nil && len(podList.Items) != int(limitadorObj.GetReplicas()) {
-		return errors.New("unexpected number of limitador pods")
+		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Calculate hash once for all pods
-	hash, err := limitadorObj.LimitsHash()
-	if err != nil {
-		return err
+	// Use CM resource version to track limits changes
+	cm := &v1.ConfigMap{}
+	if err := r.Client().Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	for idx := range podList.Items {
@@ -171,17 +170,17 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 		if annotations == nil {
 			annotations = make(map[string]string)
 		}
-		// Update only if there is a change in hash value
-		if annotations[limitadorv1alpha1.PodAnnotationLimitsHash] != hash {
-			annotations[limitadorv1alpha1.PodAnnotationLimitsHash] = hash
+		// Update only if there is a change in resource version value
+		if annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] != cm.ResourceVersion {
+			annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] = cm.ResourceVersion
 			pod.SetAnnotations(annotations)
 			if err := r.Client().Update(ctx, &pod); err != nil {
-				return err
+				return ctrl.Result{}, err
 			}
 		}
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {

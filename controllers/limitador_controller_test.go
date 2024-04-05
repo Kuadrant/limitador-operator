@@ -569,18 +569,18 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
 			limitadorObj.Spec.Storage.RedisCached.Options = nil
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(BeTrue())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 
 			deploymentObj := appsv1.Deployment{}
 			Eventually(func(g Gomega) {
-				Expect(k8sClient.Get(
+				g.Expect(k8sClient.Get(
 					ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&deploymentObj)).To(Succeed())
-			}).WithContext(ctx).Should(BeTrue())
+			}).WithContext(ctx).Should(Succeed())
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(

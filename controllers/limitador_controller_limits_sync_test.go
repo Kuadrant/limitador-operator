@@ -65,7 +65,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 		}, nodeTimeOut)
 
-		It("Should annotate limitador pods with annotation of limits hash", func(ctx SpecContext) {
+		It("Should annotate limitador pods with annotation of limits cm resource version", func(ctx SpecContext) {
 			podList := &corev1.PodList{}
 			options := &client.ListOptions{
 				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
@@ -75,11 +75,12 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			hash, err := limitadorObj.LimitsHash()
-			Expect(err).To(BeNil())
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm)).To(Succeed())
+
 			Expect(podList.Items).To(HaveLen(int(limitadorv1alpha1.DefaultReplicas)))
 			for _, pod := range podList.Items {
-				Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationLimitsHash]).To(Equal(hash))
+				Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion]).To(Equal(cm.ResourceVersion))
 			}
 		}, specTimeOut)
 	})
@@ -119,7 +120,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 		}, nodeTimeOut)
 
 		It("Should update limitador pods annotation and sync config map to pod", func(ctx SpecContext) {
-			// Check hash of pods before update
+			// Check cm resource version of pods before update
 			podList := &corev1.PodList{}
 			options := &client.ListOptions{
 				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
@@ -129,11 +130,12 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			hash, err := limitadorObj.LimitsHash()
-			Expect(err).To(BeNil())
+			cm := &corev1.ConfigMap{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm)).To(Succeed())
+
 			Expect(podList.Items).To(HaveLen(replicas))
 			for _, pod := range podList.Items {
-				Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationLimitsHash]).To(Equal(hash))
+				Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion]).To(Equal(cm.ResourceVersion))
 			}
 
 			// Update limitador with new limits
@@ -149,15 +151,14 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			// Hash should be updated
-			hash, err = updatedLimitador.LimitsHash()
-			Expect(err).To(BeNil())
+			// CM resource version should be updated
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm)).To(Succeed())
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
 				g.Expect(podList.Items).To(Not(BeEmpty()))
 
 				for _, pod := range podList.Items {
-					g.Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationLimitsHash]).To(Equal(hash))
+					g.Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion]).To(Equal(cm.ResourceVersion))
 				}
 			}).WithContext(ctx).Should(Succeed())
 
