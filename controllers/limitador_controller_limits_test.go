@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"context"
-	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,14 +14,20 @@ import (
 )
 
 var _ = Describe("Limitador controller manages limits", func() {
+	const (
+		nodeTimeOut = NodeTimeout(time.Second * 30)
+		specTimeOut = SpecTimeout(time.Minute * 2)
+	)
 
 	var testNamespace string
 
-	BeforeEach(func() {
-		CreateNamespace(&testNamespace)
-	})
+	BeforeEach(func(ctx SpecContext) {
+		CreateNamespaceWithContext(ctx, &testNamespace)
+	}, nodeTimeOut)
 
-	AfterEach(DeleteNamespaceCallback(&testNamespace))
+	AfterEach(func(ctx SpecContext) {
+		DeleteNamespaceWithContext(ctx, &testNamespace)
+	}, nodeTimeOut)
 
 	Context("Creating a new Limitador object with specific limits", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
@@ -46,30 +50,28 @@ var _ = Describe("Limitador controller manages limits", func() {
 			},
 		}
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			limitadorObj = basicLimitador(testNamespace)
 			limitadorObj.Spec.Limits = limits
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
-		})
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		}, nodeTimeOut)
 
-		It("Should create configmap with the custom limits", func() {
+		It("Should create configmap with the custom limits", func(ctx SpecContext) {
 			cm := &v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(),
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.LimitsConfigMapName(limitadorObj),
-					}, cm)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+					}, cm)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			var cmLimits []limitadorv1alpha1.RateLimit
 			err := yaml.Unmarshal([]byte(cm.Data[limitador.LimitadorConfigFileName]), &cmLimits)
 			Expect(err).To(BeNil())
 			Expect(cmLimits).To(Equal(limits))
-		})
+		}, specTimeOut)
 	})
 
 	Context("Updating limitador object with new limits", func() {
@@ -93,23 +95,21 @@ var _ = Describe("Limitador controller manages limits", func() {
 			},
 		}
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			limitadorObj = basicLimitador(testNamespace)
-			Expect(k8sClient.Create(context.TODO(), limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(limitadorObj), time.Minute, 5*time.Second).Should(BeTrue())
-		})
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		}, nodeTimeOut)
 
-		It("Should modify configmap with the new limits", func() {
+		It("Should modify configmap with the new limits", func(ctx SpecContext) {
 			cm := &v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(),
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.LimitsConfigMapName(limitadorObj),
-					}, cm)
-
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+					}, cm)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
 			var cmLimits []limitadorv1alpha1.RateLimit
 			err := yaml.Unmarshal([]byte(cm.Data[limitador.LimitadorConfigFileName]), &cmLimits)
@@ -117,41 +117,29 @@ var _ = Describe("Limitador controller manages limits", func() {
 			Expect(cmLimits).To(BeEmpty())
 
 			updatedLimitador := limitadorv1alpha1.Limitador{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), types.NamespacedName{
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: testNamespace,
 					Name:      limitadorObj.Name,
-				}, &updatedLimitador)
-
-				if err != nil {
-					return false
-				}
+				}, &updatedLimitador)).To(Succeed())
 
 				updatedLimitador.Spec.Limits = limits
 
-				return k8sClient.Update(context.TODO(), &updatedLimitador) == nil
-			}, timeout, interval).Should(BeTrue())
+				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
 
-			Eventually(func() bool {
+			Eventually(func(g Gomega) {
 				newCM := &v1.ConfigMap{}
-				err := k8sClient.Get(context.TODO(),
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.LimitsConfigMapName(limitadorObj),
-					}, newCM)
-
-				if err != nil {
-					return false
-				}
+					}, newCM)).To(Succeed())
 
 				var cmLimits []limitadorv1alpha1.RateLimit
-				err = yaml.Unmarshal([]byte(newCM.Data[limitador.LimitadorConfigFileName]), &cmLimits)
-				if err != nil {
-					return false
-				}
-
-				return reflect.DeepEqual(cmLimits, limits)
-			}, timeout, interval).Should(BeTrue())
-		})
+				g.Expect(yaml.Unmarshal([]byte(newCM.Data[limitador.LimitadorConfigFileName]), &cmLimits)).To(Succeed())
+				g.Expect(cmLimits).To(Equal(limits))
+			}).WithContext(ctx).Should(Succeed())
+		}, specTimeOut)
 	})
 })

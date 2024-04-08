@@ -32,6 +32,9 @@ import (
 const (
 	DefaultServiceHTTPPort int32 = 8080
 	DefaultServiceGRPCPort int32 = 8081
+	DefaultReplicas        int32 = 1
+
+	PodAnnotationConfigMapResourceVersion string = "limits-cm-resource-version"
 
 	// Status conditions
 	StatusConditionReady string = "Ready"
@@ -145,6 +148,14 @@ func (l *Limitador) GetResourceRequirements() *corev1.ResourceRequirements {
 	}
 
 	return l.Spec.ResourceRequirements
+}
+
+func (l *Limitador) GetReplicas() int32 {
+	if l.Spec.Replicas == nil {
+		return DefaultReplicas
+	}
+
+	return int32(*l.Spec.Replicas)
 }
 
 //+kubebuilder:object:root=true
