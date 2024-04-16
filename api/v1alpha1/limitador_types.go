@@ -87,6 +87,9 @@ type LimitadorSpec struct {
 	Telemetry *Telemetry `json:"telemetry,omitempty"`
 
 	// +optional
+	Tracing *Tracing `json:"tracing,omitempty"`
+
+	// +optional
 	Limits []RateLimit `json:"limits,omitempty"`
 
 	// +optional
@@ -322,6 +325,10 @@ type LimitadorService struct {
 type Ports struct {
 	HTTP int32 `json:"http,omitempty"`
 	GRPC int32 `json:"grpc,omitempty"`
+}
+
+type Tracing struct {
+	Endpoint string `json:"endpoint"`
 }
 
 type PodDisruptionBudgetType struct {

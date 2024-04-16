@@ -42,6 +42,7 @@ spec:
 * [Storage Options](./doc/storage.md)
 * [Rate Limit Headers](./doc/rate-limit-headers.md)
 * [Logging](./doc/logging.md)
+* [Tracing](./doc/tracing.md)
 
 ## Contributing
 

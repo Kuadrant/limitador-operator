@@ -45,6 +45,10 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 		command = append(command, "--limit-name-in-labels")
 	}
 
+	if limObj.Spec.Tracing != nil {
+		command = append(command, "--tracing-endpoint", limObj.Spec.Tracing.Endpoint)
+	}
+
 	if limObj.Spec.Verbosity != nil {
 		command = append(command, fmt.Sprintf("-%s", strings.Repeat("v", int(*limObj.Spec.Verbosity))))
 	}

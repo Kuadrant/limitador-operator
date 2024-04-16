@@ -107,6 +107,26 @@ func TestDeploymentCommand(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("command from tracing endpoint appended", func(subT *testing.T) {
+		testEndpoint := "rpc://tracing-endpoint:4317"
+		limObj := basicLimitador()
+		limObj.Spec.Tracing = &limitadorv1alpha1.Tracing{
+			Endpoint: testEndpoint,
+		}
+		command := DeploymentCommand(limObj, DeploymentStorageOptions{})
+		assert.DeepEqual(subT, command,
+			[]string{
+				"limitador-server",
+				"--tracing-endpoint",
+				testEndpoint,
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+				"/home/limitador/etc/limitador-config.yaml",
+			})
+	})
 }
 
 func TestDeploymentVolumeMounts(t *testing.T) {
