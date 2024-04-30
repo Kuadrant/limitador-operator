@@ -31,7 +31,7 @@ spec:
             - --leader-elect
           env:
             - name: RELATED_IMAGE_LIMITADOR
-              value: "quay.io/kuadrant/limitador:latest"
+              value: "quay.io/kuadrant/limitador:v1.4.0-rc.2"
           image: controller:latest
           name: manager
           securityContext:
