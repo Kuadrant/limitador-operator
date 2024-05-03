@@ -71,7 +71,9 @@ type LimitadorSpec struct {
 	// +optional
 	Replicas *int `json:"replicas,omitempty"`
 
-	// Deprecated
+	// [Deprecated] Use spec.image instead.
+	//  Docker tag used as limitador image. The repo is hardcoded to quay.io/kuadrant/limitador
+	// +deprecated
 	// +optional
 	Version *string `json:"version,omitempty"`
 
