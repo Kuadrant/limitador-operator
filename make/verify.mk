@@ -18,5 +18,9 @@ verify-fmt: fmt ## Verify fmt update.
 	git diff --exit-code ./api ./controllers
 
 .PHONY: verify-fmt
-verify-tidy: fmt ## Verify fmt update.
+verify-tidy: fmt ## Verify tidy update.
 	git diff --exit-code -- go.mod go.sum
+
+.PHONY: verify-generate
+verify-generate: generate ## Verify generate update.
+	git diff --exit-code ./api ./controllers
