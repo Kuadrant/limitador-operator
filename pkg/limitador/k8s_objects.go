@@ -16,8 +16,7 @@ import (
 )
 
 const (
-	LimitadorRepository = "quay.io/kuadrant/limitador"
-	StatusEndpoint      = "/status"
+	StatusEndpoint = "/status"
 )
 
 func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
@@ -56,9 +55,15 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions DeploymentOptions) *appsv1.Deployment {
 	replicas := limitador.GetReplicas()
 
-	image := GetLimitadorImageVersion()
+	image := GetLimitadorImage()
+
+	// deprecated
 	if limitador.Spec.Version != nil {
 		image = fmt.Sprintf("%s:%s", LimitadorRepository, *limitador.Spec.Version)
+	}
+
+	if limitador.Spec.Image != nil {
+		image = *limitador.Spec.Image
 	}
 
 	return &appsv1.Deployment{

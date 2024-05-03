@@ -6,10 +6,14 @@ import (
 	"k8s.io/utils/env"
 )
 
-var (
-	defaultImageVersion = fmt.Sprintf("%s:%s", LimitadorRepository, "latest")
+const (
+	LimitadorRepository = "quay.io/kuadrant/limitador"
 )
 
-func GetLimitadorImageVersion() string {
-	return env.GetString("RELATED_IMAGE_LIMITADOR", defaultImageVersion)
+var (
+	defaultImage = fmt.Sprintf("%s:%s", LimitadorRepository, "latest")
+)
+
+func GetLimitadorImage() string {
+	return env.GetString("RELATED_IMAGE_LIMITADOR", defaultImage)
 }
