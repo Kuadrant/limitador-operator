@@ -23,7 +23,7 @@ var _ = Describe("Limitador controller manages affinity", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -55,7 +55,7 @@ var _ = Describe("Limitador controller manages affinity", func() {
 			limitadorObj.Spec.Affinity = affinity
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create a new deployment with the custom affinity", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}
@@ -98,7 +98,7 @@ var _ = Describe("Limitador controller manages affinity", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify the deployment with the affinity custom settings", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}

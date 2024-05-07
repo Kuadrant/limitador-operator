@@ -38,7 +38,7 @@ var _ = Describe("Limitador controller", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -51,7 +51,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create a Limitador service with default ports", func(ctx SpecContext) {
 			createdLimitadorService := corev1.Service{}
@@ -182,7 +182,7 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create a new deployment with rate limit headers command line arg", func(ctx SpecContext) {
 			createdLimitadorDeployment := appsv1.Deployment{}
@@ -220,7 +220,7 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify the limitador deployment command line args", func(ctx SpecContext) {
 			updatedLimitador := limitadorv1alpha1.Limitador{}
@@ -271,7 +271,7 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify the limitador deployment command line args", func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
@@ -325,7 +325,7 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create a new deployment with verbosity level command line arg", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{}
@@ -371,7 +371,7 @@ var _ = Describe("Limitador controller", func() {
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify the limitador deployment command line args", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{}
@@ -438,7 +438,7 @@ var _ = Describe("Limitador controller", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("User tries adding side-cars to deployment CR", func(ctx SpecContext) {
 			deploymentObj := appsv1.Deployment{}
@@ -507,7 +507,7 @@ var _ = Describe("Limitador controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(redisSecret), secret)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("command line is correct", func(ctx SpecContext) {
 			limitadorObj := limitadorWithRedisStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
@@ -563,7 +563,7 @@ var _ = Describe("Limitador controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(redisSecret), secret)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("with all defaults, the command line is correct", func(ctx SpecContext) {
 			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)

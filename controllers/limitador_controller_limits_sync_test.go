@@ -31,7 +31,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -63,7 +63,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			limitadorObj.Spec.Limits = limits
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should annotate limitador pods with annotation of limits cm resource version", func(ctx SpecContext) {
 			podList := &corev1.PodList{}
@@ -117,7 +117,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			limitadorObj.Spec.Limits = limits
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should update limitador pods annotation and sync config map to pod", func(ctx SpecContext) {
 			// Check cm resource version of pods before update

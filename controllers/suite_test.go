@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +26,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,7 +54,18 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = BeforeSuite(func() {
+// SharedConfig contains minimum cluster connection config that can be safely marshalled as rest.Config is unsafe to marshall
+type SharedConfig struct {
+	Host            string `json:"host"`
+	TLSClientConfig struct {
+		Insecure bool    `json:"insecure"`
+		CertData []uint8 `json:"certData,omitempty"`
+		KeyData  []uint8 `json:"keyData,omitempty"`
+		CAData   []uint8 `json:"caData,omitempty"`
+	} `json:"tlsClientConfig"`
+}
+
+var _ = SynchronizedBeforeSuite(func() []byte {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
@@ -63,14 +77,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = limitadorv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	//+kubebuilder:scaffold:scheme
-
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
+	Expect(limitadorv1alpha1.AddToScheme(scheme.Scheme)).To(Succeed())
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
@@ -101,9 +108,56 @@ var _ = BeforeSuite(func() {
 		Expect(err).ToNot(HaveOccurred())
 	}()
 
+	// Create a shared configuration struct to pass Config information to all sub processes
+	sharedCfg := SharedConfig{
+		Host: cfg.Host,
+		TLSClientConfig: struct {
+			Insecure bool    `json:"insecure"`
+			CertData []uint8 `json:"certData,omitempty"`
+			KeyData  []uint8 `json:"keyData,omitempty"`
+			CAData   []uint8 `json:"caData,omitempty"`
+		}{
+			Insecure: cfg.TLSClientConfig.Insecure,
+			CertData: cfg.TLSClientConfig.CertData,
+			KeyData:  cfg.TLSClientConfig.KeyData,
+			CAData:   cfg.TLSClientConfig.CAData,
+		},
+	}
+
+	// Marshal the shared configuration struct
+	data, err := json.Marshal(sharedCfg)
+	Expect(err).NotTo(HaveOccurred())
+
+	return data
+}, func(data []byte) {
+	// Unmarshal the shared configuration struct
+	var sharedCfg SharedConfig
+	Expect(json.Unmarshal(data, &sharedCfg)).To(Succeed())
+
+	// Create the rest.Config object from the shared configuration
+	cfg := &rest.Config{
+		Host: sharedCfg.Host,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: sharedCfg.TLSClientConfig.Insecure,
+			CertData: sharedCfg.TLSClientConfig.CertData,
+			KeyData:  sharedCfg.TLSClientConfig.KeyData,
+			CAData:   sharedCfg.TLSClientConfig.CAData,
+		},
+	}
+
+	// Create new scheme for each client
+	s := runtime.NewScheme()
+	Expect(scheme.AddToScheme(s)).To(Succeed())
+	err := limitadorv1alpha1.AddToScheme(s)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Set the shared configuration
+	k8sClient, err = client.New(cfg, client.Options{Scheme: s})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
 })
 
-var _ = AfterSuite(func() {
+var _ = SynchronizedAfterSuite(func() {}, func() {
 	By("tearing down the test environment")
 })
 

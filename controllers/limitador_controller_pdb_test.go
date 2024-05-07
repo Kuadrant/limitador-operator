@@ -24,7 +24,7 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -41,7 +41,7 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 			limitadorObj.Spec.PodDisruptionBudget = pdbType
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create PodDisruptionBudget", func(ctx SpecContext) {
 			pdb := &policyv1.PodDisruptionBudget{}
