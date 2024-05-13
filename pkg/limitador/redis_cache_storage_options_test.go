@@ -105,8 +105,6 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 		redisObj := limitadorv1alpha1.RedisCached{
 			ConfigSecretRef: &v1.LocalObjectReference{Name: "redisSecret"},
 			Options: &limitadorv1alpha1.RedisCachedOptions{
-				TTL:             ptr.To(1),
-				Ratio:           ptr.To(2),
 				FlushPeriod:     ptr.To(3),
 				MaxCached:       ptr.To(4),
 				ResponseTimeout: ptr.To(5),
@@ -119,8 +117,6 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 				Command: []string{
 					"redis_cached",
 					"$(LIMITADOR_OPERATOR_REDIS_URL)",
-					"--ttl", "1",
-					"--ratio", "2",
 					"--flush-period", "3",
 					"--max-cached", "4",
 					"--response-timeout", "5",
