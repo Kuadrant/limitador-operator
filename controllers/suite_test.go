@@ -56,13 +56,15 @@ func TestAPIs(t *testing.T) {
 
 // SharedConfig contains minimum cluster connection config that can be safely marshalled as rest.Config is unsafe to marshall
 type SharedConfig struct {
-	Host            string `json:"host"`
-	TLSClientConfig struct {
-		Insecure bool    `json:"insecure"`
-		CertData []uint8 `json:"certData,omitempty"`
-		KeyData  []uint8 `json:"keyData,omitempty"`
-		CAData   []uint8 `json:"caData,omitempty"`
-	} `json:"tlsClientConfig"`
+	Host            string          `json:"host"`
+	TLSClientConfig TLSClientConfig `json:"tlsClientConfig"`
+}
+
+type TLSClientConfig struct {
+	Insecure bool    `json:"insecure"`
+	CertData []uint8 `json:"certData,omitempty"`
+	KeyData  []uint8 `json:"keyData,omitempty"`
+	CAData   []uint8 `json:"caData,omitempty"`
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
@@ -111,12 +113,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	// Create a shared configuration struct to pass Config information to all sub processes
 	sharedCfg := SharedConfig{
 		Host: cfg.Host,
-		TLSClientConfig: struct {
-			Insecure bool    `json:"insecure"`
-			CertData []uint8 `json:"certData,omitempty"`
-			KeyData  []uint8 `json:"keyData,omitempty"`
-			CAData   []uint8 `json:"caData,omitempty"`
-		}{
+		TLSClientConfig: TLSClientConfig{
 			Insecure: cfg.TLSClientConfig.Insecure,
 			CertData: cfg.TLSClientConfig.CertData,
 			KeyData:  cfg.TLSClientConfig.KeyData,
