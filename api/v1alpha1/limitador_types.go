@@ -71,6 +71,9 @@ type LimitadorSpec struct {
 	// +optional
 	Replicas *int `json:"replicas,omitempty"`
 
+	// [Deprecated] Use spec.image instead.
+	//  Docker tag used as limitador image. The repo is hardcoded to quay.io/kuadrant/limitador
+	// +deprecated
 	// +optional
 	Version *string `json:"version,omitempty"`
 
@@ -101,6 +104,9 @@ type LimitadorSpec struct {
 	// Sets the level of verbosity
 	// +optional
 	Verbosity *VerbosityLevel `json:"verbosity,omitempty"`
+
+	// +optional
+	Image *string `json:"image,omitempty"`
 }
 
 //+kubebuilder:object:root=true
