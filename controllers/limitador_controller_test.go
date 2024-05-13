@@ -600,8 +600,6 @@ var _ = Describe("Limitador controller", func() {
 		It("with all the optional parameters, the command line is correct", func(ctx SpecContext) {
 			limitadorObj := limitadorWithRedisCachedStorage(client.ObjectKeyFromObject(redisSecret), testNamespace)
 			limitadorObj.Spec.Storage.RedisCached.Options = &limitadorv1alpha1.RedisCachedOptions{
-				TTL:             ptr.To(1),
-				Ratio:           ptr.To(2),
 				FlushPeriod:     ptr.To(3),
 				MaxCached:       ptr.To(4),
 				ResponseTimeout: ptr.To(5),
@@ -632,8 +630,6 @@ var _ = Describe("Limitador controller", func() {
 					"/home/limitador/etc/limitador-config.yaml",
 					"redis_cached",
 					"$(LIMITADOR_OPERATOR_REDIS_URL)",
-					"--ttl", "1",
-					"--ratio", "2",
 					"--flush-period", "3",
 					"--max-cached", "4",
 					"--response-timeout", "5",

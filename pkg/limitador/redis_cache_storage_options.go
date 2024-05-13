@@ -21,12 +21,6 @@ func RedisCachedDeploymentOptions(ctx context.Context, cl client.Client, defSecr
 
 	command := []string{"redis_cached", "$(LIMITADOR_OPERATOR_REDIS_URL)"}
 	if redisCachedObj.Options != nil {
-		if redisCachedObj.Options.TTL != nil {
-			command = append(command, "--ttl", strconv.Itoa(*redisCachedObj.Options.TTL))
-		}
-		if redisCachedObj.Options.Ratio != nil {
-			command = append(command, "--ratio", strconv.Itoa(*redisCachedObj.Options.Ratio))
-		}
 		if redisCachedObj.Options.FlushPeriod != nil {
 			command = append(command, "--flush-period", strconv.Itoa(*redisCachedObj.Options.FlushPeriod))
 		}
