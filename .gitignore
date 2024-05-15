@@ -6,7 +6,7 @@
 *.so
 *.dylib
 bin
-limitador-operator
+/limitador-operator
 
 # Test binary, build with `go test -c`
 *.test
