@@ -1,0 +1,13 @@
+apiVersion: v2
+name: limitador-operator
+description: A Helm chart for Limitador Operator
+type: application
+version: "0.1.0-dev"
+appVersion: "latest"
+maintainers:
+  - email: asnaps@redhat.com
+    name: Alex Snaps
+  - email: didier@redhat.com
+    name: Didier Di Cesare
+  - email: eastizle@redhat.com
+    name: Eguzki Astiz Lezaun
