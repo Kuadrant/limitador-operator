@@ -91,6 +91,8 @@ IMG ?= $(DEFAULT_IMG)
 UNIT_DIRS := ./pkg/... ./api/...
 INTEGRATION_TEST_SUITE_PATHS := ./controllers/...
 INTEGRATION_COVER_PKGS := ./pkg/...,./controllers/...,./api/...
+INTEGRATION_TEST_NUM_CORES ?= 4
+INTEGRATION_TEST_NUM_PROCESSES ?= 10
 
 # Limitador Operator replaced version
 DEFAULT_REPLACES_VERSION = 0.0.0-alpha
@@ -229,7 +231,8 @@ test-integration: clean-cov generate fmt vet ginkgo ## Run Integration tests.
 		--output-dir $(PROJECT_PATH)/coverage/integration \
 		--coverprofile cover.out \
 		-v \
-		-p \
+		--compilers=$(INTEGRATION_TEST_NUM_CORES) \
+		--procs=$(INTEGRATION_TEST_NUM_PROCESSES) \
 		--randomize-all \
 		--randomize-suites \
 		--fail-on-pending \
