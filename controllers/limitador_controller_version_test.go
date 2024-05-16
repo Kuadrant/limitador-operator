@@ -23,7 +23,7 @@ var _ = Describe("Limitador controller manages image version", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -37,7 +37,7 @@ var _ = Describe("Limitador controller manages image version", func() {
 			limitadorObj.Spec.Version = ptr.To("otherversion")
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			// Do not expect to have limitador ready
-		}, nodeTimeOut)
+		})
 
 		It("Should create a new deployment with the custom image", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}
@@ -61,7 +61,7 @@ var _ = Describe("Limitador controller manages image version", func() {
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify the deployment with the custom image", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}

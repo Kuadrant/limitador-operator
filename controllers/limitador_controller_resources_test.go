@@ -23,7 +23,7 @@ var _ = Describe("Limitador controller manages resource requirements", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -41,7 +41,7 @@ var _ = Describe("Limitador controller manages resource requirements", func() {
 			limitadorObj.Spec.ResourceRequirements = &resourceRequirements
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create a new deployment with the custom resource requirements", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}
@@ -70,7 +70,7 @@ var _ = Describe("Limitador controller manages resource requirements", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify deployment resource requirements", func(ctx SpecContext) {
 			deployment := appsv1.Deployment{}

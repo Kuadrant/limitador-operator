@@ -23,7 +23,7 @@ var _ = Describe("Limitador controller manages limits", func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		CreateNamespaceWithContext(ctx, &testNamespace)
-	}, nodeTimeOut)
+	})
 
 	AfterEach(func(ctx SpecContext) {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
@@ -55,7 +55,7 @@ var _ = Describe("Limitador controller manages limits", func() {
 			limitadorObj.Spec.Limits = limits
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should create configmap with the custom limits", func(ctx SpecContext) {
 			cm := &v1.ConfigMap{}
@@ -99,7 +99,7 @@ var _ = Describe("Limitador controller manages limits", func() {
 			limitadorObj = basicLimitador(testNamespace)
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		}, nodeTimeOut)
+		})
 
 		It("Should modify configmap with the new limits", func(ctx SpecContext) {
 			cm := &v1.ConfigMap{}
