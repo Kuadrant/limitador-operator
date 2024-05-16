@@ -108,12 +108,12 @@ Additionally, caching options can be specified in the `spec.storage.redis-cached
 
 ### Options
 
-| Option         | Description                                                           |
-|----------------|-----------------------------------------------------------------------|
-| `ttl`          | TTL for cached counters in milliseconds [default: 5000]               |
-| `ratio`        | Ratio to apply to the TTL from Redis on cached counters [default: 10] |
-| `flush-period` | Flushing period for counters in milliseconds [default: 1000]          |
-| `max-cached`   | Maximum amount of counters cached [default: 10000]                    |
+| Option               | Description                                                           |
+|----------------------|-----------------------------------------------------------------------|
+| `batch-size`         | Size of entries to flush in as single flush [default: 100]            |
+| `flush-period`       | Flushing period for counters in milliseconds [default: 1000]          |
+| `max-cached`         | Maximum amount of counters cached [default: 10000]                    |
+| `response-timeout`   | Timeout for Redis commands in milliseconds [default: 350]             |
 
 For example:
 
@@ -128,7 +128,7 @@ spec:
       configSecretRef: # The secret reference storing the URL for Redis
         name: redisconfig
       options: # Every option is optional
-        ttl: 1000
+        batch-size: 50
         max-cached: 5000
 ```
 

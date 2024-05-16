@@ -108,6 +108,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 				FlushPeriod:     ptr.To(3),
 				MaxCached:       ptr.To(4),
 				ResponseTimeout: ptr.To(5),
+				BatchSize:       ptr.To(6),
 			},
 		}
 		options, err := RedisCachedDeploymentOptions(ctx, cl, namespace, redisObj)
@@ -120,6 +121,7 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 					"--flush-period", "3",
 					"--max-cached", "4",
 					"--response-timeout", "5",
+					"--batch-size", "6",
 				},
 			},
 		)
