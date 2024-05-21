@@ -30,6 +30,9 @@ func RedisCachedDeploymentOptions(ctx context.Context, cl client.Client, defSecr
 		if redisCachedObj.Options.ResponseTimeout != nil {
 			command = append(command, "--response-timeout", strconv.Itoa(*redisCachedObj.Options.ResponseTimeout))
 		}
+		if redisCachedObj.Options.BatchSize != nil {
+			command = append(command, "--batch-size", strconv.Itoa(*redisCachedObj.Options.BatchSize))
+		}
 	}
 
 	return DeploymentStorageOptions{

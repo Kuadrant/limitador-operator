@@ -603,6 +603,7 @@ var _ = Describe("Limitador controller", func() {
 				FlushPeriod:     ptr.To(3),
 				MaxCached:       ptr.To(4),
 				ResponseTimeout: ptr.To(5),
+				BatchSize:       ptr.To(6),
 			}
 
 			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
@@ -633,6 +634,7 @@ var _ = Describe("Limitador controller", func() {
 					"--flush-period", "3",
 					"--max-cached", "4",
 					"--response-timeout", "5",
+					"--batch-size", "6",
 				),
 			)
 		}, specTimeOut)

@@ -224,6 +224,10 @@ type RedisCachedOptions struct {
 	// +optional
 	// ResponseTimeout defines the timeout for Redis commands in milliseconds [default: 350]
 	ResponseTimeout *int `json:"response-timeout,omitempty"`
+
+	// +optional
+	// BatchSize defines the size of entries to flush in as single flush [default: 100]
+	BatchSize *int `json:"batch-size,omitempty"`
 }
 
 type RedisCached struct {
