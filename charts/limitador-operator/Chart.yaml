@@ -2,8 +2,8 @@ apiVersion: v2
 name: limitador-operator
 description: A Helm chart for Limitador Operator
 type: application
-version: "0.1.0-dev"
-appVersion: "latest"
+# The version will be properly set when the chart is released matching the operator version
+version: "0.0.0"
 maintainers:
   - email: asnaps@redhat.com
     name: Alex Snaps
