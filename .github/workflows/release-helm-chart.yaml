@@ -1,0 +1,68 @@
+name: release-helm-chart
+on:
+# TODO: The following commented lines should be used depending on the release strategy
+#  release:
+#    types:
+#      - released
+# OR for a full release workflow
+#  push:
+#    tags:
+#        - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      operatorVersion:
+          description: Operator bundle version
+          default: 0.0.0
+          type: string
+      limitadorVersion:
+        description: Limitador version
+        default: latest
+        type: string
+      releaseId:
+        description: Release ID
+        default: 0
+        type: string
+
+jobs:
+  chart_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        fetch-depth: 0
+
+    - name: Configure Git
+      run: |
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+    - name: Build the Helm Chart manifests
+      run: |
+        make helm-build \
+          VERSION=${{ inputs.operatorVersion }} \
+          LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
+
+    - name: Package Helm Chart
+      run: |
+        make helm-package
+
+    - name: Upload package to GitHub Release
+      run: |
+        response = make helm-upload-package \
+        VERSION=${{ inputs.operatorVersion }} \
+        GITHUB_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }} \
+        RELEASE_ID=${{ inputs.releaseId }}
+        echo "response: $response" >> $GITHUB_ENV
+
+    - name: Sync Helm Chart with repository
+      run: |
+        make helm-sync-package \
+          VERSION=${{ inputs.operatorVersion }} \
+          GITHUB_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }} \
+          ASSET_ID=${{ env.response.id }}
+          BROWSER_DOWNLOAD_URL=${{ env.response.browser_download_url }}
