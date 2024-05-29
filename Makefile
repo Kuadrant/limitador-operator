@@ -37,6 +37,7 @@ REGISTRY = quay.io
 
 # Organization in container resgistry
 ORG ?= kuadrant
+REPO_NAME ?= limitador-operator
 
 # kubebuilder-tools still doesn't support darwin/arm64. This is a workaround (https://github.com/kubernetes-sigs/controller-runtime/issues/1657)
 ARCH_PARAM =
