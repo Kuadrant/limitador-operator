@@ -13,3 +13,5 @@ spec:
     targetPort: metrics
   selector:
     control-plane: controller-manager
+    app: limitador-operator
+ 
