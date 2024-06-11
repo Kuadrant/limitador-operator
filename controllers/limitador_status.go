@@ -10,6 +10,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -115,23 +116,33 @@ func (r *LimitadorReconciler) checkLimitadorAvailable(ctx context.Context, limit
 		Name:      limitador.DeploymentName(limitadorObj),
 	}
 	err := r.Client().Get(ctx, dKey, deployment)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 
-	if err != nil && apierrors.IsNotFound(err) {
-		tmp := err.Error()
-		return &tmp, nil
+	if apierrors.IsNotFound(err) {
+		return ptr.To(err.Error()), nil
 	}
 
-	availableCondition := helpers.FindDeploymentStatusCondition(deployment.Status.Conditions, "Available")
+	if deployment.Status.ObservedGeneration != deployment.Generation {
+		return ptr.To("Deployment still in progress"), nil
+	}
+
+	availableCondition := helpers.FindDeploymentStatusCondition(deployment.Status.Conditions, string(appsv1.DeploymentAvailable))
 	if availableCondition == nil {
-		tmp := "Available condition not found"
-		return &tmp, nil
+		return ptr.To("Available condition not found"), nil
 	}
 
 	if availableCondition.Status != corev1.ConditionTrue {
 		return &availableCondition.Message, nil
+	}
+
+	if deployment.Status.UnavailableReplicas != 0 {
+		return ptr.To("Deployment has unavailable replicas"), nil
+	}
+
+	if deployment.Status.ReadyReplicas != deployment.Status.Replicas {
+		return ptr.To("Deployment has replicas not ready yet"), nil
 	}
 
 	return nil, nil
