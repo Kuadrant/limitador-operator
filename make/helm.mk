@@ -38,6 +38,8 @@ RELEASE_ID ?= <RELEASE-ID>
 ASSET_ID ?= <ASSET-ID>
 # GitHub Release Asset Browser Download URL, it can be find in the output of the uploaded asset
 BROWSER_DOWNLOAD_URL ?= <BROWSER-DOWNLOAD-URL>
+# Github repo name for the helm charts repository
+HELM_REPO_NAME ?= helm-charts
 ifeq (0.0.0,$(VERSION))
 CHART_VERSION = $(VERSION)-dev
 else
@@ -62,5 +64,5 @@ helm-sync-package: $(HELM) ## Sync the helm chart package to the helm-charts rep
 	  -H "Accept: application/vnd.github+json" \
 	  -H "Authorization: Bearer $(GITHUB_TOKEN)" \
 	  -H "X-GitHub-Api-Version: 2022-11-28" \
-	  https://api.github.com/repos/$(ORG)/$(REPO_NAME)/dispatches \
-	  -d '{"event_type":"sync-chart","client_payload":{"chart":limitador-operator,"version":"$(CHART_VERSION)", "asset_id":"$(ASSET_ID)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
+	  https://api.github.com/repos/$(ORG)/$(HELM_REPO_NAME)/dispatches \
+	  -d '{"event_type":"sync-chart","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)", "asset_id":"$(ASSET_ID)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
