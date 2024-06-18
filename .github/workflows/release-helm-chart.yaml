@@ -52,17 +52,18 @@ jobs:
         make helm-package
 
     - name: Upload package to GitHub Release
-      run: |
-        response = make helm-upload-package \
-        VERSION=${{ inputs.operatorVersion }} \
-        GITHUB_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }} \
-        RELEASE_ID=${{ inputs.releaseId }}
-        echo "response: $response" >> $GITHUB_ENV
+      uses: svenstaro/upload-release-action@v2
+      id: upload-chart
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: charts/limitador-operator-${{ inputs.operatorVersion }}.tgz
+        asset_name: chart-limitador-operator-${{ inputs.operatorVersion }}.tgz
+        tag: ${{ github.ref }}
+        overwrite: true
 
     - name: Sync Helm Chart with repository
       run: |
         make helm-sync-package \
           VERSION=${{ inputs.operatorVersion }} \
           GITHUB_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }} \
-          ASSET_ID=${{ env.response.id }}
-          BROWSER_DOWNLOAD_URL=${{ env.response.browser_download_url }}
+          BROWSER_DOWNLOAD_URL=${{ steps.upload-chart.outputs.browser_download_url }}
