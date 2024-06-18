@@ -18,10 +18,6 @@ on:
         description: Limitador version
         default: latest
         type: string
-      releaseId:
-        description: Release ID
-        default: 0
-        type: string
 
 jobs:
   chart_release:
