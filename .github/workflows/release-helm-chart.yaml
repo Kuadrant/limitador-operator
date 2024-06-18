@@ -1,4 +1,7 @@
-name: release-helm-chart
+# Description: This workflow is used to release the Helm chart to the GitHub repository. The chart manifests should be already
+# built with the target `helm-build` and the manifests changes already committed to the tag to be released.
+
+name: Release Helm Chart
 on:
 # TODO: The following commented lines should be used depending on the release strategy
 #  release:
@@ -14,10 +17,6 @@ on:
           description: Operator bundle version
           default: 0.0.0
           type: string
-      limitadorVersion:
-        description: Limitador version
-        default: latest
-        type: string
 
 jobs:
   chart_release:
@@ -36,12 +35,6 @@ jobs:
       run: |
         git config user.name "$GITHUB_ACTOR"
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-    - name: Build the Helm Chart manifests
-      run: |
-        make helm-build \
-          VERSION=${{ inputs.operatorVersion }} \
-          LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
 
     - name: Package Helm Chart
       run: |
