@@ -45,7 +45,7 @@ jobs:
       id: upload-chart
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: charts/limitador-operator-${{ inputs.operatorVersion }}.tgz
+        file: limitador-operator-${{ inputs.operatorVersion }}.tgz
         asset_name: chart-limitador-operator-${{ inputs.operatorVersion }}.tgz
         tag: ${{ github.ref }}
         overwrite: true
