@@ -32,10 +32,6 @@ helm-package: $(HELM) ## Package the helm chart
 
 # GitHub Token with permissions to upload to the release assets
 GITHUB_TOKEN ?= <YOUR-TOKEN>
-# GitHub Release ID, to find the release_id query the GET /repos/{owner}/{repo}/releases/latest or GET /repos/{owner}/{repo}/releases endpoints
-RELEASE_ID ?= <RELEASE-ID>
-# GitHub Release Asset ID, it can be find in the output of the uploaded asset
-ASSET_ID ?= <ASSET-ID>
 # GitHub Release Asset Browser Download URL, it can be find in the output of the uploaded asset
 BROWSER_DOWNLOAD_URL ?= <BROWSER-DOWNLOAD-URL>
 # Github repo name for the helm charts repository
@@ -46,17 +42,6 @@ else
 CHART_VERSION = $(VERSION)
 endif
 
-.PHONY: helm-upload-package
-helm-upload-package: $(HELM) ## Upload the helm chart package to the GitHub release assets
-	curl -L -s \
-      -X POST \
-      -H "Accept: application/vnd.github+json" \
-      -H "Authorization: Bearer $(GITHUB_TOKEN)" \
-      -H "X-GitHub-Api-Version: 2022-11-28" \
-      -H "Content-Type: application/octet-stream" \
-      "https://uploads.github.com/repos/$(ORG)/$(REPO_NAME)/releases/$(RELEASE_ID)/assets?name=chart-limitador-operator-$(CHART_VERSION).tgz" \
-      --data-binary "@limitador-operator-$(CHART_VERSION).tgz"
-
 .PHONY: helm-sync-package
 helm-sync-package: $(HELM) ## Sync the helm chart package to the helm-charts repo
 	curl -L \
@@ -65,4 +50,4 @@ helm-sync-package: $(HELM) ## Sync the helm chart package to the helm-charts rep
 	  -H "Authorization: Bearer $(GITHUB_TOKEN)" \
 	  -H "X-GitHub-Api-Version: 2022-11-28" \
 	  https://api.github.com/repos/$(ORG)/$(HELM_REPO_NAME)/dispatches \
-	  -d '{"event_type":"sync-chart","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)", "asset_id":"$(ASSET_ID)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
+	  -d '{"event_type":"sync-chart","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
