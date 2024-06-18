@@ -65,5 +65,5 @@ jobs:
       run: |
         make helm-sync-package \
           VERSION=${{ inputs.operatorVersion }} \
-          GITHUB_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }} \
+          HELM_WORKFLOWS_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }} \
           BROWSER_DOWNLOAD_URL=${{ steps.upload-chart.outputs.browser_download_url }}

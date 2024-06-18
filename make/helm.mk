@@ -31,7 +31,7 @@ helm-package: $(HELM) ## Package the helm chart
 	$(HELM) package charts/limitador-operator
 
 # GitHub Token with permissions to upload to the release assets
-GITHUB_TOKEN ?= <YOUR-TOKEN>
+HELM_WORKFLOWS_TOKEN ?= <YOUR-TOKEN>
 # GitHub Release Asset Browser Download URL, it can be find in the output of the uploaded asset
 BROWSER_DOWNLOAD_URL ?= <BROWSER-DOWNLOAD-URL>
 # Github repo name for the helm charts repository
@@ -47,7 +47,7 @@ helm-sync-package: $(HELM) ## Sync the helm chart package to the helm-charts rep
 	curl -L \
 	  -X POST \
 	  -H "Accept: application/vnd.github+json" \
-	  -H "Authorization: Bearer $(GITHUB_TOKEN)" \
+	  -H "Authorization: Bearer $(HELM_WORKFLOWS_TOKEN)" \
 	  -H "X-GitHub-Api-Version: 2022-11-28" \
 	  https://api.github.com/repos/$(ORG)/$(HELM_REPO_NAME)/dispatches \
 	  -d '{"event_type":"sync-chart","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
