@@ -1,6 +1,18 @@
 apiVersion: v2
 name: limitador-operator
-description: A Helm chart for Limitador Operator
+description: Kubernetes operator for managing Limitador instances, a rate limiting service to protect your APIs.
+home: https://kuadrant.io
+icon: https://raw.githubusercontent.com/Kuadrant/kuadrant.github.io/main/static/img/apple-touch-icon.png
+keywords:
+  - limitador
+  - rate limiting
+  - service protection
+  - kubernetes
+  - kuadrant
+sources:
+  - https://github.com/Kuadrant/limitador-operator/
+  - https://github.com/Kuadrant/limitador/
+kubeVersion: ">=1.19.0-0"
 type: application
 # The version will be properly set when the chart is released matching the operator version
 version: "0.0.0"
