@@ -43,7 +43,7 @@ CHART_VERSION = $(VERSION)
 endif
 
 .PHONY: helm-sync-package-created
-helm-sync-package-created: $(HELM) ## Sync the helm chart package to the helm-charts repo
+helm-sync-package-created: ## Sync the helm chart package to the helm-charts repo
 	curl -L \
 	  -X POST \
 	  -H "Accept: application/vnd.github+json" \
@@ -53,7 +53,7 @@ helm-sync-package-created: $(HELM) ## Sync the helm chart package to the helm-ch
 	  -d '{"event_type":"chart-created","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
 
 .PHONY: helm-sync-package-deleted
-helm-sync-package-deleted: $(HELM) ## Sync the deleted helm chart package to the helm-charts repo
+helm-sync-package-deleted: ## Sync the deleted helm chart package to the helm-charts repo
 	curl -L \
 	  -X POST \
 	  -H "Accept: application/vnd.github+json" \
