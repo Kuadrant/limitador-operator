@@ -36,13 +36,13 @@ metadata:
       ]
     capabilities: Basic Install
     categories: Integration & Delivery
-    containerImage: quay.io/kuadrant/limitador-operator:v0.10.0-alpha1
-    createdAt: "2024-06-18T13:28:19Z"
+    containerImage: quay.io/kuadrant/limitador-operator:v0.10.0-alpha2
+    createdAt: "2024-06-21T12:04:50Z"
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/Kuadrant/limitador-operator
     support: kuadrant
-  name: limitador-operator.v0.10.0-alpha1
+  name: limitador-operator.v0.10.0-alpha2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -154,7 +154,7 @@ spec:
                 env:
                 - name: RELATED_IMAGE_LIMITADOR
                   value: quay.io/kuadrant/limitador:v1.5.0
-                image: quay.io/kuadrant/limitador-operator:v0.10.0-alpha1
+                image: quay.io/kuadrant/limitador-operator:v0.10.0-alpha2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -242,4 +242,4 @@ spec:
   - image: quay.io/kuadrant/limitador:v1.5.0
     name: limitador
   replaces: limitador-operator.v0.9.0
-  version: 0.10.0-alpha1
+  version: 0.10.0-alpha2
