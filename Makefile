@@ -6,12 +6,28 @@ SHELL = /usr/bin/env bash -o pipefail
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
-# VERSION defines the project version for the bundle.
-# Update this value when you upgrade the version of your project.
-# To re-generate a bundle for another specific version without changing the standard setup, you can:
-# - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
-# - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
+# Check for dirty.
+define check_dirty
+	GIT_SHA=$$(git rev-parse HEAD) || { \
+		GIT_HASH=$${GIT_SHA:-NO_SHA}; \
+	}; \
+	if [ -z "$$GIT_HASH" ]; then \
+		GIT_DIRTY=$$(git diff --stat); \
+		if [ -n "$$GIT_DIRTY" ]; then \
+			DIRTY="true"; \
+		else \
+			DIRTY="false"; \
+		fi; \
+	fi; \
+	echo $$DIRTY
+endef
+
 VERSION ?= 0.0.0
+
+# ldflag variables
+VERSION_LIMITADOR_OPERATOR=0.10.0-dev # change this when version increases
+COMMIT=$(shell git rev-parse HEAD)
+DIRTY=$(shell $(check_dirty))
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -269,7 +285,7 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -ldflags "-X main.version=${VERSION_LIMITADOR_OPERATOR} -X main.commit=${COMMIT} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
@@ -277,7 +293,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: ## Build docker image with the manager.
-	docker build -t $(IMG) .
+	docker build --build-arg VERSION=$(VERSION_LIMITADOR_OPERATOR) --build-arg COMMIT=$(COMMIT) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
 
 docker-push: ## Push docker image with the manager.
 	docker push $(IMG)
