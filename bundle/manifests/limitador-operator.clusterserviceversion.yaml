@@ -144,6 +144,7 @@ spec:
           template:
             metadata:
               labels:
+                app: limitador-operator
                 control-plane: controller-manager
             spec:
               containers:

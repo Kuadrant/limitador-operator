@@ -11,6 +11,7 @@ spec:
     port: 8080
     targetPort: metrics
   selector:
+    app: limitador-operator
     control-plane: controller-manager
 status:
   loadBalancer: {}
