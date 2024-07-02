@@ -45,6 +45,9 @@ var (
 	scheme   = k8sruntime.NewScheme()
 	logLevel = env.GetString("LOG_LEVEL", "info")
 	logMode  = env.GetString("LOG_MODE", "production")
+	version  string
+	commit   string
+	dirty    string
 )
 
 func init() {
@@ -67,6 +70,7 @@ func printControllerMetaInfo() {
 	setupLog.Info(fmt.Sprintf("go version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("go os/arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	setupLog.Info("base logger", "log level", logLevel, "log mode", logMode)
+	setupLog.Info("booting up limitador-operator", "version", version, "commit", commit, "dirty", dirty)
 }
 
 func main() {
