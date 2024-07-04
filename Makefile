@@ -24,10 +24,6 @@ endef
 
 VERSION ?= 0.0.0
 
-# ldflag variables
-COMMIT=$(shell git rev-parse HEAD)
-DIRTY=$(shell $(check_dirty))
-
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
@@ -282,15 +278,20 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
 
 ##@ Build
-
+build: COMMIT=$(shell git rev-parse HEAD)
+build: DIRTY=$(shell $(check_dirty))
 build: generate fmt vet ## Build manager binary.
-	go build -ldflags "-X main.commit=${COMMIT} -X main.dirty=${DIRTY}" -o bin/manager main.go
+	   go build -ldflags "-X main.commit=${COMMIT} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+run: COMMIT=$(shell git rev-parse HEAD)
+run: DIRTY=$(shell $(check_dirty))
+run: manifests generate fmt vet ## Run a controller from your host.)
+	go run -ldflags "-X main.commit=${COMMIT} -X main.dirty=${DIRTY}" ./main.go
 
+docker-build: COMMIT=$(shell git rev-parse HEAD)
+docker-build: DIRTY=$(shell $(check_dirty))
 docker-build: ## Build docker image with the manager.
 	docker build --build-arg COMMIT=$(COMMIT) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
 
