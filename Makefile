@@ -25,7 +25,6 @@ endef
 VERSION ?= 0.0.0
 
 # ldflag variables
-VERSION_LIMITADOR_OPERATOR=0.10.0-dev # change this when version increases
 COMMIT=$(shell git rev-parse HEAD)
 DIRTY=$(shell $(check_dirty))
 
@@ -285,7 +284,7 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -ldflags "-X main.version=${VERSION_LIMITADOR_OPERATOR} -X main.commit=${COMMIT} -X main.dirty=${DIRTY}" -o bin/manager main.go
+	go build -ldflags "-X main.commit=${COMMIT} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
@@ -293,7 +292,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: ## Build docker image with the manager.
-	docker build --build-arg VERSION=$(VERSION_LIMITADOR_OPERATOR) --build-arg COMMIT=$(COMMIT) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
+	docker build --build-arg COMMIT=$(COMMIT) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
 
 docker-push: ## Push docker image with the manager.
 	docker push $(IMG)
