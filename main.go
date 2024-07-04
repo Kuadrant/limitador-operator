@@ -48,7 +48,7 @@ var (
 	scheme   = k8sruntime.NewScheme()
 	logLevel = env.GetString("LOG_LEVEL", "info")
 	logMode  = env.GetString("LOG_MODE", "production")
-	commit   string
+	gitSHA   string
 	dirty    string
 )
 
@@ -72,7 +72,7 @@ func printControllerMetaInfo() {
 	setupLog.Info(fmt.Sprintf("go version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("go os/arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	setupLog.Info("base logger", "log level", logLevel, "log mode", logMode)
-	setupLog.Info("", "version", version.Version, "commit", commit, "dirty", dirty)
+	setupLog.Info("", "version", version.Version, "commit", gitSHA, "dirty", dirty)
 }
 
 func main() {
