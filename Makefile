@@ -18,6 +18,8 @@ define check_dirty
 		else \
 			DIRTY="false"; \
 		fi; \
+	else \
+        DIRTY="unknown"; \
 	fi; \
 	echo $$DIRTY
 endef
@@ -278,20 +280,20 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
 
 ##@ Build
-build: GIT_SHA=$(shell git rev-parse HEAD)
-build: DIRTY=$(shell $(check_dirty))
+build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
+build: DIRTY=$(shell $(check_dirty) || echo "unknown")
 build: generate fmt vet ## Build manager binary.
 	   go build -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
-run: GIT_SHA=$(shell git rev-parse HEAD)
-run: DIRTY=$(shell $(check_dirty))
+run: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
+run: DIRTY=$(shell $(check_dirty) || echo "unknown")
 run: manifests generate fmt vet ## Run a controller from your host.)
 	go run -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go
 
-docker-build: GIT_SHA=$(shell git rev-parse HEAD)
-docker-build: DIRTY=$(shell $(check_dirty))
+docker-build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
+docker-build: DIRTY=$(shell $(check_dirty) || echo "unknown")
 docker-build: ## Build docker image with the manager.
 	docker build --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
 
