@@ -72,7 +72,7 @@ func printControllerMetaInfo() {
 	setupLog.Info(fmt.Sprintf("go version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("go os/arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	setupLog.Info("base logger", "log level", logLevel, "log mode", logMode)
-	setupLog.Info("booting up limitador-operator", "version", version.Version, "commit", commit, "dirty", dirty)
+	setupLog.Info("", "version", version.Version, "commit", commit, "dirty", dirty)
 }
 
 func main() {
