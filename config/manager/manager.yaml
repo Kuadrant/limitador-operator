@@ -37,6 +37,9 @@ spec:
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
+          ports:
+            - name: metrics
+              containerPort: 8080
           livenessProbe:
             httpGet:
               path: /healthz

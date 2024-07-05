@@ -4,7 +4,7 @@ metadata:
   creationTimestamp: null
   labels:
     control-plane: controller-manager
-  name: limitador-operator-controller-manager-metrics-service
+  name: limitador-operator-metrics
 spec:
   ports:
   - name: metrics

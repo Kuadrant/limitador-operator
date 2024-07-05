@@ -370,7 +370,7 @@ local-env-setup: ## Prepare environment to run the operator with "make run"
 
 ## Miscellaneous Custom targets
 .PHONY: local-setup
-local-setup: export IMG := limitador-operator:dev
+local-setup: export IMG := localhost/limitador-operator:dev
 local-setup: ## Deploy operator in local kind cluster
 	$(MAKE) local-env-setup
 	$(MAKE) docker-build
