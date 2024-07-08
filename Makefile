@@ -6,24 +6,6 @@ SHELL = /usr/bin/env bash -o pipefail
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
-# Check for dirty.
-define check_dirty
-	GIT_SHA=$$(git rev-parse HEAD) || { \
-		GIT_HASH=$${GIT_SHA:-NO_SHA}; \
-	}; \
-	if [ -z "$$GIT_HASH" ]; then \
-		GIT_DIRTY=$$(git diff --stat); \
-		if [ -n "$$GIT_DIRTY" ]; then \
-			DIRTY="true"; \
-		else \
-			DIRTY="false"; \
-		fi; \
-	else \
-        DIRTY="unknown"; \
-	fi; \
-	echo $$DIRTY
-endef
-
 VERSION ?= 0.0.0
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -281,19 +263,19 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 
 ##@ Build
 build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
-build: DIRTY=$(shell $(check_dirty) || echo "unknown")
+build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 build: generate fmt vet ## Build manager binary.
 	   go build -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
 run: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
-run: DIRTY=$(shell $(check_dirty) || echo "unknown")
+run: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 run: manifests generate fmt vet ## Run a controller from your host.)
 	go run -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go
 
 docker-build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
-docker-build: DIRTY=$(shell $(check_dirty) || echo "unknown")
+docker-build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 docker-build: ## Build docker image with the manager.
 	docker build --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
 
