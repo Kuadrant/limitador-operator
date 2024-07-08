@@ -94,7 +94,7 @@ jobs:
           dockerfiles: |
             ./Dockerfile
           build-args: |
-            GIT_SHA=${{ env.GIT_SHA }}
+            GIT_SHA=${{ github.sha }}
             DIRTY=${{ env.DIRTY }}
       - name: Push Image
         if: ${{ !env.ACT }}
