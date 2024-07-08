@@ -76,7 +76,7 @@ jobs:
             ./Dockerfile
           build-args: |
             GIT_SHA=${{ github.sha }}
-            DIRTY="false"
+            DIRTY=false
       - name: Push Image
         if: ${{ !env.ACT }}
         id: push-to-quay
