@@ -74,6 +74,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           dockerfiles: |
             ./Dockerfile
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            DIRTY=false
       - name: Push Image
         if: ${{ !env.ACT }}
         id: push-to-quay

@@ -6,11 +6,6 @@ SHELL = /usr/bin/env bash -o pipefail
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
-# VERSION defines the project version for the bundle.
-# Update this value when you upgrade the version of your project.
-# To re-generate a bundle for another specific version without changing the standard setup, you can:
-# - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
-# - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 0.0.0
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -267,17 +262,22 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
 
 ##@ Build
-
+build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
+build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	   go build -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+run: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
+run: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
+run: manifests generate fmt vet ## Run a controller from your host.)
+	go run -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go
 
+docker-build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
+docker-build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 docker-build: ## Build docker image with the manager.
-	docker build -t $(IMG) .
+	docker build --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
 
 docker-push: ## Push docker image with the manager.
 	docker push $(IMG)
