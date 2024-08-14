@@ -1,0 +1,73 @@
+name: Release Operator
+
+on:
+  workflow_dispatch:
+    inputs:
+      gitRef:
+        description: Commit SHA, tag or branch name
+        required: true
+      limitadorOperatorVersion:
+        description: Limitador Operator bundle version
+        default: latest
+        type: string
+      limitadorVersion:
+        description: Limitador service version
+        default: latest
+        type: string
+      replacesVersion:
+        description: Limitador Operator replaced version
+        default: 0.0.0-alpha
+        type: string
+      channels:
+        description: Bundle and catalog channels, comma separated
+        default: preview
+        type: string
+      prerelease:
+        description: Is the release a pre release?
+        required: false
+        type: boolean
+
+jobs:
+  build:
+    name: Release operator
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install gettext-base
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+      - name: Set up Go 1.21.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21.x
+        id: go
+      - name: Checkout code at git ref
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.gitRef }}
+      - name: Create release branch
+        if: ${{ !startsWith(inputs.gitRef, 'release-v') }}
+        run: |
+          git checkout -b release-v${{ inputs.limitadorOperatorVersion }}
+      - name: Prepare release
+        run: |
+          VERSION=${{ inputs.limitadorOperatorVersion }} \
+          LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
+          REPLACES_VERSION=${{ inputs.replacesVersion }} \
+          CHANNELS=${{ inputs.channels }}
+          make prepare-release
+      - name: Commit and push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -m "Prepared release v${{ inputs.limitadorOperatorVersion }}"
+          git push origin release-v${{ inputs.limitadorOperatorVersion }}
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ inputs.limitadorOperatorVersion }}
+          tag_name: v${{ inputs.limitadorOperatorVersion }}
+          body: "**This release enables installations of Limitador v${{ inputs.limitadorVersion }}**"
+          generate_release_notes: true
+          target_commitish: release-v${{ inputs.limitadorOperatorVersion }}
+          prerelease: ${{ inputs.prerelease }}
