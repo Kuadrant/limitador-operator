@@ -365,7 +365,6 @@ prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
 	$(MAKE) bundle VERSION=$(VERSION) \
 		LIMITADOR_VERSION=$(LIMITADOR_VERSION) \
 		REPLACES_VERSION=$(REPLACES_VERSION) \
-		CHANNELS=$(CHANNELS)
 	$(MAKE) helm-build VERSION=$(VERSION) \
 		LIMITADOR_VERSION=$(LIMITADOR_VERSION)
 
