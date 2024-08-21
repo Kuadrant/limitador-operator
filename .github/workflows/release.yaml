@@ -18,10 +18,6 @@ on:
         description: Limitador Operator replaced version
         default: 0.0.0-alpha
         type: string
-      channels:
-        description: Bundle and catalog channels, comma separated
-        default: preview
-        type: string
       prerelease:
         description: Is the release a pre release?
         required: false
@@ -53,8 +49,7 @@ jobs:
         run: |
           VERSION=${{ inputs.limitadorOperatorVersion }} \
           LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
-          REPLACES_VERSION=${{ inputs.replacesVersion }} \
-          CHANNELS=${{ inputs.channels }}
+          REPLACES_VERSION=${{ inputs.replacesVersion }}
           make prepare-release
       - name: Commit and push
         run: |
