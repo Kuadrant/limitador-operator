@@ -1,6 +1,7 @@
 # Limitador Operator
 
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0) 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0) [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKuadrant%2Flimitador-operator.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FKuadrant%2Flimitador-operator?ref=badge_shield)
+
 [![codecov](https://codecov.io/gh/Kuadrant/limitador-operator/branch/main/graph/badge.svg?token=181Q05ZJBJ)](https://codecov.io/gh/Kuadrant/limitador-operator)
 
 ## Overview
@@ -57,3 +58,6 @@ for live discussions about the roadmap and more.
 This software is licensed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
 
 See the LICENSE and NOTICE files that should have been provided along with this software for details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKuadrant%2Flimitador-operator.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FKuadrant%2Flimitador-operator?ref=badge_large)
