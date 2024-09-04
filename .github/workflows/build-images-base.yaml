@@ -47,7 +47,7 @@ on:
         type: string
 
 env:
-  IMG_TAGS: ${{ github.sha }} ${{ inputs.operatorTag }}
+  IMG_TAGS: ${{ inputs.operatorTag }}
   VERSION: ${{ inputs.operatorVersion }}
   IMG_REGISTRY_HOST: quay.io
   IMG_REGISTRY_ORG: kuadrant
@@ -65,6 +65,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
+      - name: Add git sha tag for the main branch
+        if: ${{ github.ref_name == env.MAIN_BRANCH_NAME }}
+        id: add-git-sha-tag
+        run: |
+          echo "IMG_TAGS=${{ github.sha }} ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
@@ -117,6 +122,11 @@ jobs:
             LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
             REPLACES_VERSION=${{ inputs.replacesVersion }} \
             CHANNELS=${{ inputs.channels }}
+      - name: Add git sha tag for the main branch
+        if: ${{ github.ref_name == env.MAIN_BRANCH_NAME }}
+        id: add-git-sha-tag
+        run: |
+          echo "IMG_TAGS=${{ github.sha }} ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
@@ -163,6 +173,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
+      - name: Add git sha tag for the main branch
+        if: ${{ github.ref_name == env.MAIN_BRANCH_NAME }}
+        id: add-git-sha-tag
+        run: |
+          echo "IMG_TAGS=${{ github.sha }} ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
