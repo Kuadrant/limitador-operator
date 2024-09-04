@@ -8,7 +8,7 @@ on:
         default: 0.0.0
         type: string
       operatorTag:
-        description: Operator tag
+        description: Operator bundle tag
         default: latest
         type: string
       limitadorVersion:
@@ -23,6 +23,10 @@ on:
         description: Bundle and catalog channels, comma separated
         default: preview
         type: string
+      imageTags:
+        description: Docker image tags
+        default: latest
+        type: string
   workflow_dispatch:
     inputs:
       operatorVersion:
@@ -30,7 +34,7 @@ on:
         default: 0.0.0
         type: string
       operatorTag:
-        description: Operator tag
+        description: Operator bundle tag
         default: latest
         type: string
       limitadorVersion:
@@ -47,7 +51,7 @@ on:
         type: string
 
 env:
-  IMG_TAGS: ${{ inputs.operatorTag }}
+  IMG_TAGS: ${{ inputs.imageTags || inputs.operatorTag }}
   VERSION: ${{ inputs.operatorVersion }}
   IMG_REGISTRY_HOST: quay.io
   IMG_REGISTRY_ORG: kuadrant
@@ -60,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install qemu dependency
         run: |
           sudo apt-get update
@@ -106,7 +110,7 @@ jobs:
           go-version: 1.21.x
         id: go
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install qemu dependency
         run: |
           sudo apt-get update
@@ -118,7 +122,6 @@ jobs:
             REGISTRY=${{ env.IMG_REGISTRY_HOST }} \
             ORG=${{ env.IMG_REGISTRY_ORG }} \
             VERSION=${{ env.VERSION }} \
-            IMAGE_TAG=${{ inputs.operatorTag }} \
             LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
             REPLACES_VERSION=${{ inputs.replacesVersion }} \
             CHANNELS=${{ inputs.channels }}
@@ -160,7 +163,7 @@ jobs:
           go-version: 1.21.x
         id: go
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Generate Catalog Content
         run: |
           make catalog \

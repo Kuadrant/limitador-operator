@@ -1,15 +1,17 @@
-name: Build images for dev branches
+name: Build images for branches
 
 on:
   push:
     branches: ['*']
+  workflow_dispatch: {}
 
 jobs:
   workflow-build:
-    if: github.ref_name != 'main' && !startsWith(github.ref, 'refs/tags/v')
     name: Calls build-images-base workflow
     uses: ./.github/workflows/build-images-base.yaml
     secrets: inherit
     with:
-      operatorVersion: ${{ github.ref_name }}
+      operatorVersion: 0.0.0
       operatorTag: ${{ github.ref_name }}
+      limitadorVersion: latest
+      imageTags: ${{ github.ref_name }}
