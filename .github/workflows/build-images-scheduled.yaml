@@ -3,13 +3,50 @@ name: Schedule build with latest image SHA versions
 on:
   schedule:
     - cron: '0 0 * * 0'
+  workflow_dispatch: {}
 
 jobs:
+  release-date:
+    name: GetDate
+    runs-on: ubuntu-latest
+    outputs:
+      release_date: ${{ steps.release_date.outputs.release_date }}
+    steps:
+      - id: release_date
+        run: echo "release_date=nightly-$(date +'%d-%m-%Y')" >> $GITHUB_OUTPUT
+  limitador-latest-revision:
+    name: Get the latest git commit from limitador in the default branch
+    runs-on: ubuntu-latest
+    outputs:
+      limitador_last_hash: ${{ steps.lastcommit.outputs.hash }}
+    steps:
+      - id: lastcommit
+        uses: nmbgeek/github-action-get-latest-commit@v0.1.0
+        with:
+          repository: Kuadrant/limitador
+          # avoid the action failing due to API rate limiting
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Print Limitador's last commit revision
+        run: echo "${{ steps.lastcommit.outputs.hash }}"
+  check-limitador-image:
+    needs: limitador-latest-revision
+    name: Check limitador image exists
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check image
+        uses: cloudposse/github-action-docker-image-exists@0.2.0
+        with:
+          registry: quay.io
+          organization: kuadrant
+          repository: limitador
+          tag: ${{ needs.limitador-latest-revision.outputs.limitador_last_hash }}
   workflow-build:
+    needs: [release-date, check-limitador-image, limitador-latest-revision]
     name: Calls build-images-base workflow
     uses: ./.github/workflows/build-images-base.yaml
     secrets: inherit
     with:
-      operatorVersion: ${{ github.sha }}
-      operatorTag: ${{ github.sha }}
-      limitadorVersion: ${{ vars.LIMITADOR_SHA }}
+      operatorVersion: 0.0.0
+      imageTags: ${{ needs.release-date.outputs.release_date }} nightly-latest
+      operatorTag: ${{ needs.release-date.outputs.release_date }}
+      limitadorVersion: ${{ needs.limitador-latest-revision.outputs.limitador_last_hash }}
