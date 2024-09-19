@@ -20,6 +20,5 @@ COPY bundle/metadata /metadata/
 COPY bundle/tests/scorecard /tests/scorecard/
 
 # Quay image expiry
-ARG QUAY_IMAGE_EXPIRY
-ENV QUAY_IMAGE_EXPIRY=${QUAY_IMAGE_EXPIRY:-never}
+ARG QUAY_IMAGE_EXPIRY=never
 LABEL quay.expires-after=${QUAY_IMAGE_EXPIRY}
