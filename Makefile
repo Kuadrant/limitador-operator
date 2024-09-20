@@ -277,7 +277,7 @@ run: manifests generate fmt vet ## Run a controller from your host.)
 docker-build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
 docker-build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 docker-build: ## Build docker image with the manager.
-	docker build --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) -t $(IMG) .
+	docker build --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) --build-arg QUAY_IMAGE_EXPIRY=$(QUAY_IMAGE_EXPIRY) -t $(IMG) .
 
 docker-push: ## Push docker image with the manager.
 	docker push $(IMG)
@@ -340,6 +340,7 @@ bundle: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Generate bundle manifest
 	# Validate bundle manifests
 	$(OPERATOR_SDK) bundle validate ./bundle
 	$(MAKE) bundle-ignore-createdAt
+	echo "$$QUAY_EXPIRY_TIME_LABEL" >> bundle.Dockerfile
 
 .PHONY: bundle-ignore-createdAt
 bundle-ignore-createdAt:
@@ -354,7 +355,7 @@ bundle-ignore-createdAt:
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	docker build --build-arg QUAY_IMAGE_EXPIRY=$(QUAY_IMAGE_EXPIRY) -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.

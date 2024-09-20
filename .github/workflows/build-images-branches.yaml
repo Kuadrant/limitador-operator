@@ -13,3 +13,4 @@ jobs:
     with:
       operatorVersion: ${{ github.ref_name }}
       operatorTag: ${{ github.ref_name }}
+      quayImageExpiry: 1w

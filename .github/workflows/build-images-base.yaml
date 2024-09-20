@@ -23,6 +23,10 @@ on:
         description: Bundle and catalog channels, comma separated
         default: preview
         type: string
+      quayImageExpiry:
+        description: When to expire the built quay images. The time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively, from the time the image is built.
+        default: never
+        type: string
   workflow_dispatch:
     inputs:
       operatorVersion:
@@ -45,6 +49,10 @@ on:
         description: Bundle and catalog channels, comma separated
         default: preview
         type: string
+      quayImageExpiry:
+        description: When to expire the built quay images. The time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively, from the time the image is built.
+        default: never
+        type: string
 
 env:
   IMG_TAGS: ${{ inputs.operatorTag }}
@@ -53,6 +61,7 @@ env:
   IMG_REGISTRY_ORG: kuadrant
   MAIN_BRANCH_NAME: main
   OPERATOR_NAME: limitador-operator
+  QUAY_IMAGE_EXPIRY: ${{ inputs.quayImageExpiry }}
 
 jobs:
   build:
@@ -82,6 +91,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             DIRTY=false
+            QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
       - name: Push Image
         if: ${{ !env.ACT }}
         id: push-to-quay
@@ -136,6 +146,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           dockerfiles: |
             ./bundle.Dockerfile
+          build-args: |
+            QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
       - name: Push Image
         if: ${{ !env.ACT }}
         id: push-to-quay
@@ -188,6 +200,7 @@ jobs:
           context: ./catalog
           dockerfiles: |
             ./catalog/${{ env.OPERATOR_NAME }}-catalog.Dockerfile
+          # The Quay image expiry label for the generated catalog Dockerfile is set via opm, using the value set in the QUAY_IMAGE_EXPIRY environment variable
       - name: Push Image
         if: ${{ !env.ACT }}
         id: push-to-quay

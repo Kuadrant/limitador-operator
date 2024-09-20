@@ -13,3 +13,4 @@ jobs:
       operatorVersion: ${{ github.sha }}
       operatorTag: ${{ github.sha }}
       limitadorVersion: ${{ vars.LIMITADOR_SHA }}
+      quayImageExpiry: 2w
