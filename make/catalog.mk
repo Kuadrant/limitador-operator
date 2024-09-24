@@ -27,14 +27,14 @@ $(CATALOG_FILE): $(OPM) $(YQ)
 	@echo "************************************************************"
 	@echo Build limitador operator catalog
 	@echo
-	@echo BUNDLE_IMG					= $(BUNDLE_IMG)
-	@echo REPLACES_VERSION				= $(REPLACES_VERSION)
-	@echo CHANNELS						= $(CHANNELS)
+	@echo BUNDLE_IMG                   = $(BUNDLE_IMG)
+	@echo REPLACES_VERSION             = $(REPLACES_VERSION)
+	@echo CHANNEL                      = $(DEFAULT_CHANNEL)
 	@echo "************************************************************"
 	@echo
 	@echo Please check this matches your expectations and override variables if needed.
 	@echo
-	$(PROJECT_PATH)/utils/generate-catalog.sh $(OPM) $(YQ) $(BUNDLE_IMG) $@ $(REPLACES_VERSION) $(CHANNELS)
+	$(PROJECT_PATH)/utils/generate-catalog.sh $(OPM) $(YQ) $(BUNDLE_IMG) $@ $(REPLACES_VERSION) $(DEFAULT_CHANNEL)
 
 .PHONY: catalog
 catalog: $(OPM) ## Generate catalog content and validate.
