@@ -79,13 +79,17 @@ The `make bundle` target accepts the following variables:
 | `IMG`                     | Operator image URL   | `quay.io/kuadrant/limitador-operator:latest` |                                                                          |
 | `VERSION`                 | Bundle version       | `0.0.0`                                      |                                                                          |
 | `RELATED_IMAGE_LIMITADOR` | Limitador bundle URL | `quay.io/kuadrant/limitador:latest`          | `LIMITADOR_VERSION` var could be use to build this URL providing the tag |
+| `CHANNELS`                | Bundle channels used in the bundle, comma separated                 | `alpha`                                                                  |
+| `DEFAULT_CHANNEL`         | The default channel used in the bundle                              | `alpha`                                                                  |
 
 * Build the bundle manifests
 
 ```bash
 make bundle [IMG=quay.io/kuadrant/limitador-operator:latest] \
             [VERSION=0.0.0] \
-            [RELATED_IMAGE_LIMITADOR=quay.io/kuadrant/limitador:latest]
+            [RELATED_IMAGE_LIMITADOR=quay.io/kuadrant/limitador:latest] \
+            [CHANNELS=alpha] \
+            [DEFAULT_CHANNEL=alpha]
 ```
 
 * Build the bundle image from the manifests
