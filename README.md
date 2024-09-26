@@ -44,6 +44,7 @@ spec:
 * [Rate Limit Headers](./doc/rate-limit-headers.md)
 * [Logging](./doc/logging.md)
 * [Tracing](./doc/tracing.md)
+* [Custom Image](./doc/custom-image.md)
 
 ## Contributing
 
