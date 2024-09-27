@@ -5,7 +5,6 @@ import (
 
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,7 +115,7 @@ func TestDeployment(t *testing.T) {
 	t.Run("volumeMounts", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		deployment := Deployment(limObj, DeploymentOptions{
-			VolumeMounts: []v1.VolumeMount{
+			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "A",
 					MountPath: "/path/A",
@@ -129,7 +128,7 @@ func TestDeployment(t *testing.T) {
 		})
 		assert.Assert(subT, len(deployment.Spec.Template.Spec.Containers) == 1)
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			[]v1.VolumeMount{
+			[]corev1.VolumeMount{
 				{
 					Name:      "A",
 					MountPath: "/path/A",
@@ -145,12 +144,12 @@ func TestDeployment(t *testing.T) {
 	t.Run("volumes", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		deployment := Deployment(limObj, DeploymentOptions{
-			Volumes: []v1.Volume{
+			Volumes: []corev1.Volume{
 				{
 					Name: "A",
-					VolumeSource: v1.VolumeSource{
-						ConfigMap: &v1.ConfigMapVolumeSource{
-							LocalObjectReference: v1.LocalObjectReference{
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "secretA",
 							},
 						},
@@ -158,9 +157,9 @@ func TestDeployment(t *testing.T) {
 				},
 				{
 					Name: "B",
-					VolumeSource: v1.VolumeSource{
-						ConfigMap: &v1.ConfigMapVolumeSource{
-							LocalObjectReference: v1.LocalObjectReference{
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "secretB",
 							},
 						},
@@ -169,12 +168,12 @@ func TestDeployment(t *testing.T) {
 			},
 		})
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Volumes,
-			[]v1.Volume{
+			[]corev1.Volume{
 				{
 					Name: "A",
-					VolumeSource: v1.VolumeSource{
-						ConfigMap: &v1.ConfigMapVolumeSource{
-							LocalObjectReference: v1.LocalObjectReference{
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "secretA",
 							},
 						},
@@ -182,9 +181,9 @@ func TestDeployment(t *testing.T) {
 				},
 				{
 					Name: "B",
-					VolumeSource: v1.VolumeSource{
-						ConfigMap: &v1.ConfigMapVolumeSource{
-							LocalObjectReference: v1.LocalObjectReference{
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "secretB",
 							},
 						},
@@ -361,14 +360,14 @@ func TestPVC(t *testing.T) {
 		limObj := newDiskStorageLimitador("some-name")
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Spec.AccessModes,
-			[]v1.PersistentVolumeAccessMode{v1.ReadWriteOnce})
+			[]corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce})
 	})
 
 	t.Run("default resources", func(subT *testing.T) {
 		limObj := newDiskStorageLimitador("some-name")
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Spec.Resources.Requests,
-			v1.ResourceList{v1.ResourceStorage: resource.MustParse("1Gi")},
+			corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")},
 		)
 	})
 
@@ -381,7 +380,7 @@ func TestPVC(t *testing.T) {
 		}
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Spec.Resources.Requests,
-			v1.ResourceList{v1.ResourceStorage: resource.MustParse("100Gi")},
+			corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("100Gi")},
 		)
 	})
 
