@@ -27,14 +27,16 @@ EOF
 
 To pull an image from a private container image registry or repository, you need to provide credentials.
 
-Create a Secret by providing credentials on the command line
+Create a Secret of type `kubernetes.io/dockerconfigjson` by providing credentials.
+For example, using `kubectl` tool with the following command line:
 
 ```
-kubectl create secret docker-registry regcred --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
+kubectl create secret docker-registry regcred --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword>
 ```
 
-Deploy limitador instance that uses your secret
+That will create a secret named `regcred`.
 
+Deploy limitador instance with the `imagePullSecrets` field having a reference to the `regcred`.
 
 ```yaml
 ---
@@ -47,3 +49,5 @@ spec:
   imagePullSecrets:
   - name: regcred
 ```
+
+> **NOTE**: It is mandatory that the secret and limitador CR are created in the same namespace.

@@ -7,23 +7,24 @@ import (
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
 type DeploymentOptions struct {
 	Command            []string
-	VolumeMounts       []v1.VolumeMount
-	Volumes            []v1.Volume
+	VolumeMounts       []corev1.VolumeMount
+	Volumes            []corev1.Volume
 	DeploymentStrategy appsv1.DeploymentStrategy
-	EnvVar             []v1.EnvVar
+	EnvVar             []corev1.EnvVar
+	ImagePullSecrets   []corev1.LocalObjectReference
 }
 
 type DeploymentStorageOptions struct {
 	Command            []string
-	VolumeMounts       []v1.VolumeMount
-	Volumes            []v1.Volume
+	VolumeMounts       []corev1.VolumeMount
+	Volumes            []corev1.Volume
 	DeploymentStrategy appsv1.DeploymentStrategy
 }
 
@@ -67,8 +68,8 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 	return command
 }
 
-func DeploymentVolumeMounts(storageOptions DeploymentStorageOptions) []v1.VolumeMount {
-	volumeMounts := []v1.VolumeMount{
+func DeploymentVolumeMounts(storageOptions DeploymentStorageOptions) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      LimitsCMVolumeName,
 			MountPath: LimitadorCMMountPath,
@@ -78,13 +79,13 @@ func DeploymentVolumeMounts(storageOptions DeploymentStorageOptions) []v1.Volume
 	return volumeMounts
 }
 
-func DeploymentVolumes(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []v1.Volume {
-	volumes := []v1.Volume{
+func DeploymentVolumes(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []corev1.Volume {
+	volumes := []corev1.Volume{
 		{
 			Name: LimitsCMVolumeName,
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
 						Name: LimitsConfigMapName(limObj),
 					},
 				},

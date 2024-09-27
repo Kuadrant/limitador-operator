@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gotest.tools/assert"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -190,6 +191,17 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			},
+		)
+	})
+
+	t.Run("imagePullSecrets", func(subT *testing.T) {
+		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
+		deployment := Deployment(limObj, DeploymentOptions{
+			ImagePullSecrets: []corev1.LocalObjectReference{{Name: "regcred"}},
+		})
+
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.ImagePullSecrets,
+			[]corev1.LocalObjectReference{{Name: "regcred"}},
 		)
 	})
 }

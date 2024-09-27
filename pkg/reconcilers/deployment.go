@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kuadrant/limitador-operator/pkg/log"
 )
 
 // DeploymentMutateFn is a function which mutates the existing Deployment into it's desired state.
@@ -188,4 +191,21 @@ func DeploymentReadinessProbeMutator(desired, existing *appsv1.Deployment) bool 
 	}
 
 	return update
+}
+
+func DeploymentImagePullSecretsMutator(desired, existing *appsv1.Deployment) bool {
+	logger := log.Log
+
+	if cmp.Equal(desired.Spec.Template.Spec.ImagePullSecrets, existing.Spec.Template.Spec.ImagePullSecrets) {
+		return false
+	}
+
+	if logger.V(1).Enabled() {
+		diff := cmp.Diff(desired.Spec.Template.Spec.ImagePullSecrets, existing.Spec.Template.Spec.ImagePullSecrets)
+		logger.V(1).Info("imagepullsecrets not equal", "difference", diff)
+	}
+
+	// indeed, update the deployment
+	existing.Spec.Template.Spec.ImagePullSecrets = desired.Spec.Template.Spec.ImagePullSecrets
+	return true
 }
