@@ -15,7 +15,7 @@ YQ="${2?:Error \$YQ not set. Bye}"
 BUNDLE_IMG="${3?:Error \$BUNDLE_IMG not set. Bye}"
 CATALOG_FILE="${4?:Error \$CATALOG_FILE not set. Bye}"
 REPLACES_VERSION="${5:-$DEFAULT_REPLACES_VERSION}"
-CHANNELS="${6:-$DEFAULT_CHANNEL}"
+CHANNEL="${6:-$DEFAULT_CHANNEL}"
 
 CATALOG_FILE_BASEDIR="$( cd "$( dirname "$(realpath ${CATALOG_FILE})" )" && pwd )"
 CATALOG_BASEDIR="$( cd "$( dirname "$(realpath ${CATALOG_FILE_BASEDIR})" )" && pwd )"
@@ -31,13 +31,13 @@ touch ${CATALOG_FILE}
 # Limitador Operator
 ###
 # Add the package
-${OPM} init limitador-operator --default-channel=${CHANNELS} --output yaml >> ${CATALOG_FILE}
+${OPM} init limitador-operator --default-channel=${CHANNEL} --output yaml >> ${CATALOG_FILE}
 # Add a bundles to the Catalog
 cat ${TMP_DIR}/limitador-operator-bundle.yaml >> ${CATALOG_FILE}
 # Add a channel entry for the bundle
 V=`${YQ} eval '.name' ${TMP_DIR}/limitador-operator-bundle.yaml` \
 REPLACES=limitador-operator.v${REPLACES_VERSION} \
-CHANNELS=${CHANNELS} \
-    ${YQ} eval '(.entries[0].name = strenv(V)) | (.entries[0].replaces = strenv(REPLACES)) | (.name = strenv(CHANNELS))' ${CATALOG_BASEDIR}/limitador-operator-channel-entry.yaml >> ${CATALOG_FILE}
+CHANNEL=${CHANNEL} \
+    ${YQ} eval '(.entries[0].name = strenv(V)) | (.entries[0].replaces = strenv(REPLACES)) | (.name = strenv(CHANNEL))' ${CATALOG_BASEDIR}/limitador-operator-channel-entry.yaml >> ${CATALOG_FILE}
 
 rm -rf $TMP_DIR
