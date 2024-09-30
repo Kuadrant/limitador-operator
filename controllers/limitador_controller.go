@@ -36,7 +36,6 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
-	"github.com/kuadrant/limitador-operator/pkg/upgrades"
 )
 
 // LimitadorReconciler reconciles a Limitador object
@@ -254,8 +253,7 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		return ctrl.Result{}, err
 	}
 
-	// TODO: To be deleted when the upgrade path is no longer needed.
-	return upgrades.UpgradeDeploymentTov070(ctx, r.Client(), limitadorObj, client.ObjectKeyFromObject(deployment))
+	return ctrl.Result{}, nil
 }
 
 func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -320,12 +318,6 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 
 	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
 	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
-	if err != nil {
-		return err
-	}
-
-	// TODO: To be deleted when the upgrade path is no longer needed.
-	err = upgrades.UpgradeConfigMapTov070(ctx, r.Client(), limitadorObj)
 	if err != nil {
 		return err
 	}
