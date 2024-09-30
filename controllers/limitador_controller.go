@@ -116,11 +116,7 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 		return ctrl.Result{}, err
 	}
 
-	result, err := r.reconcileDeployment(ctx, limitadorObj)
-	if result.Requeue {
-		return result, nil
-	}
-	if err != nil {
+	if err := r.reconcileDeployment(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -205,15 +201,15 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 	return nil
 }
 
-func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
+func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	deploymentOptions, err := r.getDeploymentOptions(ctx, limitadorObj)
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	deploymentMutators := make([]reconcilers.DeploymentMutateFn, 0)
@@ -245,15 +241,15 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 	err = r.ReconcileDeployment(ctx, deployment, reconcilers.DeploymentMutator(deploymentMutators...))
 	logger.V(1).Info("reconcile deployment", "error", err)
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
