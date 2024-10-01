@@ -24,7 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -137,7 +137,7 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 }
 
 func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
-	podList := &v1.PodList{}
+	podList := &corev1.PodList{}
 	options := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
 		Namespace:     limitadorObj.Namespace,
@@ -156,7 +156,7 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 	}
 
 	// Use CM resource version to track limits changes
-	cm := &v1.ConfigMap{}
+	cm := &corev1.ConfigMap{}
 	if err := r.Client().Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: true}, nil
@@ -235,6 +235,13 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentLivenessProbeMutator,
 		reconcilers.DeploymentReadinessProbeMutator,
 	)
+
+	// reconcile imagepullsecrets only when set in limitador CR
+	// if not set in limitador CR, the user will be able to add them manually and the operator
+	// will not revert the changes.
+	if len(deploymentOptions.ImagePullSecrets) > 0 {
+		deploymentMutators = append(deploymentMutators, reconcilers.DeploymentImagePullSecretsMutator)
+	}
 
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
 	// controller reference
@@ -327,13 +334,13 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 }
 
 func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
-	existing, ok := existingObj.(*v1.ConfigMap)
+	existing, ok := existingObj.(*corev1.ConfigMap)
 	if !ok {
-		return false, fmt.Errorf("%T is not a *v1.ConfigMap", existingObj)
+		return false, fmt.Errorf("%T is not a *corev1.ConfigMap", existingObj)
 	}
-	desired, ok := desiredObj.(*v1.ConfigMap)
+	desired, ok := desiredObj.(*corev1.ConfigMap)
 	if !ok {
-		return false, fmt.Errorf("%T is not a *v1.ConfigMap", desiredObj)
+		return false, fmt.Errorf("%T is not a *corev1.ConfigMap", desiredObj)
 	}
 
 	updated := false
@@ -378,6 +385,7 @@ func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *
 	if err != nil {
 		return deploymentOptions, err
 	}
+	deploymentOptions.ImagePullSecrets = r.getDeploymentImagePullSecrets(limObj)
 
 	return deploymentOptions, nil
 }
@@ -402,7 +410,7 @@ func (r *LimitadorReconciler) getDeploymentStorageOptions(ctx context.Context, l
 	return limitador.InMemoryDeploymentOptions()
 }
 
-func (r *LimitadorReconciler) getDeploymentEnvVar(limObj *limitadorv1alpha1.Limitador) ([]v1.EnvVar, error) {
+func (r *LimitadorReconciler) getDeploymentEnvVar(limObj *limitadorv1alpha1.Limitador) ([]corev1.EnvVar, error) {
 	if limObj.Spec.Storage != nil {
 		if limObj.Spec.Storage.Redis != nil {
 			return limitador.DeploymentEnvVar(limObj.Spec.Storage.Redis.ConfigSecretRef)
@@ -416,12 +424,16 @@ func (r *LimitadorReconciler) getDeploymentEnvVar(limObj *limitadorv1alpha1.Limi
 	return nil, nil
 }
 
+func (r *LimitadorReconciler) getDeploymentImagePullSecrets(limObj *limitadorv1alpha1.Limitador) []corev1.LocalObjectReference {
+	return limObj.Spec.ImagePullSecrets
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *LimitadorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&limitadorv1alpha1.Limitador{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&v1.ConfigMap{}).
+		Owns(&corev1.ConfigMap{}).
 		Owns(&policyv1.PodDisruptionBudget{}).
 		Complete(r)
 }

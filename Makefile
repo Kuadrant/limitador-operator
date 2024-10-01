@@ -234,14 +234,16 @@ clean-cov: ## Remove coverage reports
 .PHONY: test
 test: test-unit test-integration ## Run all tests
 
+ifdef VERBOSE
+test-integration: VERBOSE_FLAG = -v
+endif
 test-integration: clean-cov generate fmt vet ginkgo ## Run Integration tests.
 	mkdir -p $(PROJECT_PATH)/coverage/integration
 #	Check `ginkgo help run` for command line options. For example to filtering tests.
-	$(GINKGO) \
+	$(GINKGO) $(VERBOSE_FLAG) \
 		--coverpkg $(INTEGRATION_COVER_PKGS) \
 		--output-dir $(PROJECT_PATH)/coverage/integration \
 		--coverprofile cover.out \
-		-v \
 		--compilers=$(INTEGRATION_TEST_NUM_CORES) \
 		--procs=$(INTEGRATION_TEST_NUM_PROCESSES) \
 		--randomize-all \
@@ -255,9 +257,12 @@ test-integration: clean-cov generate fmt vet ginkgo ## Run Integration tests.
 ifdef TEST_NAME
 test-unit: TEST_PATTERN := --run $(TEST_NAME)
 endif
+ifdef VERBOSE
+test-unit: VERBOSE_FLAG = -v
+endif
 test-unit: clean-cov generate fmt vet ## Run Unit tests.
 	mkdir -p $(PROJECT_PATH)/coverage/unit
-	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out -v -timeout 0 $(TEST_PATTERN)
+	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out $(VERBOSE_FLAG) -timeout 0 $(TEST_PATTERN)
 
 ##@ Build
 build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")

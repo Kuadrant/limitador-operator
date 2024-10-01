@@ -715,6 +715,33 @@ var _ = Describe("Limitador controller", func() {
 			Expect(pvc.GetOwnerReferences()).To(HaveLen(1))
 		}, specTimeOut)
 	})
+
+	Context("Creating a new Limitador object with imagePullSecrets", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func(ctx SpecContext) {
+			limitadorObj = basicLimitador(testNamespace)
+			limitadorObj.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "regcred"}}
+
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		})
+
+		It("Should create a new deployment with imagepullsecrets", func(ctx SpecContext) {
+			deployment := &appsv1.Deployment{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx,
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					}, deployment)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
+
+			Expect(deployment.Spec.Template.Spec.ImagePullSecrets).To(
+				HaveExactElements(corev1.LocalObjectReference{Name: "regcred"}),
+			)
+		}, specTimeOut)
+	})
 })
 
 func basicLimitador(ns string) *limitadorv1alpha1.Limitador {
