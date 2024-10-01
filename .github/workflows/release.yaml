@@ -14,10 +14,6 @@ on:
         description: Limitador service version
         default: latest
         type: string
-      replacesVersion:
-        description: Limitador Operator replaced version
-        default: 0.0.0-alpha
-        type: string
       prerelease:
         description: Is the release a pre release?
         required: false
@@ -49,7 +45,6 @@ jobs:
         run: |
           VERSION=${{ inputs.limitadorOperatorVersion }} \
           LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
-          REPLACES_VERSION=${{ inputs.replacesVersion }}
           make prepare-release
       - name: Commit and push
         run: |
