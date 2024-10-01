@@ -53,5 +53,4 @@ spec:
   provider:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator
-  replaces: limitador-operator.v0.0.0-alpha
   version: 0.0.0

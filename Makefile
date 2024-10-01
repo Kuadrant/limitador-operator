@@ -88,10 +88,6 @@ INTEGRATION_COVER_PKGS := ./pkg/...,./controllers/...,./api/...
 INTEGRATION_TEST_NUM_CORES ?= 4
 INTEGRATION_TEST_NUM_PROCESSES ?= 10
 
-# Limitador Operator replaced version
-DEFAULT_REPLACES_VERSION = 0.0.0-alpha
-REPLACES_VERSION ?= $(DEFAULT_REPLACES_VERSION)
-
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -337,7 +333,6 @@ bundle: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Generate bundle manifest
 	V="limitador-operator.v$(BUNDLE_VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	V="$(BUNDLE_VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	V="$(IMG)" $(YQ) eval '.metadata.annotations.containerImage = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
-	V="limitador-operator.v$(REPLACES_VERSION)" $(YQ) eval '.spec.replaces = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	# Generate bundle
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
 	# Validate bundle manifests
@@ -368,7 +363,6 @@ bundle-push: ## Push the bundle image.
 prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
 	$(MAKE) bundle VERSION=$(VERSION) \
 		LIMITADOR_VERSION=$(LIMITADOR_VERSION) \
-		REPLACES_VERSION=$(REPLACES_VERSION)
 	$(MAKE) helm-build VERSION=$(VERSION) \
 		LIMITADOR_VERSION=$(LIMITADOR_VERSION)
 

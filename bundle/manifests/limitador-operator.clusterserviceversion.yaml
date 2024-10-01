@@ -242,5 +242,4 @@ spec:
   relatedImages:
   - image: quay.io/kuadrant/limitador:latest
     name: limitador
-  replaces: limitador-operator.v0.0.0-alpha
   version: 0.0.0
