@@ -49,7 +49,9 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: Limitador
+    - description: Limitador is the Schema for the limitadors API
+      displayName: Limitador
+      kind: Limitador
       name: limitadors.limitador.kuadrant.io
       version: v1alpha1
   description: The Limitador operator installs and maintains limitador instances
