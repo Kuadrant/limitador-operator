@@ -3,6 +3,8 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
+  labels:
+    app.kubernetes.io/managed-by: helm
   name: limitadors.limitador.kuadrant.io
 spec:
   group: limitador.kuadrant.io
@@ -1180,12 +1182,15 @@ kind: ServiceAccount
 metadata:
   labels:
     app: limitador-operator
+    app.kubernetes.io/managed-by: helm
   name: limitador-operator-controller-manager
   namespace: '{{ .Release.Namespace }}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  labels:
+    app.kubernetes.io/managed-by: helm
   name: limitador-operator-leader-election-role
   namespace: '{{ .Release.Namespace }}'
 rules:
@@ -1214,6 +1219,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  labels:
+    app.kubernetes.io/managed-by: helm
   name: limitador-operator-manager-role
 rules:
 - apiGroups:
@@ -1290,6 +1297,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  labels:
+    app.kubernetes.io/managed-by: helm
   name: limitador-operator-leader-election-rolebinding
   namespace: '{{ .Release.Namespace }}'
 roleRef:
@@ -1304,6 +1313,8 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
+  labels:
+    app.kubernetes.io/managed-by: helm
   name: limitador-operator-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -1330,6 +1341,8 @@ data:
       resourceName: 3745a16e.kuadrant.io
 kind: ConfigMap
 metadata:
+  labels:
+    app.kubernetes.io/managed-by: helm
   name: limitador-operator-manager-config
   namespace: '{{ .Release.Namespace }}'
 ---
@@ -1337,6 +1350,7 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app.kubernetes.io/managed-by: helm
     control-plane: controller-manager
   name: limitador-operator-metrics
   namespace: '{{ .Release.Namespace }}'
@@ -1353,6 +1367,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app.kubernetes.io/managed-by: helm
     control-plane: controller-manager
   name: limitador-operator-controller-manager
   namespace: '{{ .Release.Namespace }}'
@@ -1365,6 +1380,7 @@ spec:
     metadata:
       labels:
         app: limitador-operator
+        app.kubernetes.io/managed-by: helm
         control-plane: controller-manager
     spec:
       containers:
