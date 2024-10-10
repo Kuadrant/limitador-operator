@@ -225,6 +225,7 @@ spec:
   keywords:
   - api
   - rate-limit
+  - kuadrant
   links:
   - name: Limitador Operator
     url: https://github.com/Kuadrant/limitador-operator
