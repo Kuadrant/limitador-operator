@@ -38,18 +38,16 @@ import (
 	"github.com/kuadrant/limitador-operator/controllers"
 	"github.com/kuadrant/limitador-operator/pkg/log"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
-
 	//+kubebuilder:scaffold:imports
-	// import version
-	"github.com/kuadrant/limitador-operator/version"
 )
 
 var (
 	scheme   = k8sruntime.NewScheme()
 	logLevel = env.GetString("LOG_LEVEL", "info")
 	logMode  = env.GetString("LOG_MODE", "production")
-	gitSHA   string
-	dirty    string
+	gitSHA   string // pass ldflag here to display gitSHA hash
+	dirty    string // must be string as passed in by ldflag to determine display .
+	version  string // must be string as passed in by ldflag to determine display .
 )
 
 func init() {
@@ -72,7 +70,7 @@ func printControllerMetaInfo() {
 	setupLog.Info(fmt.Sprintf("go version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("go os/arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	setupLog.Info("base logger", "log level", logLevel, "log mode", logMode)
-	setupLog.Info("", "version", version.Version, "commit", gitSHA, "dirty", dirty)
+	setupLog.Info("build information", "version", version, "commit", gitSHA, "dirty", dirty)
 }
 
 func main() {

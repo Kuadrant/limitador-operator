@@ -95,6 +95,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+RELEASE_FILE = $(PROJECT_PATH)/make/release.mk
 
 all: build
 
@@ -264,19 +265,19 @@ test-unit: clean-cov generate fmt vet ## Run Unit tests.
 build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
 build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 build: generate fmt vet ## Build manager binary.
-	   go build -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o bin/manager main.go
+	   go build -ldflags "-X main.version=v$(VERSION) -X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o bin/manager main.go
 
 run: export LOG_LEVEL = debug
 run: export LOG_MODE = development
 run: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
 run: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 run: manifests generate fmt vet ## Run a controller from your host.)
-	go run -ldflags "-X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go
+	go run -ldflags "-X main.version=v$(VERSION) -X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go
 
 docker-build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
 docker-build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 docker-build: ## Build docker image with the manager.
-	docker build --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) --build-arg QUAY_IMAGE_EXPIRY=$(QUAY_IMAGE_EXPIRY) -t $(IMG) .
+	docker build --build-arg VERSION=v$(VERSION) --build-arg GIT_SHA=$(GIT_SHA) --build-arg DIRTY=$(DIRTY) --build-arg QUAY_IMAGE_EXPIRY=$(QUAY_IMAGE_EXPIRY) -t $(IMG) .
 
 docker-push: ## Push docker image with the manager.
 	docker push $(IMG)
@@ -369,8 +370,19 @@ bundle-build: ## Build the bundle image.
 bundle-push: ## Push the bundle image.
 	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
 
+.PHONY: bundle-operator-image-url
+bundle-operator-image-url: $(YQ) ## Read operator image reference URL from the manifest bundle.
+	@$(YQ) '.metadata.annotations.containerImage' bundle/manifests/limitador-operator.clusterserviceversion.yaml
+
+print-bundle-image: ## Pring bundle images.
+	@echo $(BUNDLE_IMG)
+
 .PHONY: prepare-release
+prepare-release: IMG_TAG=v$(VERSION)
 prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
+	echo -e "#Release default values\\nIMG=$(IMAGE_TAG_BASE):$(IMG_TAG)\nBUNDLE_IMG=$(IMAGE_TAG_BASE)-bundle:$(IMG_TAG)\n\
+	CATALOG_IMG=$(IMAGE_TAG_BASE)-catalog:$(IMG_TAG)\nCHANNELS=$(CHANNELS)\nBUNDLE_CHANNELS=--channels=$(CHANNELS)\n\
+	VERSION=$(VERSION)" > $(RELEASE_FILE)
 	$(MAKE) bundle VERSION=$(VERSION) \
 		LIMITADOR_VERSION=$(LIMITADOR_VERSION) \
 	$(MAKE) helm-build VERSION=$(VERSION) \
