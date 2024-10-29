@@ -8,11 +8,11 @@ on:
         required: true
       limitadorOperatorVersion:
         description: Limitador Operator bundle version
-        default: latest
+        default: 0.0.0
         type: string
       limitadorVersion:
         description: Limitador service version
-        default: latest
+        default: 0.0.0
         type: string
       prerelease:
         description: Is the release a pre release?
