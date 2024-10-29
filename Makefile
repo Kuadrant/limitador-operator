@@ -388,6 +388,10 @@ prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
 	$(MAKE) helm-build VERSION=$(VERSION) \
 		LIMITADOR_VERSION=$(LIMITADOR_VERSION)
 
+.PHONY: read-release-version
+read-release-version: ## Reads release version
+	@echo "v$(VERSION)"
+
 ##@ Misc
 
 .PHONY: local-env-setup
