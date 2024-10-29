@@ -380,7 +380,7 @@ print-bundle-image: ## Pring bundle images.
 .PHONY: prepare-release
 prepare-release: IMG_TAG=v$(VERSION)
 prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
-	echo -e "#Release default values\\nIMG=$(IMAGE_TAG_BASE):$(IMG_TAG)\nBUNDLE_IMG=$(IMAGE_TAG_BASE)-bundle:$(IMG_TAG)\n\
+	echo -e "#Release default values\\nLIMITADOR_VERSION=$(nLIMITADOR_VERSION)\nIMG=$(IMAGE_TAG_BASE):$(IMG_TAG)\nBUNDLE_IMG=$(IMAGE_TAG_BASE)-bundle:$(IMG_TAG)\n\
 	CATALOG_IMG=$(IMAGE_TAG_BASE)-catalog:$(IMG_TAG)\nCHANNELS=$(CHANNELS)\nBUNDLE_CHANNELS=--channels=$(CHANNELS)\n\
 	VERSION=$(VERSION)" > $(RELEASE_FILE)
 	$(MAKE) bundle VERSION=$(VERSION) \

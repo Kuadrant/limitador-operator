@@ -22,7 +22,7 @@ on:
 jobs:
   build:
     name: Release operator
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install gettext-base
         run: |
@@ -43,9 +43,9 @@ jobs:
           git checkout -b release-v${{ inputs.limitadorOperatorVersion }}
       - name: Prepare release
         run: |
+          make prepare-release \
           VERSION=${{ inputs.limitadorOperatorVersion }} \
-          LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
-          make prepare-release
+          LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
       - name: Commit and push
         run: |
           git config --global user.name "github-actions[bot]"
