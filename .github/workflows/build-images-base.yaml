@@ -70,11 +70,6 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
-      - name: Read release string version
-        id: release
-        run: |
-          version=`make read-release-version`
-          echo version=$version >> $GITHUB_OUTPUT
       - name: Install qemu dependency
         run: |
           sudo apt-get update
@@ -96,7 +91,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             DIRTY=false
-            VERSION=${{ steps.release.outputs.version }}
+            VERSION=${{ inputs.operatorVersion }}
             QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
       - name: Push Image
         if: ${{ !env.ACT }}
