@@ -8,11 +8,11 @@ on:
         required: true
       limitadorOperatorVersion:
         description: Limitador Operator bundle version
-        default: latest
+        default: 0.0.0
         type: string
       limitadorVersion:
         description: Limitador service version
-        default: latest
+        default: 0.0.0
         type: string
       prerelease:
         description: Is the release a pre release?
@@ -22,7 +22,7 @@ on:
 jobs:
   build:
     name: Release operator
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install gettext-base
         run: |
@@ -34,24 +34,29 @@ jobs:
           go-version: 1.21.x
         id: go
       - name: Checkout code at git ref
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.gitRef }}
+          token: ${{ secrets.KUADRANT_DEV_PAT }}
       - name: Create release branch
         if: ${{ !startsWith(inputs.gitRef, 'release-v') }}
         run: |
           git checkout -b release-v${{ inputs.limitadorOperatorVersion }}
       - name: Prepare release
         run: |
+          make prepare-release \
           VERSION=${{ inputs.limitadorOperatorVersion }} \
-          LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
-          make prepare-release
+          LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
       - name: Commit and push
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A && git commit -s -m "Prepared release v${{ inputs.limitadorOperatorVersion }}"
-          git push origin release-v${{ inputs.limitadorOperatorVersion }}
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Prepared release v${{ inputs.limitadorOperatorVersion }}"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          branch: release-v${{ inputs.limitadorOperatorVersion }}
+          create_branch: true
+          tagging_message: v${{ inputs.limitadorOperatorVersion }}
+          commit_options: '--signoff'
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:

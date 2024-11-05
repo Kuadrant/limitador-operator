@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install qemu dependency
         run: |
           sudo apt-get update
@@ -91,6 +91,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
             DIRTY=false
+            VERSION=${{ inputs.operatorVersion }}
             QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
       - name: Push Image
         if: ${{ !env.ACT }}
