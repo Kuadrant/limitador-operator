@@ -9,6 +9,7 @@ helm-build: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Build the helm chart
 	# Build the helm chart templates from kustomize manifests
 	$(KUSTOMIZE) build config/helm > charts/limitador-operator/templates/manifests.yaml
 	V="$(VERSION)" $(YQ) eval '.version = strenv(V)' -i charts/limitador-operator/Chart.yaml
+	V="$(VERSION)" $(YQ) eval '.appVersion = strenv(V)' -i charts/limitador-operator/Chart.yaml
 
 .PHONY: helm-install
 helm-install: $(HELM) ## Install the helm chart
