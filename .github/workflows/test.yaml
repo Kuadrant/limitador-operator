@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [ '*' ]
 
+  merge_group:
+    types: [ checks_requested ]
+
+  workflow_dispatch:
+
   schedule:
     - cron: "15 1 * * *"
 
@@ -180,3 +185,14 @@ jobs:
       - name: Run make verify-helm-charts
         run: |
           make verify-helm-charts
+  required-checks:
+    name: Tests Required Checks
+    # This check adds a list of checks to one job to simplify adding settings to the repo.
+    # If a new check is added in this file, and it should be retested on entry to the merge queue,
+    # it needs to be added to the list below aka needs: [ existing check 1, existing check 2, new check ].
+    needs: [ unit-tests, integration-tests, verify-manifests, verify-bundle, verify-fmt, verify-tidy, lint, verify-generate, verify-go-mod, verify-helm-charts ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
