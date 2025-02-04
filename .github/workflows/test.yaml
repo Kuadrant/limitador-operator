@@ -16,8 +16,22 @@ on:
     - cron: "15 1 * * *"
 
 jobs:
+  pre-job:
+    runs-on: ubuntu-latest
+    name: Pre job checks
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v3.4.1
+        with:
+          cancel_others: false
+          paths_ignore: '["**/*.md", "**/*.adoc", "LICENSE"]'
   unit-tests:
     name: Unit Tests
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,6 +55,8 @@ jobs:
           verbose: true
   integration-tests:
     name: Integration Tests
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -75,6 +91,8 @@ jobs:
           verbose: true
   verify-manifests:
     name: Verify manifests
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -87,6 +105,8 @@ jobs:
         run: make verify-manifests
   verify-bundle:
     name: Verify bundle
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -101,6 +121,8 @@ jobs:
           make verify-bundle
   verify-fmt:
     name: Verify fmt
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -115,6 +137,8 @@ jobs:
           make verify-fmt
   verify-tidy:
     name: Verify tidy
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -132,6 +156,8 @@ jobs:
           make verify-tidy
   lint:
     name: Lint
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -145,6 +171,8 @@ jobs:
         run: make run-lint
   verify-generate:
     name: Verify generate
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -159,6 +187,8 @@ jobs:
           make verify-generate
   verify-go-mod:
     name: Verify go.mod
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -173,6 +203,8 @@ jobs:
           make verify-go-mod
   verify-helm-charts:
     name: Verify helm charts
+    if: needs.pre-job.outputs.should_skip != 'true'
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.22.x
