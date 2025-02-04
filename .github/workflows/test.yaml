@@ -7,12 +7,31 @@ on:
   pull_request:
     branches: [ '*' ]
 
+  merge_group:
+    types: [ checks_requested ]
+
+  workflow_dispatch:
+
   schedule:
     - cron: "15 1 * * *"
 
 jobs:
+  pre-job:
+    runs-on: ubuntu-latest
+    name: Pre job checks
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v3.4.1
+        with:
+          cancel_others: false
+          paths_ignore: '["**/*.md", "**/*.adoc", "LICENSE"]'
   unit-tests:
     name: Unit Tests
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,6 +55,8 @@ jobs:
           verbose: true
   integration-tests:
     name: Integration Tests
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -70,6 +91,8 @@ jobs:
           verbose: true
   verify-manifests:
     name: Verify manifests
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -82,6 +105,8 @@ jobs:
         run: make verify-manifests
   verify-bundle:
     name: Verify bundle
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -96,6 +121,8 @@ jobs:
           make verify-bundle
   verify-fmt:
     name: Verify fmt
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -110,6 +137,8 @@ jobs:
           make verify-fmt
   verify-tidy:
     name: Verify tidy
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -127,6 +156,8 @@ jobs:
           make verify-tidy
   lint:
     name: Lint
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -140,6 +171,8 @@ jobs:
         run: make run-lint
   verify-generate:
     name: Verify generate
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -154,6 +187,8 @@ jobs:
           make verify-generate
   verify-go-mod:
     name: Verify go.mod
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.21.x
@@ -168,6 +203,8 @@ jobs:
           make verify-go-mod
   verify-helm-charts:
     name: Verify helm charts
+    if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
+    needs: pre-job
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.22.x
@@ -180,3 +217,14 @@ jobs:
       - name: Run make verify-helm-charts
         run: |
           make verify-helm-charts
+  required-checks:
+    name: Tests Required Checks
+    # This check adds a list of checks to one job to simplify adding settings to the repo.
+    # If a new check is added in this file, and it should be retested on entry to the merge queue,
+    # it needs to be added to the list below aka needs: [ existing check 1, existing check 2, new check ].
+    needs: [ unit-tests, integration-tests, verify-manifests, verify-bundle, verify-fmt, verify-tidy, lint, verify-generate, verify-go-mod, verify-helm-charts ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success" or .result == "skipped")'
