@@ -24,6 +24,9 @@ bin
 *.swo
 *~
 
+# Helm chart packages
+*operator*.tgz*
+
 # controller-runtime testenv binaries
 testbin
 

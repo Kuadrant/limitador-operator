@@ -1,5 +1,10 @@
 ##@ Helm Charts
 
+# Chart name
+CHART_NAME ?= limitador-operator
+# Chart directory
+CHART_DIRECTORY ?= charts/$(CHART_NAME)
+
 .PHONY: helm-build
 helm-build: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Build the helm chart from kustomize manifests
 	# Set desired operator image and related limitador image
@@ -7,29 +12,37 @@ helm-build: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Build the helm chart
 	# Replace the controller image
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	# Build the helm chart templates from kustomize manifests
-	$(KUSTOMIZE) build config/helm > charts/limitador-operator/templates/manifests.yaml
-	V="$(VERSION)" $(YQ) eval '.version = strenv(V)' -i charts/limitador-operator/Chart.yaml
-	V="$(VERSION)" $(YQ) eval '.appVersion = strenv(V)' -i charts/limitador-operator/Chart.yaml
+	$(KUSTOMIZE) build config/helm > $(CHART_DIRECTORY)/templates/manifests.yaml
+	V="$(VERSION)" $(YQ) eval '.version = strenv(V)' -i $(CHART_DIRECTORY)/Chart.yaml
+	V="$(VERSION)" $(YQ) eval '.appVersion = strenv(V)' -i $(CHART_DIRECTORY)/Chart.yaml
 
 .PHONY: helm-install
 helm-install: $(HELM) ## Install the helm chart
 	# Install the helm chart in the cluster
-	$(HELM) install limitador-operator charts/limitador-operator
+	$(HELM) install $(CHART_NAME) $(CHART_DIRECTORY)
 
 .PHONY: helm-uninstall
 helm-uninstall: $(HELM) ## Uninstall the helm chart
 	# Uninstall the helm chart from the cluster
-	$(HELM) uninstall limitador-operator
+	$(HELM) uninstall $(CHART_NAME)
 
 .PHONY: helm-upgrade
 helm-upgrade: $(HELM) ## Upgrade the helm chart
 	# Upgrade the helm chart in the cluster
-	$(HELM) upgrade limitador-operator charts/limitador-operator
+	$(HELM) upgrade $(CHART_NAME) $(CHART_DIRECTORY)
 
 .PHONY: helm-package
 helm-package: $(HELM) ## Package the helm chart
 	# Package the helm chart
-	$(HELM) package charts/limitador-operator
+	$(HELM) package $(CHART_DIRECTORY)
+
+# GPG_KEY_UID: substring of the desired key's uid, the name or email
+GPG_KEY_UID ?= 'Kuadrant Development Team'
+# The keyring should've been imported before running this target
+.PHONY: helm-package-sign
+helm-package-sign: $(HELM) ## Package the helm chart and GPG sign it
+	# Package the helm chart and sign it
+	$(HELM) package --sign --key "$(GPG_KEY_UID)" $(CHART_DIRECTORY)
 
 # GitHub Token with permissions to upload to the release assets
 HELM_WORKFLOWS_TOKEN ?= <YOUR-TOKEN>
@@ -51,7 +64,7 @@ helm-sync-package-created: ## Sync the helm chart package to the helm-charts rep
 	  -H "Authorization: Bearer $(HELM_WORKFLOWS_TOKEN)" \
 	  -H "X-GitHub-Api-Version: 2022-11-28" \
 	  https://api.github.com/repos/$(ORG)/$(HELM_REPO_NAME)/dispatches \
-	  -d '{"event_type":"chart-created","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
+	  -d '{"event_type":"chart-created","client_payload":{"chart":"$(CHART_NAME)","version":"$(CHART_VERSION)", "browser_download_url": "$(BROWSER_DOWNLOAD_URL)"}}'
 
 .PHONY: helm-sync-package-deleted
 helm-sync-package-deleted: ## Sync the deleted helm chart package to the helm-charts repo
@@ -61,4 +74,4 @@ helm-sync-package-deleted: ## Sync the deleted helm chart package to the helm-ch
 	  -H "Authorization: Bearer $(HELM_WORKFLOWS_TOKEN)" \
 	  -H "X-GitHub-Api-Version: 2022-11-28" \
 	  https://api.github.com/repos/$(ORG)/$(HELM_REPO_NAME)/dispatches \
-	  -d '{"event_type":"chart-deleted","client_payload":{"chart":"$(REPO_NAME)","version":"$(CHART_VERSION)"}}'
+	  -d '{"event_type":"chart-deleted","client_payload":{"chart":"$(CHART_NAME)","version":"$(CHART_VERSION)"}}'
