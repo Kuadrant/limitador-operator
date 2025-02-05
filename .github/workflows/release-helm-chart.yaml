@@ -64,7 +64,7 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: limitador-operator-${{ env.OPERATOR_VERSION }}.tgz.prov
         asset_name: chart-limitador-operator-${{ env.OPERATOR_VERSION }}.tgz.prov
-        tag: ${{ env.OPERATOR_TAG }}
+        tag: ${{ github.ref }}
         overwrite: true
 
     - name: Sync Helm Chart with repository
