@@ -2,7 +2,6 @@ package limitador
 
 import (
 	"fmt"
-
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -219,8 +218,8 @@ func ValidatePDB(pdb *policyv1.PodDisruptionBudget) error {
 
 func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
 	return map[string]string{
-		"app":                "limitador",
-		"limitador-resource": limitador.ObjectMeta.Name,
+		helpers.LabelKeyApp:               "limitador",
+		helpers.LabelKeyLimitadorResource: limitador.ObjectMeta.Name,
 	}
 }
 
