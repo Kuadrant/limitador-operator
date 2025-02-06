@@ -229,6 +229,7 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentPortsMutator,
 		reconcilers.DeploymentLivenessProbeMutator,
 		reconcilers.DeploymentReadinessProbeMutator,
+		reconcilers.DeploymentTemplateLabelMutator,
 	)
 
 	// reconcile imagepullsecrets only when set in limitador CR
@@ -238,7 +239,7 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		deploymentMutators = append(deploymentMutators, reconcilers.DeploymentImagePullSecretsMutator)
 	}
 
-	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
+	deployment := limitador.Deployment(limitadorObj, deploymentOptions, logger)
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
 		return err

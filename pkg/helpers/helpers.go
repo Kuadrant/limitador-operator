@@ -33,3 +33,19 @@ func IsObjectTaggedToDelete(obj client.Object) bool {
 	annotation, ok := annotations[DeleteTagAnnotation]
 	return ok && annotation == "true"
 }
+
+func MergeMapStringString(modified *bool, existing map[string]string, desired *map[string]string) {
+	if existing == nil {
+		existing = map[string]string{}
+	}
+
+	// for each desired key value set, e.g. labels
+	// check if it's present in existing. if not add it to existing.
+	// e.g. preserving existing labels while adding those that are in the desired set.
+	for desiredKey, desiredValue := range *desired {
+		if existingValue, exists := (existing)[desiredKey]; !exists || existingValue != desiredValue {
+			(*desired)[desiredKey] = existingValue
+			*modified = true
+		}
+	}
+}

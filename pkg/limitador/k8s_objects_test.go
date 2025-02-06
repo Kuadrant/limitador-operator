@@ -1,6 +1,7 @@
 package limitador
 
 import (
+	"github.com/go-logr/logr"
 	"testing"
 
 	"gotest.tools/assert"
@@ -66,10 +67,11 @@ func TestServiceName(t *testing.T) {
 }
 
 func TestDeployment(t *testing.T) {
+	logger := logr.Discard()
 	t.Run("default replicas", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		limObj.Spec.Replicas = nil
-		deployment := Deployment(limObj, DeploymentOptions{})
+		deployment := Deployment(limObj, DeploymentOptions{}, logger)
 		assert.Assert(subT, deployment.Spec.Replicas != nil)
 		assert.Assert(subT, *deployment.Spec.Replicas == 1)
 	})
@@ -77,15 +79,68 @@ func TestDeployment(t *testing.T) {
 	t.Run("replicas", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		limObj.Spec.Replicas = ptr.To(2)
-		deployment := Deployment(limObj, DeploymentOptions{})
+		deployment := Deployment(limObj, DeploymentOptions{}, logger)
 		assert.Assert(subT, deployment.Spec.Replicas != nil)
 		assert.Assert(subT, *deployment.Spec.Replicas == 2)
 	})
 
 	t.Run("labels", func(subT *testing.T) {
-		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
-		deployment := Deployment(limObj, DeploymentOptions{})
+		limObjLabels := newTestLimitadorObj("some-name", "some-ns", nil)
+		limObjLabels.Labels = map[string]string{
+			"test-label-key": "test-label-value",
+		}
+		deployment := Deployment(limObjLabels, DeploymentOptions{}, logger)
 		assert.DeepEqual(subT, deployment.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+				"test-label-key":     "test-label-value",
+			})
+		assert.DeepEqual(subT, deployment.Spec.Template.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+				"test-label-key":     "test-label-value",
+			})
+		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
+		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
+		deployment = Deployment(limObj, DeploymentOptions{}, logger)
+		assert.DeepEqual(subT, deployment.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
+		assert.DeepEqual(subT, deployment.Spec.Template.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
+		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
+
+		limObjInvalidLabels := newTestLimitadorObj("some-name", "some-ns", nil)
+		limObjInvalidLabels.Labels = map[string]string{
+			"app": "some-other-non-system-app-value",
+		}
+		deployment = Deployment(limObjInvalidLabels, DeploymentOptions{}, logger)
+		assert.DeepEqual(subT, deployment.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
+		assert.DeepEqual(subT, deployment.Spec.Template.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
+		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
 			map[string]string{
 				"app":                "limitador",
 				"limitador-resource": "some-name",
@@ -93,7 +148,7 @@ func TestDeployment(t *testing.T) {
 	})
 	t.Run("selector", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
-		deployment := Deployment(limObj, DeploymentOptions{})
+		deployment := Deployment(limObj, DeploymentOptions{}, logger)
 		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
 			map[string]string{
 				"app":                "limitador",
@@ -105,7 +160,7 @@ func TestDeployment(t *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		deployment := Deployment(limObj, DeploymentOptions{
 			Command: []string{"a", "b", "c"},
-		})
+		}, logger)
 		assert.Assert(subT, len(deployment.Spec.Template.Spec.Containers) == 1)
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Command,
 			[]string{"a", "b", "c"},
@@ -125,7 +180,7 @@ func TestDeployment(t *testing.T) {
 					MountPath: "/path/B",
 				},
 			},
-		})
+		}, logger)
 		assert.Assert(subT, len(deployment.Spec.Template.Spec.Containers) == 1)
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
 			[]corev1.VolumeMount{
@@ -166,7 +221,7 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, logger)
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Volumes,
 			[]corev1.Volume{
 				{
@@ -197,7 +252,7 @@ func TestDeployment(t *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		deployment := Deployment(limObj, DeploymentOptions{
 			ImagePullSecrets: []corev1.LocalObjectReference{{Name: "regcred"}},
-		})
+		}, logger)
 
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.ImagePullSecrets,
 			[]corev1.LocalObjectReference{{Name: "regcred"}},
