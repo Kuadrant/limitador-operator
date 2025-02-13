@@ -2,6 +2,7 @@ package reconcilers
 
 import (
 	"fmt"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	"reflect"
 
 	"github.com/google/go-cmp/cmp"
@@ -35,6 +36,13 @@ func DeploymentMutator(opts ...DeploymentMutateFn) MutateFn {
 
 		return update, nil
 	}
+}
+
+func DeploymentTemplateLabelMutator(desired, existing *appsv1.Deployment) bool {
+	update := false
+	helpers.MergeMapStringString(&update, existing.Spec.Template.Labels, &desired.Spec.Template.Labels)
+	helpers.MergeMapStringString(&update, existing.Labels, &desired.Labels)
+	return update
 }
 
 func DeploymentAffinityMutator(desired, existing *appsv1.Deployment) bool {

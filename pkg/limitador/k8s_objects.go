@@ -2,6 +2,7 @@ package limitador
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -52,7 +53,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 	}
 }
 
-func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions DeploymentOptions) *appsv1.Deployment {
+func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions DeploymentOptions, logger logr.Logger) *appsv1.Deployment {
 	replicas := limitador.GetReplicas()
 
 	image := GetLimitadorImage()
@@ -66,6 +67,18 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 		image = *limitador.Spec.Image
 	}
 
+	// setting the desired labels, the hardcoded ones and the limitador ones.
+	mutableLabels := Labels(limitador)
+	if limitador.ObjectMeta.Labels != nil {
+		for key, value := range limitador.ObjectMeta.Labels {
+			if key == "limitador-resource" || key == "app" {
+				logger.V(1).Info("skipping limitador labels with keys \"app\" and \"limitador-resource\" as these are reserved for use by the operator")
+				continue
+			}
+			mutableLabels[key] = value
+		}
+	}
+	immutableLabels := Labels(limitador)
 	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -74,17 +87,17 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName(limitador),
 			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
-			Labels:    Labels(limitador),
+			Labels:    mutableLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Strategy: deploymentOptions.DeploymentStrategy,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: Labels(limitador),
+				MatchLabels: immutableLabels,
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: Labels(limitador),
+					Labels: mutableLabels,
 				},
 				Spec: v1.PodSpec{
 					Affinity:         limitador.Spec.Affinity,
