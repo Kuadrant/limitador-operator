@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM mirror.gcr.io/library/golang:1.21 AS builder
+FROM mirror.gcr.io/library/golang:1.22 AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
