@@ -229,6 +229,8 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		reconcilers.DeploymentPortsMutator,
 		reconcilers.DeploymentLivenessProbeMutator,
 		reconcilers.DeploymentReadinessProbeMutator,
+		reconcilers.DeploymentTemplateLabelMutator,
+		reconcilers.DeploymentObjectLabelMutator,
 	)
 
 	// reconcile imagepullsecrets only when set in limitador CR
