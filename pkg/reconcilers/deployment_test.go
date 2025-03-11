@@ -382,7 +382,7 @@ func TestDeploymentMutator(t *testing.T) {
 		mutator := reconcilers.DeploymentMutator(
 			nameMutator, commandMutator, imageMutator,
 		)
-		updated, err := mutator(existing, &appsv1.Deployment{})
+		updated, err := mutator(&appsv1.Deployment{}, existing)
 		assert.NilError(subT, err)
 		assert.Assert(subT, updated)
 		assert.Equal(subT, existing.Spec.Template.Spec.Containers[0].Name, "newName")

@@ -15,7 +15,7 @@ import (
 type DeploymentMutateFn func(desired, existing *appsv1.Deployment) bool
 
 func DeploymentMutator(opts ...DeploymentMutateFn) MutateFn {
-	return func(existingObj, desiredObj client.Object) (bool, error) {
+	return func(desiredObj, existingObj client.Object) (bool, error) {
 		existing, ok := existingObj.(*appsv1.Deployment)
 		if !ok {
 			return false, fmt.Errorf("%T is not a *appsv1.Deployment", existingObj)

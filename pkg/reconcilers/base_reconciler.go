@@ -36,7 +36,7 @@ import (
 )
 
 // MutateFn is a function which mutates the existing object into it's desired state.
-type MutateFn func(existing, desired client.Object) (bool, error)
+type MutateFn func(desired, existing client.Object) (bool, error)
 
 func CreateOnlyMutator(_, _ client.Object) (bool, error) {
 	return false, nil
@@ -127,7 +127,7 @@ func (b *BaseReconciler) ReconcileResource(ctx context.Context, obj, desired cli
 		return b.DeleteResource(ctx, desired)
 	}
 
-	update, err := mutateFn(obj, desired)
+	update, err := mutateFn(desired, obj)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func PodDisruptionBudgetMutator(existingObj, desiredObj client.Object) (bool, error) {
+func PodDisruptionBudgetMutator(desiredObj, existingObj client.Object) (bool, error) {
 	update := false
 
 	existing, ok := existingObj.(*policyv1.PodDisruptionBudget)

@@ -321,7 +321,7 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 	return nil
 }
 
-func mutateLimitsConfigMap(existingObj, desiredObj client.Object) (bool, error) {
+func mutateLimitsConfigMap(desiredObj, existingObj client.Object) (bool, error) {
 	existing, ok := existingObj.(*corev1.ConfigMap)
 	if !ok {
 		return false, fmt.Errorf("%T is not a *corev1.ConfigMap", existingObj)
