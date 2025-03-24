@@ -90,10 +90,11 @@ func TestDeployment(t *testing.T) {
 				"app":                "limitador",
 				"limitador-resource": "some-name",
 			})
-	})
-	t.Run("selector", func(subT *testing.T) {
-		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
-		deployment := Deployment(limObj, DeploymentOptions{})
+		assert.DeepEqual(subT, deployment.Spec.Template.Labels,
+			map[string]string{
+				"app":                "limitador",
+				"limitador-resource": "some-name",
+			})
 		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
 			map[string]string{
 				"app":                "limitador",
