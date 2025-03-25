@@ -40,7 +40,7 @@ catalog: $(OPM) ## Generate catalog content and validate.
 	# Initializing the Catalog
 	-rm -rf $(PROJECT_PATH)/catalog/limitador-operator-catalog
 	-rm -rf $(PROJECT_PATH)/catalog/limitador-operator-catalog.Dockerfile
-	$(MAKE) $(CATALOG_DOCKERFILE)
+	$(MAKE) $(CATALOG_DOCKERFILE) DEFAULT_CHANNEL=$(DEFAULT_CHANNEL)
 	$(MAKE) $(CATALOG_FILE) BUNDLE_IMG=$(BUNDLE_IMG)
 	cd $(PROJECT_PATH)/catalog && $(OPM) validate limitador-operator-catalog
 
