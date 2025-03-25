@@ -58,6 +58,7 @@ catalog-push: ## Push a catalog image.
 
 deploy-catalog: $(KUSTOMIZE) $(YQ) ## Deploy operator to the K8s cluster specified in ~/.kube/config using OLM catalog image.
 	V="$(CATALOG_IMG)" $(YQ) eval '.spec.image = strenv(V)' -i config/deploy/olm/catalogsource.yaml
+	V="$(DEFAULT_CHANNEL)" $(YQ) eval '.spec.channel = strenv(V)' -i config/deploy/olm/subscription.yaml
 	$(KUSTOMIZE) build config/deploy/olm | kubectl apply -f -
 
 undeploy-catalog: $(KUSTOMIZE) ## Undeploy controller from the K8s cluster specified in ~/.kube/config using OLM catalog image.
