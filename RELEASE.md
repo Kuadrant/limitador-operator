@@ -17,9 +17,18 @@
 3. Verify that the build [release tag workflow](https://github.com/Kuadrant/limitador-operator/actions/workflows/build-images-for-tag-release.yaml) is triggered and completes for the new tag
 
 4. Verify the new version can be installed from the catalog image.
-   4.1. Deploy the OLM catalog image following the [Deploy the operator using OLM](/doc/development.md#deploy-the-operator-using-olm) and providing the generated catalog image. For example:
+   4.1. Deploy the new OLM catalog image
+   Create kind cluster
    ```sh
-   make deploy-catalog CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:v0.13.0 DEFAULT_CHANNEL=stable
+   make kind-create-cluster
+   ```
+   Deploy OLM system
+   ```sh
+   make install-olm
+   ```
+   Deploy the catalog image. Replace `<NEW_TAG>` with the new release tag.
+   ```sh
+   make deploy-catalog CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:<NEW_TAG> DEFAULT_CHANNEL=stable
    ```
    4.2. Wait for deployment:
    ```sh
