@@ -17,6 +17,7 @@
 3. Verify that the build [release tag workflow](https://github.com/Kuadrant/limitador-operator/actions/workflows/build-images-for-tag-release.yaml) is triggered and completes for the new tag
 
 4. Verify the new version can be installed from the catalog image.
+
    4.1. Deploy the new OLM catalog image
    Create kind cluster
    ```sh
