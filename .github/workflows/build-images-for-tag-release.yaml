@@ -152,7 +152,7 @@ jobs:
         if: ${{ needs.build-bundle.outputs.image != steps.parsed-operator-bundle.outputs.image }}
         run: exit 1
       - name: Generate Catalog Content
-        run: make catalog
+        run: make catalog DEFAULT_CHANNEL=stable
       - name: Install qemu dependency
         run: |
           sudo apt-get update
