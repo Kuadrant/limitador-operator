@@ -12,7 +12,7 @@ import (
 type ServiceMutateFn func(desired, existing *v1.Service) bool
 
 func ServiceMutator(opts ...ServiceMutateFn) MutateFn {
-	return func(existingObj, desiredObj client.Object) (bool, error) {
+	return func(desiredObj, existingObj client.Object) (bool, error) {
 		existing, ok := existingObj.(*v1.Service)
 		if !ok {
 			return false, fmt.Errorf("%T is not a *v1.Service", existingObj)
