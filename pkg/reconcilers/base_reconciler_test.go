@@ -165,7 +165,7 @@ func TestBaseReconcilerUpdateNeeded(t *testing.T) {
 		},
 	}
 
-	customMutator := func(desiredObj, existingObj client.Object) (bool, error) {
+	customMutator := func(_, existingObj client.Object) (bool, error) {
 		existing, ok := existingObj.(*v1.ConfigMap)
 		if !ok {
 			return false, fmt.Errorf("%T is not a *v1.ConfigMap", existingObj)

@@ -37,10 +37,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - uses: actions/checkout@v4
       - name: Run make test-unit
@@ -62,10 +62,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -95,10 +95,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - uses: actions/checkout@v4
       - name: Verify manifests
@@ -109,10 +109,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -125,10 +125,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -141,10 +141,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -160,10 +160,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -175,10 +175,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -191,10 +191,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
@@ -207,10 +207,10 @@ jobs:
     needs: pre-job
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.22.x
+      - name: Set up Go 1.23.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
         id: go
       - name: Check out code
         uses: actions/checkout@v4
