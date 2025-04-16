@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"math"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -169,7 +170,17 @@ func (l *Limitador) GetReplicas() int32 {
 		return DefaultReplicas
 	}
 
-	return int32(*l.Spec.Replicas)
+	replicas := *l.Spec.Replicas
+
+	if replicas > math.MaxInt32 {
+		return math.MaxInt32
+	}
+
+	if replicas < math.MinInt32 {
+		return math.MinInt32
+	}
+
+	return int32(replicas)
 }
 
 //+kubebuilder:object:root=true
