@@ -185,9 +185,6 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 	}
 
 	pdb := limitador.PodDisruptionBudget(limitadorObj)
-	if err := limitador.ValidatePDB(pdb); err != nil {
-		return err
-	}
 
 	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, pdb); err != nil {

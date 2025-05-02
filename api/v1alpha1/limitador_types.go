@@ -349,6 +349,7 @@ type Tracing struct {
 	Endpoint string `json:"endpoint"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && has(self.minAvailable))",message="pdb spec invalid, maxUnavailable and minAvailable are mutually exclusive"
 type PodDisruptionBudgetType struct {
 	// An eviction is allowed if at most "maxUnavailable" limitador pods
 	// are unavailable after the eviction, i.e. even in absence of

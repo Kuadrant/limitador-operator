@@ -893,6 +893,10 @@ spec:
                       evictions by specifying "100%".
                     x-kubernetes-int-or-string: true
                 type: object
+                x-kubernetes-validations:
+                - message: pdb spec invalid, maxUnavailable and minAvailable are mutually
+                    exclusive
+                  rule: '!(has(self.maxUnavailable) && has(self.minAvailable))'
               rateLimitHeaders:
                 description: RateLimitHeadersType defines the valid options for the
                   --rate-limit-headers arg
