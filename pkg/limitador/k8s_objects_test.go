@@ -5,7 +5,6 @@ import (
 
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -209,17 +208,6 @@ func TestDeployment(t *testing.T) {
 func TestPodDisruptionBudgetName(t *testing.T) {
 	name := PodDisruptionBudgetName(newTestLimitadorObj("my-limitador-instance", "default", nil))
 	assert.Equal(t, name, "limitador-my-limitador-instance")
-}
-
-func TestValidatePdb(t *testing.T) {
-	limitadorPdb := &policyv1.PodDisruptionBudget{
-		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: intStrOne,
-			MinAvailable:   intStrOne,
-		},
-	}
-	err := ValidatePDB(limitadorPdb)
-	assert.Error(t, err, "pdb spec invalid, maxunavailable and minavailable are mutually exclusive")
 }
 
 func TestPodDisruptionBudget(t *testing.T) {

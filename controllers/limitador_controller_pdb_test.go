@@ -30,6 +30,19 @@ var _ = Describe("Limitador controller manages PodDisruptionBudget", func() {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
 	}, nodeTimeOut)
 
+	Context("CEL validation on pdb configuration", func() {
+		It("Should not allow the user apply misconfigured resource", func(ctx SpecContext) {
+			limitadorObj := basicLimitador(testNamespace)
+			limitadorObj.Spec.PodDisruptionBudget = &limitadorv1alpha1.PodDisruptionBudgetType{
+				MaxUnavailable: &intstr.IntOrString{IntVal: 1},
+				MinAvailable:   &intstr.IntOrString{IntVal: 1},
+			}
+			err := k8sClient.Create(ctx, limitadorObj)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("pdb spec invalid, maxUnavailable and minAvailable are mutually exclusive"))
+		})
+	})
+
 	Context("Creating a new Limitador object with specific pdb", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
