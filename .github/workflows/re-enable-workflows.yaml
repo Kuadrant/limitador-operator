@@ -1,0 +1,74 @@
+name: Re-enable Disabled Workflows
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 */50 * *'
+
+jobs:
+  re-enable-workflows:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+    - name: Re-enable disabled workflows
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: ${{ github.repository_owner }}
+        REPO_NAME: ${{ github.event.repository.name }}
+      run: |
+        echo "Checking for disabled workflows..."
+        
+        response_code=$(curl -s -w "%{http_code}" -o /tmp/workflows.json \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows")
+        
+        if [ "$response_code" -ne 200 ]; then
+          echo "Failed to fetch workflows (HTTP $response_code)"
+          cat /tmp/workflows.json
+          exit 1
+        fi
+        
+        workflows=$(cat /tmp/workflows.json)
+        
+        echo "Found workflows:"
+        echo "$workflows" | jq -r '.workflows[] | "\(.name) - State: \(.state)"'
+        
+        disabled_workflows=$(echo "$workflows" | jq -r '.workflows[] | select(.state == "disabled_inactivity") | .id')
+        
+        if [ -z "$disabled_workflows" ]; then
+          echo "No workflows are disabled due to inactivity!"
+        else
+          echo "Found disabled workflows. Re-enabling them..."
+          
+          echo "$disabled_workflows" | while read -r workflow_id; do
+            if [ -n "$workflow_id" ]; then
+              echo "Re-enabling workflow ID: $workflow_id"
+              
+              # Get workflow name for logging
+              workflow_name=$(echo "$workflows" | jq -r --arg id "$workflow_id" '.workflows[] | select(.id == ($id | tonumber)) | .name')
+              echo "Workflow name: $workflow_name"
+              
+              # Re-enable the workflow
+              response=$(curl -s -w "%{http_code}" -o /tmp/response.json \
+                -X PUT \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$workflow_id/enable")
+              
+              if [ "$response" -eq 204 ]; then
+                echo "Successfully re-enabled: $workflow_name"
+              else
+                echo "Failed to re-enable: $workflow_name (HTTP $response)"
+                cat /tmp/response.json
+                exit 1
+              fi
+            fi
+          done
+        fi
+        
+        # Cleanup temporary files
+        rm -f /tmp/workflows.json /tmp/response.json
+        
+        echo "Workflow re-enablement completed successfully!"
