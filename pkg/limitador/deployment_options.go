@@ -2,6 +2,7 @@ package limitador
 
 import (
 	"fmt"
+	"k8s.io/utils/env"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -29,9 +30,11 @@ type DeploymentStorageOptions struct {
 }
 
 const (
-	LimitadorConfigFileName = "limitador-config.yaml"
-	LimitadorCMMountPath    = "/home/limitador/etc"
-	LimitsCMVolumeName      = "config-file"
+	LimitadorConfigFileName            = "limitador-config.yaml"
+	LimitadorCMMountPath               = "/home/limitador/etc"
+	LimitsCMVolumeName                 = "config-file"
+	MetricsLabelDefaultEnvName         = "LIMITADOR_METRIC_LABELS_DEFAULT"
+	MetricsLabelDefaultEnvDefaultValue = "descriptors[1]"
 )
 
 func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []string {
@@ -61,6 +64,9 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 	// let's set explicitly the GRPC port,
 	// as it is being set in the service
 	command = append(command, "--rls-port", strconv.Itoa(int(limObj.GRPCPort())))
+
+	// sets the metrics-label-default
+	command = append(command, "--metric-labels-default", env.GetString(MetricsLabelDefaultEnvName, MetricsLabelDefaultEnvDefaultValue))
 
 	command = append(command, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
 	command = append(command, storageOptions.Command...)
