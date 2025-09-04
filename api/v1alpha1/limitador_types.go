@@ -111,6 +111,9 @@ type LimitadorSpec struct {
 
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,15,rep,name=imagePullSecrets"`
+
+	//+optional
+	MetricLabelsDefault *string `json:"metricLabelsDefault,omitempty"`
 }
 
 //+kubebuilder:object:root=true

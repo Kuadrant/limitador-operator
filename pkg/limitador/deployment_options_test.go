@@ -1,7 +1,6 @@
 package limitador
 
 import (
-	"os"
 	"strconv"
 	"testing"
 
@@ -33,24 +32,14 @@ func TestDeploymentCommand(t *testing.T) {
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
-				"--metric-labels-default",
-				"descriptors[1]",
 				"/home/limitador/etc/limitador-config.yaml",
 				"memory",
 			})
 	})
-	t.Run("when metric labels env is set", func(subT *testing.T) {
+	t.Run("when metric labels default is set", func(subT *testing.T) {
 		limObj := basicLimitador()
-		err := os.Setenv(MetricsLabelDefaultEnvName, "descriptors[1][\"metrics-labels\"]")
-		if err != nil {
-			panic(err)
-		}
-		defer func() {
-			err = os.Unsetenv(MetricsLabelDefaultEnvName)
-			if err != nil {
-				panic(err)
-			}
-		}()
+		metricLabelsDefault := "descriptors[1][\"metrics-labels\"]"
+		limObj.Spec.MetricLabelsDefault = &metricLabelsDefault
 		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
 		assert.DeepEqual(subT, command,
 			[]string{
@@ -80,8 +69,6 @@ func TestDeploymentCommand(t *testing.T) {
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
-				"--metric-labels-default",
-				"descriptors[1]",
 				"/home/limitador/etc/limitador-config.yaml",
 				"memory",
 			})
@@ -97,8 +84,6 @@ func TestDeploymentCommand(t *testing.T) {
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
-				"--metric-labels-default",
-				"descriptors[1]",
 				"/home/limitador/etc/limitador-config.yaml",
 			})
 	})
@@ -115,8 +100,6 @@ func TestDeploymentCommand(t *testing.T) {
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
-				"--metric-labels-default",
-				"descriptors[1]",
 				"/home/limitador/etc/limitador-config.yaml",
 				"a", "b", "c",
 			})
@@ -159,8 +142,6 @@ func TestDeploymentCommand(t *testing.T) {
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
-				"--metric-labels-default",
-				"descriptors[1]",
 				"/home/limitador/etc/limitador-config.yaml",
 			})
 	})
