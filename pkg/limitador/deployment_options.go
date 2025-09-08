@@ -62,6 +62,11 @@ func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions Deplo
 	// as it is being set in the service
 	command = append(command, "--rls-port", strconv.Itoa(int(limObj.GRPCPort())))
 
+	// sets the metrics-label-default
+	if limObj.Spec.MetricLabelsDefault != nil {
+		command = append(command, "--metric-labels-default", *limObj.Spec.MetricLabelsDefault)
+	}
+
 	command = append(command, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
 	command = append(command, storageOptions.Command...)
 

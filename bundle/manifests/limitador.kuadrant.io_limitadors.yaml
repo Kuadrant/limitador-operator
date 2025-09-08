@@ -870,6 +870,8 @@ spec:
                         type: integer
                     type: object
                 type: object
+              metricLabelsDefault:
+                type: string
               pdb:
                 properties:
                   maxUnavailable:

@@ -36,6 +36,24 @@ func TestDeploymentCommand(t *testing.T) {
 				"memory",
 			})
 	})
+	t.Run("when metric labels default is set", func(subT *testing.T) {
+		limObj := basicLimitador()
+		metricLabelsDefault := "descriptors[1][\"metrics-labels\"]"
+		limObj.Spec.MetricLabelsDefault = &metricLabelsDefault
+		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
+		assert.DeepEqual(subT, command,
+			[]string{
+				"limitador-server",
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+				"--metric-labels-default",
+				"descriptors[1][\"metrics-labels\"]",
+				"/home/limitador/etc/limitador-config.yaml",
+				"memory",
+			})
+	})
 
 	t.Run("when rate limit headers set in the spec command line args includes --rate-limit-headers", func(subT *testing.T) {
 		limObj := basicLimitador()
