@@ -1405,8 +1405,8 @@ spec:
         - /manager
         env:
         - name: RELATED_IMAGE_LIMITADOR
-          value: quay.io/kuadrant/limitador:latest
-        image: quay.io/kuadrant/limitador-operator:latest
+          value: quay.io/kuadrant/limitador:v2.1.0
+        image: quay.io/kuadrant/limitador-operator:v0.15.0
         livenessProbe:
           httpGet:
             path: /healthz
