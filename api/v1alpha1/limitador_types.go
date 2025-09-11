@@ -112,7 +112,11 @@ type LimitadorSpec struct {
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,15,rep,name=imagePullSecrets"`
 
-	//+optional
+	// MetricLabelsDefault is an optional string that specifies the default metric-labels
+	// selector used by Limitador when automatically discovering custom metrics.
+	// When set the operator passes this value to the Limitador process as the
+	// `--metric-labels-default` command-line flag.
+	// +optional
 	MetricLabelsDefault *string `json:"metricLabelsDefault,omitempty"`
 }
 
