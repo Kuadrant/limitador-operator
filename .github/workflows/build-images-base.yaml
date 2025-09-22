@@ -184,7 +184,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./catalog
-          file: ./catalog/kuadrant-operator-catalog.Dockerfile
+          file: ./catalog/${{ env.OPERATOR_NAME }}-catalog.Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: false
