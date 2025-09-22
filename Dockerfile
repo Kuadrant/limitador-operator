@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM mirror.gcr.io/library/golang:1.23 AS builder
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/golang:1.23 AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -20,11 +20,14 @@ ARG GIT_SHA
 ARG DIRTY
 ARG VERSION
 
+# Set environment variables for cross-compilation
+ARG TARGETARCH
+
 ENV GIT_SHA=${GIT_SHA:-unknown}
 ENV DIRTY=${DIRTY:-unknown}
 ENV VERSION=${VERSION:-unknown}
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags "-X main.version=${VERSION} -X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -a -ldflags "-X main.version=${VERSION} -X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
