@@ -78,11 +78,14 @@ jobs:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
-      - name: Add git sha tag for the main branch
-        if: ${{ github.ref_name == env.MAIN_BRANCH_NAME }}
-        id: add-git-sha-tag
-        run: |
-          echo "IMG_TAGS=${{ github.sha }} ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}
+          tags: |
+            type=raw,value=${{ env.IMG_TAGS }}
+            type=sha,enable={{is_default_branch}}
       - name: Build and Push Image
         id: build-image
         uses: docker/build-push-action@v5
@@ -92,15 +95,16 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: false
-          tags: |
-            ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}:${{ env.IMG_TAGS }}
+          tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
             GIT_SHA=${{ github.sha }}
             DIRTY=false
             VERSION=${{ inputs.operatorVersion }}
       - name: Print Image URL
-        run: echo "Image pushed to ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}:${{ env.IMG_TAGS }}"
+        run: |
+          echo "Image(s) pushed:"
+          echo "${{ steps.meta.outputs.tags }}"
 
   build-bundle:
     needs: build
@@ -125,11 +129,6 @@ jobs:
             LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
             DEFAULT_CHANNEL=${{ inputs.defaultChannel }} \
             CHANNELS=${{ inputs.channels }}
-      - name: Add git sha tag for the main branch
-        if: ${{ github.ref_name == env.MAIN_BRANCH_NAME }}
-        id: add-git-sha-tag
-        run: |
-          echo "IMG_TAGS=${{ github.sha }} ${{ env.IMG_TAGS }}" >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to container registry
@@ -138,6 +137,14 @@ jobs:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
+      - name: Extract bundle metadata
+        id: bundle-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle
+          tags: |
+            type=raw,value=${{ env.IMG_TAGS }}
+            type=sha,enable={{is_default_branch}}
       - name: Build and Push Bundle Image
         id: build-bundle-image
         uses: docker/build-push-action@v5
@@ -147,11 +154,13 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: false
-          tags: |
-            ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle:${{ env.IMG_TAGS }}
-          build-args: QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
+          tags: ${{ steps.bundle-meta.outputs.tags }}
+          labels: ${{ steps.bundle-meta.outputs.labels }}
       - name: Print Bundle Image URL
-        run: echo "Bundle image pushed to ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle:${{ env.IMG_TAGS }}"
+        run: |
+          echo "Bundle image(s) pushed:"
+          echo "${{ steps.bundle-meta.outputs.tags }}"
+  
   build-catalog:
     name: Build Catalog
     needs: [build, build-bundle]
@@ -179,6 +188,14 @@ jobs:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
+      - name: Extract catalog metadata
+        id: catalog-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog
+          tags: |
+            type=raw,value=${{ env.IMG_TAGS }}
+            type=sha,enable={{is_default_branch}}
       - name: Build and Push Catalog Image
         id: build-catalog-image
         uses: docker/build-push-action@v5
@@ -188,8 +205,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: false
-          tags: |
-            ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog:${{ env.IMG_TAGS }}
+          tags: ${{ steps.catalog-meta.outputs.tags }}
           # The Quay image expiry label for the generated catalog Dockerfile is set via opm, using the value set in the QUAY_IMAGE_EXPIRY environment variable
       - name: Print Catalog Image URL
-        run: echo "Catalog image pushed to ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog:${{ env.IMG_TAGS }}"
+        run: |
+          echo "Catalog image(s) pushed:"
+          echo "${{ steps.catalog-meta.outputs.tags }}"
