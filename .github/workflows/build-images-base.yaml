@@ -85,7 +85,7 @@ jobs:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}
           tags: |
             type=raw,value=${{ env.IMG_TAGS }}
-            type=sha,enable={{is_default_branch}}
+            type=raw,value=${{ github.sha }},enable={{is_default_branch}}
       - name: Build and Push Image
         id: build-image
         uses: docker/build-push-action@v5
@@ -144,7 +144,7 @@ jobs:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle
           tags: |
             type=raw,value=${{ env.IMG_TAGS }}
-            type=sha,enable={{is_default_branch}}
+            type=raw,value=${{ github.sha }},enable={{is_default_branch}}
       - name: Build and Push Bundle Image
         id: build-bundle-image
         uses: docker/build-push-action@v5
@@ -195,7 +195,7 @@ jobs:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog
           tags: |
             type=raw,value=${{ env.IMG_TAGS }}
-            type=sha,enable={{is_default_branch}}
+            type=raw,value=${{ github.sha }},enable={{is_default_branch}}
       - name: Build and Push Catalog Image
         id: build-catalog-image
         uses: docker/build-push-action@v5
