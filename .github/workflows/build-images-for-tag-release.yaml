@@ -19,7 +19,7 @@ jobs:
       image: ${{ steps.push-to-quay.outputs.registry-path }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Read release string version
         id: release
@@ -79,7 +79,7 @@ jobs:
       image: ${{ steps.push-to-quay.outputs.registry-path }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install yq tool
         run: |
           # following sub-shells running make target should have yq already installed
@@ -136,7 +136,7 @@ jobs:
       image: ${{ steps.push-to-quay.outputs.registry-path }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install yq tool
         run: |
           # following sub-shells running make target should have yq already installed
