@@ -15,68 +15,63 @@ jobs:
     name: Build and Push image
     runs-on: ubuntu-latest
     outputs:
-      build-tags: ${{ steps.build-image.outputs.tags }}
-      image: ${{ steps.push-to-quay.outputs.registry-path }}
+      image: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5
-
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to container registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.IMG_REGISTRY_USERNAME }}
+          password: ${{ secrets.IMG_REGISTRY_TOKEN }}
+          registry: ${{ env.IMG_REGISTRY_HOST }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
       - name: Read release string version
         id: release
         run: |
           version=`make read-release-version`
           echo version=$version >> $GITHUB_OUTPUT
-
       - name: Print tags
         run: echo "Git reference name = ${{ github.ref_name }}, release version = ${{ steps.release.outputs.version }}"
       - name: Verify git reference name matches the release version
         if: ${{ github.ref_name != steps.release.outputs.version }}
         run: exit 1
-
-      - name: Install qemu dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-
-      - name: Build Image
+      - name: Build and Push Image
+        if: github.repository_owner == 'kuadrant'
         id: build-image
-        uses: redhat-actions/buildah-build@v2
+        uses: docker/build-push-action@v5
         with:
-          image: ${{ env.OPERATOR_NAME }}
-          tags: ${{ github.ref_name }}
+          context: .
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
           build-args: |
+            QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
             GIT_SHA=${{ github.sha }}
             DIRTY=false
             VERSION=${{ github.ref_name }}
-
-          dockerfiles: |
-            ./Dockerfile
-
-      - name: Print Build Info
-        run: echo "Image = ${{ steps.build-image.outputs.image }}, Tags = ${{ steps.build-image.outputs.tags }}"
-
-      - name: Push Image
-        if: github.repository_owner == 'kuadrant'
-        id: push-to-quay
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}
-          username: ${{ secrets.IMG_REGISTRY_USERNAME }}
-          password: ${{ secrets.IMG_REGISTRY_TOKEN }}
-
       - name: Print Image URL
-        run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
-
+        run: |
+          echo "Image(s) pushed:"
+          echo "${{ steps.meta.outputs.tags }}"
   build-bundle:
     name: Build and Push bundle image
     needs: [build]
     runs-on: ubuntu-latest
     outputs:
-      build-tags: ${{ steps.build-image.outputs.tags }}
-      image: ${{ steps.push-to-quay.outputs.registry-path }}
+      image: ${{ steps.bundle-meta.outputs.tags }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5
@@ -94,46 +89,45 @@ jobs:
       - name: Verify referenced operator image tag matches the tag currently being built
         if: ${{ needs.build.outputs.image != steps.parsed-operator-image.outputs.url }}
         run: exit 1
-
-      - name: Install qemu dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-
-      - name: Build Image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to container registry
+        uses: docker/login-action@v2
         with:
-          image: ${{ env.OPERATOR_NAME }}-bundle
-          tags: ${{ needs.build.outputs.build-tags }}
-          platforms: linux/amd64,linux/arm64
-          dockerfiles: |
-            ./bundle.Dockerfile
-
-      - name: Print Build Info
-        run: echo "Image = ${{ steps.build-image.outputs.image }}, Tags = ${{ steps.build-image.outputs.tags }}, Operator IMG = ${{ steps.parsed-operator-image.outputs.url }}"
-
-      - name: Push Image
-        if: github.repository_owner == 'kuadrant'
-        id: push-to-quay
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
-
-      - name: Print Image URL
-        run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
-
+          registry: ${{ env.IMG_REGISTRY_HOST }}
+      - name: Extract bundle metadata
+        id: bundle-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
+      - name: Build and Push Bundle Image
+        if: github.repository_owner == 'kuadrant'
+        id: build-bundle-image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./bundle.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: ${{ steps.bundle-meta.outputs.tags }}
+          build-args: QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
+      - name: Print Bundle Image URL
+        run: |
+          echo "Bundle image(s) pushed:"
+          echo "${{ steps.bundle-meta.outputs.tags }}"
   build-catalog:
     name: Build and Push catalog image
     needs: [build, build-bundle]
     runs-on: ubuntu-latest
     outputs:
-      build-tags: ${{ steps.build-image.outputs.tags }}
-      image: ${{ steps.push-to-quay.outputs.registry-path }}
+      image: ${{ steps.catalog-meta.outputs.tags }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5
@@ -153,45 +147,36 @@ jobs:
         run: exit 1
       - name: Generate Catalog Content
         run: make catalog DEFAULT_CHANNEL=stable
-      - name: Install qemu dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-      - name: Build Image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to container registry
+        uses: docker/login-action@v2
         with:
-          image: ${{ env.OPERATOR_NAME }}-catalog
-          tags: ${{ needs.build.outputs.build-tags }}
-          platforms: linux/amd64,linux/arm64
-          context: ./catalog
-          dockerfiles: ./catalog/${{ env.OPERATOR_NAME }}-catalog.Dockerfile
-
-      - name: Print Build Info
-        run: echo "Image = ${{ steps.build-image.outputs.image }}, Tags = ${{ steps.build-image.outputs.tags }}, Bundle IMG = ${{ steps.parsed-operator-bundle.outputs.image }}"
-
-      - name: Push Image
-        if: github.repository_owner == 'kuadrant'
-        id: push-to-quay
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
-
-      - name: Print Image URL
-        run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
-
-  verify-builds:
-    name: Ensure all image references are equal (operator, bundle, catalog)
-    needs: [build, build-bundle, build-catalog]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify bundle and operator image tags match
-        if: ${{ needs.build.outputs.build-tags != needs.build-bundle.outputs.build-tags }}
-        run: exit 1
-      - name: Verify catalog and bundle tags match
-        if: ${{ needs.build-bundle.outputs.build-tags != needs.build-catalog.outputs.build-tags }}
-        run: exit 1
+          registry: ${{ env.IMG_REGISTRY_HOST }}
+      - name: Extract catalog metadata
+        id: catalog-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
+      - name: Build and Push Catalog Image
+        if: github.repository_owner == 'kuadrant'
+        id: build-catalog-image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./catalog
+          file: ./catalog/${{ env.OPERATOR_NAME }}-catalog.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: ${{ steps.catalog-meta.outputs.tags }}
+          # The Quay image expiry label for the generated catalog Dockerfile is set via opm, using the value set in the QUAY_IMAGE_EXPIRY environment variable
+      - name: Print Catalog Image URL
+        run: |
+          echo "Catalog image(s) pushed:"
+          echo "${{ steps.catalog-meta.outputs.tags }}"
