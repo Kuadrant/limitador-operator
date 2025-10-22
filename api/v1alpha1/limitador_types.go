@@ -35,8 +35,6 @@ const (
 	DefaultServiceGRPCPort int32 = 8081
 	DefaultReplicas        int32 = 1
 
-	PodAnnotationConfigMapResourceVersion string = "limits-cm-resource-version"
-
 	// Status conditions
 	StatusConditionReady string = "Ready"
 )

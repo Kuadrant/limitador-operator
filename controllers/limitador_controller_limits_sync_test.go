@@ -37,54 +37,6 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 		DeleteNamespaceWithContext(ctx, &testNamespace)
 	}, nodeTimeOut)
 
-	Context("Creating a new Limitador object with default replicas", func() {
-		var limitadorObj *limitadorv1alpha1.Limitador
-
-		limits := []limitadorv1alpha1.RateLimit{
-			{
-				Conditions: []string{"req.method == 'GET'"},
-				MaxValue:   10,
-				Namespace:  "test-namespace",
-				Seconds:    60,
-				Variables:  []string{"user_id"},
-				Name:       "useless",
-			},
-			{
-				Conditions: []string{"req.method == 'POST'"},
-				MaxValue:   5,
-				Namespace:  "test-namespace",
-				Seconds:    60,
-				Variables:  []string{"user_id"},
-			},
-		}
-
-		BeforeEach(func(ctx SpecContext) {
-			limitadorObj = basicLimitador(testNamespace)
-			limitadorObj.Spec.Limits = limits
-			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
-			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
-		})
-
-		It("Should annotate limitador pods with annotation of limits cm resource version", func(ctx SpecContext) {
-			podList := &corev1.PodList{}
-			options := &client.ListOptions{
-				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
-				Namespace:     limitadorObj.Namespace,
-			}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
-			}).WithContext(ctx).Should(Succeed())
-
-			cm := &corev1.ConfigMap{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm)).To(Succeed())
-
-			Expect(podList.Items).To(HaveLen(int(limitadorv1alpha1.DefaultReplicas)))
-			for _, pod := range podList.Items {
-				Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion]).To(Equal(cm.ResourceVersion))
-			}
-		}, specTimeOut)
-	})
-
 	Context("Updating a Limitador object - multiple replicas", func() {
 		var (
 			limitadorObj *limitadorv1alpha1.Limitador
@@ -119,8 +71,8 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 		})
 
-		It("Should update limitador pods annotation and sync config map to pod", func(ctx SpecContext) {
-			// Check cm resource version of pods before update
+		It("Should sync config map changes to pod automatically via Limitador's file watcher", func(ctx SpecContext) {
+			// Get pods
 			podList := &corev1.PodList{}
 			options := &client.ListOptions{
 				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
@@ -128,15 +80,8 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
+				g.Expect(podList.Items).To(HaveLen(replicas))
 			}).WithContext(ctx).Should(Succeed())
-
-			cm := &corev1.ConfigMap{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm)).To(Succeed())
-
-			Expect(podList.Items).To(HaveLen(replicas))
-			for _, pod := range podList.Items {
-				Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion]).To(Equal(cm.ResourceVersion))
-			}
 
 			// Update limitador with new limits
 			updatedLimitador := limitadorv1alpha1.Limitador{}
@@ -151,18 +96,21 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			// CM resource version should be updated
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm)).To(Succeed())
+			// Wait for ConfigMap to be updated by the operator
+			cm := &corev1.ConfigMap{}
 			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.List(ctx, podList, options)).To(Succeed())
-				g.Expect(podList.Items).To(Not(BeEmpty()))
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+					Name:      limitador.LimitsConfigMapName(limitadorObj),
+					Namespace: limitadorObj.Namespace,
+				}, cm)).To(Succeed())
 
-				for _, pod := range podList.Items {
-					g.Expect(pod.Annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion]).To(Equal(cm.ResourceVersion))
-				}
+				// Verify ConfigMap has updated content
+				g.Expect(cm.Data[limitador.LimitadorConfigFileName]).To(ContainSubstring("req.method == 'POST'"))
 			}).WithContext(ctx).Should(Succeed())
 
-			// Config map should be synced immediately if pod annotations was updated successfully
+			// Verify that Limitador automatically reloads the config from the ConfigMap
+			// Limitador watches the config file and detects symlink changes made by Kubernetes
+			// when the ConfigMap is updated
 			config, err := config.GetConfig()
 			Expect(err).To(BeNil())
 			clientSet, err := kubernetes.NewForConfig(config)
@@ -171,9 +119,12 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			// Name of the pod where the function will be executed.
 			podName := podList.Items[0].Name
 
-			// Command to execute your function.
+			// Command to read the config file inside the pod
 			command := []string{"cat", fmt.Sprintf("%s/%s", limitador.LimitadorCMMountPath, limitador.LimitadorConfigFileName)}
 
+			// Verify the config file in the pod matches the updated ConfigMap
+			// This happens automatically via Kubernetes ConfigMap mount (symlink update)
+			// and Limitador's file watcher detects and reloads it
 			Eventually(func(g Gomega) {
 				req := clientSet.CoreV1().
 					RESTClient().

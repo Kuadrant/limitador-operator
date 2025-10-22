@@ -27,8 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -126,53 +124,6 @@ func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *l
 
 	if err := r.reconcilePdb(ctx, limitadorObj); err != nil {
 		return ctrl.Result{}, err
-	}
-
-	return r.reconcilePodLimitsHashAnnotation(ctx, limitadorObj)
-}
-
-func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
-	podList := &corev1.PodList{}
-	options := &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
-		Namespace:     limitadorObj.Namespace,
-	}
-	if err := r.Client().List(ctx, podList, options); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if len(podList.Items) == 0 {
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// Replicas won't change if spec.Replicas goes from value to nil
-	if limitadorObj.Spec.Replicas != nil && len(podList.Items) != int(limitadorObj.GetReplicas()) {
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// Use CM resource version to track limits changes
-	cm := &corev1.ConfigMap{}
-	if err := r.Client().Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm); err != nil {
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	for idx := range podList.Items {
-		pod := podList.Items[idx]
-		annotations := pod.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		// Update only if there is a change in resource version value
-		if annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] != cm.ResourceVersion {
-			annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] = cm.ResourceVersion
-			pod.SetAnnotations(annotations)
-			if err := r.Client().Update(ctx, &pod); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
 	}
 
 	return ctrl.Result{}, nil
