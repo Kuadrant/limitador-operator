@@ -1,8 +1,8 @@
 # Custom Image
 
 Currently, the limitador image being used in the deployment is read from different sources with some order of precedence:
-* If Limtador CR's `spec.image` is set -> image = `${spec.image}`
-* If Limtador CR's `spec.version` is set -> image = `quay.io/kuadrant/limitador:${spec.version}` (note the repo is hardcoded)
+* If Limitador CR's `spec.image` is set -> image = `${spec.image}`
+* If Limitador CR's `spec.version` is set -> image = `quay.io/kuadrant/limitador:${spec.version}` (note the repo is hardcoded)
 * if `RELATED_IMAGE_LIMITADOR` env var is set -> image = `$RELATED_IMAGE_LIMITADOR`
 * else: hardcoded to `quay.io/kuadrant/limitador:latest`
 
@@ -20,7 +20,6 @@ metadata:
   name: limitador-instance-1
 spec:
   image: example.com/myorg/limitador-repo:custom-image-v1
-EOF
 ```
 
 ## Pull an Image from a Private Registry
