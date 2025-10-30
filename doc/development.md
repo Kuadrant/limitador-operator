@@ -74,13 +74,13 @@ If you want to deploy (using OLM) a custom limitador operator, you need to build
 
 The `make bundle` target accepts the following variables:
 
-| **Makefile Variable**     | **Description**      | **Default value**                            | **Notes**                                                                |
-|---------------------------|----------------------|----------------------------------------------|--------------------------------------------------------------------------|
-| `IMG`                     | Operator image URL   | `quay.io/kuadrant/limitador-operator:latest` |                                                                          |
-| `VERSION`                 | Bundle version       | `0.0.0`                                      |                                                                          |
-| `RELATED_IMAGE_LIMITADOR` | Limitador bundle URL | `quay.io/kuadrant/limitador:latest`          | `LIMITADOR_VERSION` var could be use to build this URL providing the tag |
-| `CHANNELS`                | Bundle channels used in the bundle, comma separated                 | `alpha`                                                                  |
-| `DEFAULT_CHANNEL`         | The default channel used in the bundle                              | `alpha`                                                                  |
+| **Makefile Variable**     | **Description**                                      | **Default value**                            | **Notes**                                                                |
+|---------------------------|------------------------------------------------------|----------------------------------------------|--------------------------------------------------------------------------|
+| `IMG`                     | Operator image URL                                   | `quay.io/kuadrant/limitador-operator:latest` |                                                                          |
+| `VERSION`                 | Bundle version                                       | `0.0.0`                                      |                                                                          |
+| `RELATED_IMAGE_LIMITADOR` | Limitador bundle URL                                 | `quay.io/kuadrant/limitador:latest`          | `LIMITADOR_VERSION` var could be use to build this URL providing the tag |
+| `CHANNELS`                | Bundle channels used in the bundle, comma separated  | `alpha`                                      |                                                                          |
+| `DEFAULT_CHANNEL`         | The default channel used in the bundle               | `alpha`                                      |                                                                          |
 
 * Build the bundle manifests
 
@@ -142,7 +142,7 @@ make catalog-build [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:late
 * Push the catalog image to a registry
 
 ```sh
-make catalog-push [CATALOG_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
+make catalog-push [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:latest]
 ```
 
 You can try out your custom catalog image following the steps of the
