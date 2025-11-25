@@ -18,9 +18,13 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
+	"github.com/kuadrant/limitador-operator/pkg/observability"
 )
 
 func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador, specErr error) (ctrl.Result, error) {
+	ctx, span := r.Tracer().StartReconcileStatusSpan(ctx)
+	defer span.End()
+
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -28,6 +32,7 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 
 	newStatus, err := r.calculateStatus(ctx, limitadorObj, specErr)
 	if err != nil {
+		observability.RecordError(span, err, "failed to calculate status")
 		return reconcile.Result{}, err
 	}
 
@@ -37,6 +42,7 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 	if equalStatus && limitadorObj.Generation == limitadorObj.Status.ObservedGeneration {
 		// Steady state
 		logger.V(1).Info("Status was not updated")
+		observability.RecordStatusCompleted(span)
 		return reconcile.Result{}, nil
 	}
 
@@ -56,8 +62,10 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 
 	updateErr := r.UpdateResourceStatus(ctx, patch)
 	if updateErr != nil {
+		observability.RecordError(span, updateErr, "failed to update status")
 		return reconcile.Result{}, fmt.Errorf("failed to update status: %w", updateErr)
 	}
+	observability.RecordStatusCompleted(span)
 	return ctrl.Result{}, nil
 }
 

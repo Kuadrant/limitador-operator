@@ -21,6 +21,10 @@ import (
 	"encoding/json"
 
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -32,6 +36,7 @@ import (
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
+	"github.com/kuadrant/limitador-operator/pkg/observability"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 )
 
@@ -51,11 +56,10 @@ type LimitadorReconciler struct {
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
 	logger.V(1).Info("Reconciling Limitador")
-	ctx := logr.NewContext(eventCtx, logger)
 
-	// Delete Limitador deployment and service if needed
+	// Get Limitador object first to extract trace context from annotations
 	limitadorObj := &limitadorv1alpha1.Limitador{}
-	if err := r.Client().Get(ctx, req.NamespacedName, limitadorObj); err != nil {
+	if err := r.Client().Get(eventCtx, req.NamespacedName, limitadorObj); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("no object found")
 			return ctrl.Result{}, nil
@@ -65,9 +69,47 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	// Extract trace context from CR annotations as a LINK (not parent)
+	// Since reconciliation is event-driven and asynchronous, we use a link rather than
+	// a parent-child relationship to connect the operator trace with the operation that
+	// created/updated the CR (e.g., kubectl apply, GitOps controller)
+	var spanOpts []trace.SpanStartOption
+	carrier := propagation.MapCarrier(limitadorObj.Annotations)
+	linkCtx := otel.GetTextMapPropagator().Extract(context.Background(), carrier)
+	linkSpanCtx := trace.SpanFromContext(linkCtx).SpanContext()
+
+	if linkSpanCtx.IsValid() {
+		spanOpts = append(spanOpts, trace.WithLinks(trace.Link{
+			SpanContext: linkSpanCtx,
+		}))
+	}
+
+	// Store base logger (without trace context) in context
+	ctx := observability.StoreBaseLogger(eventCtx, logger)
+
+	// Start reconcile span with link to the original operation (if traceparent exists)
+	// This automatically refreshes the logger in context with the span's trace context
+	ctx, span := r.Tracer().StartReconcileSpan(ctx, req, spanOpts...)
+	defer span.End()
+
+	// Add Limitador-specific attributes to span
+	storageType := "memory" // default
+	if limitadorObj.Spec.Storage != nil {
+		if limitadorObj.Spec.Storage.RedisCached != nil {
+			storageType = "redis-cached"
+		} else if limitadorObj.Spec.Storage.Redis != nil {
+			storageType = "redis"
+		} else if limitadorObj.Spec.Storage.Disk != nil {
+			storageType = "disk"
+		}
+	}
+
+	observability.AddLimitadorAttributes(span, limitadorObj.Namespace, limitadorObj.Name, limitadorObj.GetReplicas(), storageType)
+
 	if logger.V(1).Enabled() {
 		jsonData, err := json.MarshalIndent(limitadorObj, "", "  ")
 		if err != nil {
+			observability.RecordError(span, err, "failed to marshal Limitador object to JSON")
 			return ctrl.Result{}, err
 		}
 		logger.V(1).Info(string(jsonData))
@@ -75,6 +117,7 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 
 	if limitadorObj.GetDeletionTimestamp() != nil {
 		logger.Info("marked to be deleted")
+		observability.RecordReconcileResult(span, ctrl.Result{}, nil)
 		return ctrl.Result{}, nil
 	}
 
@@ -83,67 +126,92 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 	statusResult, statusErr := r.reconcileStatus(ctx, limitadorObj, specErr)
 
 	if specErr != nil {
+		observability.RecordError(span, specErr, "spec reconciliation failed")
 		return ctrl.Result{}, specErr
 	}
 
 	if statusErr != nil {
+		observability.RecordError(span, statusErr, "status reconciliation failed")
 		return ctrl.Result{}, statusErr
 	}
 
 	if specResult.RequeueAfter > 0 {
 		logger.V(1).Info("Reconciling spec not finished. Requeueing.")
+		observability.RecordReconcileResult(span, specResult, nil)
 		return specResult, nil
 	}
 
 	if statusResult.RequeueAfter > 0 {
 		logger.V(1).Info("Reconciling status not finished. Requeueing.")
+		observability.RecordReconcileResult(span, statusResult, nil)
 		return statusResult, nil
 	}
 
 	logger.Info("successfully reconciled")
+	observability.RecordReconcileResult(span, ctrl.Result{}, nil)
 	return ctrl.Result{}, nil
 }
 
 func (r *LimitadorReconciler) reconcileSpec(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
+	ctx, span := r.Tracer().StartReconcileSpecSpan(ctx)
+	defer span.End()
+
 	if err := r.reconcileService(ctx, limitadorObj); err != nil {
+		observability.RecordError(span, err, "failed to reconcile service")
 		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcilePVC(ctx, limitadorObj); err != nil {
+		observability.RecordError(span, err, "failed to reconcile PVC")
 		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcileDeployment(ctx, limitadorObj); err != nil {
+		observability.RecordError(span, err, "failed to reconcile deployment")
 		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcileLimitsConfigMap(ctx, limitadorObj); err != nil {
+		observability.RecordError(span, err, "failed to reconcile limits ConfigMap")
 		return ctrl.Result{}, err
 	}
 
 	if err := r.reconcilePdb(ctx, limitadorObj); err != nil {
+		observability.RecordError(span, err, "failed to reconcile PodDisruptionBudget")
 		return ctrl.Result{}, err
 	}
 
-	return r.reconcilePodLimitsHashAnnotation(ctx, limitadorObj)
+	result, err := r.reconcilePodLimitsHashAnnotation(ctx, limitadorObj)
+	if err != nil {
+		observability.RecordError(span, err, "failed to reconcile pod annotations")
+	} else {
+		observability.RecordSpecCompleted(span)
+	}
+	return result, err
 }
 
 func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) (ctrl.Result, error) {
+	ctx, span := r.Tracer().StartResourceSpan(ctx, "PodAnnotation", limitadorObj.Namespace, limitador.DeploymentName(limitadorObj))
+	defer span.End()
+
 	podList := &corev1.PodList{}
 	options := &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
 		Namespace:     limitadorObj.Namespace,
 	}
 	if err := r.Client().List(ctx, podList, options); err != nil {
+		observability.RecordError(span, err, "failed to list pods")
 		return ctrl.Result{}, err
 	}
 
 	if len(podList.Items) == 0 {
+		span.SetStatus(codes.Ok, "")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Replicas won't change if spec.Replicas goes from value to nil
 	if limitadorObj.Spec.Replicas != nil && len(podList.Items) != int(limitadorObj.GetReplicas()) {
+		span.SetStatus(codes.Ok, "")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -151,8 +219,10 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 	cm := &corev1.ConfigMap{}
 	if err := r.Client().Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm); err != nil {
 		if apierrors.IsNotFound(err) {
+			span.SetStatus(codes.Ok, "")
 			return ctrl.Result{Requeue: true}, nil
 		}
+		observability.RecordError(span, err, "failed to get limits ConfigMap")
 		return ctrl.Result{}, err
 	}
 
@@ -163,15 +233,20 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 		if annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] != cm.ResourceVersion {
 			if err := r.ReconcilePodAnnotation(ctx, pod.Name, pod.Namespace,
 				limitadorv1alpha1.PodAnnotationConfigMapResourceVersion, cm.ResourceVersion); err != nil {
+				observability.RecordError(span, err, "failed to update pod annotation")
 				return ctrl.Result{}, err
 			}
 		}
 	}
 
+	span.SetStatus(codes.Ok, "")
 	return ctrl.Result{}, nil
 }
 
 func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	ctx, span := r.Tracer().StartResourceSpan(ctx, "PodDisruptionBudget", limitadorObj.Namespace, limitador.PodDisruptionBudgetName(limitadorObj))
+	defer span.End()
+
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
@@ -179,15 +254,24 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 
 	pdb := limitador.PodDisruptionBudget(limitadorObj)
 	if err := r.SetOwnerReference(limitadorObj, pdb); err != nil {
+		observability.RecordError(span, err, "failed to set owner reference")
 		return err
 	}
 
 	err = r.ReconcilePodDisruptionBudget(ctx, pdb)
 	logger.V(1).Info("reconcile pdb", "error", err)
-	return err
+	if err != nil {
+		observability.RecordError(span, err, "failed to reconcile PodDisruptionBudget")
+		return err
+	}
+	span.SetStatus(codes.Ok, "")
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	ctx, span := r.Tracer().StartResourceSpan(ctx, "Deployment", limitadorObj.Namespace, limitador.DeploymentName(limitadorObj))
+	defer span.End()
+
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
@@ -195,20 +279,31 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 
 	deploymentOptions, err := r.getDeploymentOptions(ctx, limitadorObj)
 	if err != nil {
+		observability.RecordError(span, err, "failed to get deployment options")
 		return err
 	}
 
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
+		observability.RecordError(span, err, "failed to set owner reference")
 		return err
 	}
 
 	err = r.ReconcileDeployment(ctx, deployment)
 	logger.V(1).Info("reconcile deployment", "error", err)
-	return err
+	if err != nil {
+		observability.RecordError(span, err, "failed to reconcile deployment")
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "")
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	ctx, span := r.Tracer().StartResourceSpan(ctx, "Service", limitadorObj.Namespace, limitador.ServiceName(limitadorObj))
+	defer span.End()
+
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
@@ -216,15 +311,25 @@ func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj
 
 	limitadorService := limitador.Service(limitadorObj)
 	if err := r.SetOwnerReference(limitadorObj, limitadorService); err != nil {
+		observability.RecordError(span, err, "failed to set owner reference")
 		return err
 	}
 
 	err = r.ReconcileService(ctx, limitadorService)
 	logger.V(1).Info("reconcile service", "error", err)
-	return err
+	if err != nil {
+		observability.RecordError(span, err, "failed to reconcile service")
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "")
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcilePVC(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	ctx, span := r.Tracer().StartResourceSpan(ctx, "PersistentVolumeClaim", limitadorObj.Namespace, limitador.PVCName(limitadorObj))
+	defer span.End()
+
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
@@ -232,15 +337,25 @@ func (r *LimitadorReconciler) reconcilePVC(ctx context.Context, limitadorObj *li
 
 	pvc := limitador.PVC(limitadorObj)
 	if err := r.SetOwnerReference(limitadorObj, pvc); err != nil {
+		observability.RecordError(span, err, "failed to set owner reference")
 		return err
 	}
 
 	err = r.ReconcilePersistentVolumeClaim(ctx, pvc)
 	logger.V(1).Info("reconcile pvc", "error", err)
-	return err
+	if err != nil {
+		observability.RecordError(span, err, "failed to reconcile PVC")
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "")
+	return nil
 }
 
 func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
+	ctx, span := r.Tracer().StartResourceSpan(ctx, "ConfigMap", limitadorObj.Namespace, limitador.LimitsConfigMapName(limitadorObj))
+	defer span.End()
+
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
@@ -248,15 +363,23 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 
 	limitsConfigMap, err := limitador.LimitsConfigMap(limitadorObj)
 	if err != nil {
+		observability.RecordError(span, err, "failed to create limits ConfigMap")
 		return err
 	}
 	if err := r.SetOwnerReference(limitadorObj, limitsConfigMap); err != nil {
+		observability.RecordError(span, err, "failed to set owner reference")
 		return err
 	}
 
 	err = r.ReconcileConfigMap(ctx, limitsConfigMap)
 	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
-	return err
+	if err != nil {
+		observability.RecordError(span, err, "failed to reconcile limits ConfigMap")
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "")
+	return nil
 }
 
 func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *limitadorv1alpha1.Limitador) (limitador.DeploymentOptions, error) {

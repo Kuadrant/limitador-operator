@@ -33,7 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
+	"github.com/kuadrant/limitador-operator/pkg/observability"
 )
 
 const (
@@ -46,6 +49,7 @@ type BaseReconciler struct {
 	apiClientReader client.Reader
 	logger          logr.Logger
 	recorder        record.EventRecorder
+	tracer          *observability.Tracer
 }
 
 // blank assignment to verify that BaseReconciler implements reconcile.Reconciler
@@ -60,6 +64,7 @@ func NewBaseReconciler(
 		apiClientReader: apiClientReader,
 		logger:          logger,
 		recorder:        recorder,
+		tracer:          observability.NewTracer(),
 	}
 }
 
@@ -91,6 +96,10 @@ func (b *BaseReconciler) EventRecorder() record.EventRecorder {
 	return b.recorder
 }
 
+func (b *BaseReconciler) Tracer() *observability.Tracer {
+	return b.tracer
+}
+
 // ReconcileResource uses server-side apply to reconcile the desired state.
 // The operator declares ownership only over the fields it explicitly sets,
 // allowing external controllers to manage additional fields without conflicts.
@@ -110,8 +119,20 @@ func (b *BaseReconciler) ReconcileResource(ctx context.Context, obj client.Objec
 
 	logger.Info("apply object", "GKV", obj.GetObjectKind().GroupVersionKind(),
 		"name", obj.GetName(), "namespace", obj.GetNamespace())
-	return b.Client().Patch(ctx, obj, client.Apply,
+
+	err = b.Client().Patch(ctx, obj, client.Apply,
 		client.ForceOwnership, client.FieldOwner(FieldManagerName))
+
+	// Record operation result on span
+	// With server-side apply, we don't distinguish between create/update/unchanged
+	span := trace.SpanFromContext(ctx)
+	if err == nil {
+		observability.RecordResourceApplied(span)
+	} else {
+		observability.RecordError(span, err, "failed to apply resource")
+	}
+
+	return err
 }
 
 func (b *BaseReconciler) ReconcileService(ctx context.Context, desired *corev1.Service) error {
@@ -131,6 +152,7 @@ func (b *BaseReconciler) ReconcilePodDisruptionBudget(ctx context.Context, desir
 }
 
 // ReconcilePersistentVolumeClaim handles PVC reconciliation with create-only semantics.
+// PVCs cannot be updated after creation (immutable fields), so we only create if not exists.
 func (b *BaseReconciler) ReconcilePersistentVolumeClaim(ctx context.Context, desired *corev1.PersistentVolumeClaim) error {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
@@ -145,11 +167,24 @@ func (b *BaseReconciler) ReconcilePersistentVolumeClaim(ctx context.Context, des
 	obj := &corev1.PersistentVolumeClaim{}
 	if err := b.Client().Get(ctx, key, obj); err != nil {
 		if !errors.IsNotFound(err) {
+			span := trace.SpanFromContext(ctx)
+			observability.RecordError(span, err, "failed to get PVC")
 			return err
 		}
-		return b.CreateResource(ctx, desired)
+		// PVC doesn't exist, create it
+		err := b.CreateResource(ctx, desired)
+		span := trace.SpanFromContext(ctx)
+		if err == nil {
+			observability.RecordResourceCreated(span)
+		} else {
+			observability.RecordError(span, err, "failed to create PVC")
+		}
+		return err
 	}
+	// PVC already exists, log and skip (PVCs are immutable after creation)
 	logger.V(1).Info("pvc already exists, skipping update", "name", desired.GetName(), "namespace", desired.GetNamespace())
+	span := trace.SpanFromContext(ctx)
+	observability.RecordResourceUnchanged(span)
 	return nil
 }
 

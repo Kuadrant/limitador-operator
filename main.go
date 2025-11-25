@@ -17,10 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -44,6 +46,7 @@ import (
 	"github.com/kuadrant/limitador-operator/controllers"
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	"github.com/kuadrant/limitador-operator/pkg/log"
+	"github.com/kuadrant/limitador-operator/pkg/observability"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
 )
@@ -93,6 +96,27 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
+
+	// Initialize OpenTelemetry
+	ctx := context.Background()
+	otelConfig := observability.NewConfig(version)
+	otelProvider, err := observability.InitProvider(ctx, otelConfig)
+	if err != nil {
+		setupLog.Error(err, "unable to initialize OpenTelemetry")
+		os.Exit(1)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := otelProvider.Shutdown(shutdownCtx); err != nil {
+			setupLog.Error(err, "error shutting down OpenTelemetry")
+		}
+	}()
+	if otelConfig.Endpoint == "" {
+		setupLog.Info("OpenTelemetry tracing disabled")
+	} else {
+		setupLog.Info("OpenTelemetry tracing initialized", "endpoint", otelConfig.Endpoint)
+	}
 
 	cacheOptions := cache.Options{
 		ByObject: map[client.Object]cache.ByObject{
@@ -146,7 +170,9 @@ func main() {
 	}
 
 	limitadorBaseReconciler := reconcilers.NewBaseReconciler(
-		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetAPIReader(),
 		log.Log.WithName("limitador"),
 		mgr.GetEventRecorderFor("Limitador"),
 	)
