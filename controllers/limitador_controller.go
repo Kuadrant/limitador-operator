@@ -93,12 +93,12 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, statusErr
 	}
 
-	if specResult.Requeue {
+	if specResult.RequeueAfter > 0 {
 		logger.V(1).Info("Reconciling spec not finished. Requeueing.")
 		return specResult, nil
 	}
 
-	if statusResult.Requeue {
+	if statusResult.RequeueAfter > 0 {
 		logger.V(1).Info("Reconciling status not finished. Requeueing.")
 		return statusResult, nil
 	}
