@@ -154,6 +154,10 @@ func LimitsConfigMap(limitadorObj *limitadorv1alpha1.Limitador) (*v1.ConfigMap, 
 	}
 
 	return &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
 		Data: map[string]string{
 			LimitadorConfigFileName: string(limitsMarshalled),
 		},
@@ -183,6 +187,10 @@ func DeploymentName(limitadorObj *limitadorv1alpha1.Limitador) string {
 
 func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PodDisruptionBudget",
+			APIVersion: "policy/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PodDisruptionBudgetName(limitadorObj),
 			Namespace: limitadorObj.ObjectMeta.Namespace,
