@@ -8,7 +8,7 @@ Limitador Operator is a Kubernetes operator that manages [Limitador](https://git
 Limitador is a rate-limiting service. The operator reconciles `Limitador` custom resources (CRD) to create and manage
 deployments, services, ConfigMaps, PVCs, and PodDisruptionBudgets in Kubernetes.
 
-**Built with:** Kubebuilder v3, operator-sdk v1.32.0, Go 1.24+
+**Built with:** Kubebuilder v3, operator-sdk v1.32.0, Go 1.25+
 
 ## Common Commands
 
