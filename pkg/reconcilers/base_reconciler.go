@@ -39,10 +39,6 @@ const (
 	FieldManagerName = "limitador-operator"
 )
 
-// Deprecated: MutateFn is no longer used with server-side apply
-// MutateFn is a function which mutates the existing object into it's desired state.
-type MutateFn func(desired, existing client.Object) (bool, error)
-
 type BaseReconciler struct {
 	client          client.Client
 	scheme          *runtime.Scheme
