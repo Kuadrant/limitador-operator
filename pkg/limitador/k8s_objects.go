@@ -27,7 +27,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName(limitador),
-			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
+			Namespace: limitador.Namespace, // TODO: revisit later. For now assume same.
 			Labels:    Labels(limitador),
 		},
 		Spec: v1.ServiceSpec{
@@ -73,7 +73,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName(limitador),
-			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
+			Namespace: limitador.Namespace, // TODO: revisit later. For now assume same.
 			Labels:    Labels(limitador),
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -193,7 +193,7 @@ func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.Po
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PodDisruptionBudgetName(limitadorObj),
-			Namespace: limitadorObj.ObjectMeta.Namespace,
+			Namespace: limitadorObj.Namespace,
 			Labels:    Labels(limitadorObj),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
@@ -221,7 +221,7 @@ func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
 func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
 	return map[string]string{
 		helpers.LabelKeyApp:               "limitador",
-		helpers.LabelKeyLimitadorResource: limitador.ObjectMeta.Name,
+		helpers.LabelKeyLimitadorResource: limitador.Name,
 	}
 }
 
@@ -233,7 +233,7 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PVCName(limitador),
-			Namespace: limitador.ObjectMeta.Namespace,
+			Namespace: limitador.Namespace,
 			Labels:    Labels(limitador),
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
