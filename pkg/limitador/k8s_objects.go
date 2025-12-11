@@ -154,6 +154,10 @@ func LimitsConfigMap(limitadorObj *limitadorv1alpha1.Limitador) (*v1.ConfigMap, 
 	}
 
 	return &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
 		Data: map[string]string{
 			LimitadorConfigFileName: string(limitsMarshalled),
 		},
@@ -183,6 +187,10 @@ func DeploymentName(limitadorObj *limitadorv1alpha1.Limitador) string {
 
 func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PodDisruptionBudget",
+			APIVersion: "policy/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PodDisruptionBudgetName(limitadorObj),
 			Namespace: limitadorObj.ObjectMeta.Namespace,
@@ -230,7 +238,7 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-			Resources: v1.ResourceRequirements{
+			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					// Default value for resources
 					v1.ResourceStorage: resource.MustParse("1Gi"),
@@ -252,7 +260,7 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 
 		// Default value for resources
 		if limitador.Spec.Storage.Disk.PVC.Resources != nil {
-			pvc.Spec.Resources = v1.ResourceRequirements{
+			pvc.Spec.Resources = v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: limitador.Spec.Storage.Disk.PVC.Resources.Requests,
 				},

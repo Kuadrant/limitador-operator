@@ -19,8 +19,6 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/pkg/limitador"
@@ -46,9 +43,9 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=limitador.kuadrant.io,resources=limitadors/finalizers,verbs=update
-//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=services;configmaps;secrets;persistentvolumeclaims,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services;configmaps;secrets;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch;update
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -93,12 +90,12 @@ func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Reque
 		return ctrl.Result{}, statusErr
 	}
 
-	if specResult.Requeue {
+	if specResult.RequeueAfter > 0 {
 		logger.V(1).Info("Reconciling spec not finished. Requeueing.")
 		return specResult, nil
 	}
 
-	if statusResult.Requeue {
+	if statusResult.RequeueAfter > 0 {
 		logger.V(1).Info("Reconciling status not finished. Requeueing.")
 		return statusResult, nil
 	}
@@ -185,17 +182,13 @@ func (r *LimitadorReconciler) reconcilePdb(ctx context.Context, limitadorObj *li
 	}
 
 	pdb := limitador.PodDisruptionBudget(limitadorObj)
-
-	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, pdb); err != nil {
 		return err
 	}
-	err = r.ReconcilePodDisruptionBudget(ctx, pdb, reconcilers.PodDisruptionBudgetMutator)
+
+	err = r.ReconcilePodDisruptionBudget(ctx, pdb)
 	logger.V(1).Info("reconcile pdb", "error", err)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -209,46 +202,14 @@ func (r *LimitadorReconciler) reconcileDeployment(ctx context.Context, limitador
 		return err
 	}
 
-	deploymentMutators := make([]reconcilers.DeploymentMutateFn, 0)
-	if limitadorObj.Spec.Replicas != nil {
-		deploymentMutators = append(deploymentMutators, reconcilers.DeploymentReplicasMutator)
-	}
-
-	deploymentMutators = append(deploymentMutators,
-		reconcilers.DeploymentContainerListMutator,
-		reconcilers.DeploymentImageMutator,
-		reconcilers.DeploymentCommandMutator,
-		reconcilers.DeploymentAffinityMutator,
-		reconcilers.DeploymentResourcesMutator,
-		reconcilers.DeploymentVolumesMutator,
-		reconcilers.DeploymentVolumeMountsMutator,
-		reconcilers.DeploymentEnvMutator,
-		reconcilers.DeploymentPortsMutator,
-		reconcilers.DeploymentLivenessProbeMutator,
-		reconcilers.DeploymentReadinessProbeMutator,
-		reconcilers.DeploymentTemplateLabelMutator,
-		reconcilers.DeploymentObjectLabelMutator,
-	)
-
-	// reconcile imagepullsecrets only when set in limitador CR
-	// if not set in limitador CR, the user will be able to add them manually and the operator
-	// will not revert the changes.
-	if len(deploymentOptions.ImagePullSecrets) > 0 {
-		deploymentMutators = append(deploymentMutators, reconcilers.DeploymentImagePullSecretsMutator)
-	}
-
 	deployment := limitador.Deployment(limitadorObj, deploymentOptions)
-	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, deployment); err != nil {
 		return err
 	}
-	err = r.ReconcileDeployment(ctx, deployment, reconcilers.DeploymentMutator(deploymentMutators...))
-	logger.V(1).Info("reconcile deployment", "error", err)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	err = r.ReconcileDeployment(ctx, deployment)
+	logger.V(1).Info("reconcile deployment", "error", err)
+	return err
 }
 
 func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -258,20 +219,13 @@ func (r *LimitadorReconciler) reconcileService(ctx context.Context, limitadorObj
 	}
 
 	limitadorService := limitador.Service(limitadorObj)
-	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, limitadorService); err != nil {
 		return err
 	}
 
-	serviceMutator := reconcilers.ServiceMutator(reconcilers.ServicePortsMutator)
-
-	err = r.ReconcileService(ctx, limitadorService, serviceMutator)
+	err = r.ReconcileService(ctx, limitadorService)
 	logger.V(1).Info("reconcile service", "error", err)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (r *LimitadorReconciler) reconcilePVC(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -281,19 +235,13 @@ func (r *LimitadorReconciler) reconcilePVC(ctx context.Context, limitadorObj *li
 	}
 
 	pvc := limitador.PVC(limitadorObj)
-	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, pvc); err != nil {
 		return err
 	}
 
-	// Not reconciling updates PVCs for now.
-	err = r.ReconcilePersistentVolumeClaim(ctx, pvc, reconcilers.CreateOnlyMutator)
+	err = r.ReconcilePersistentVolumeClaim(ctx, pvc)
 	logger.V(1).Info("reconcile pvc", "error", err)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limitadorObj *limitadorv1alpha1.Limitador) error {
@@ -306,54 +254,13 @@ func (r *LimitadorReconciler) reconcileLimitsConfigMap(ctx context.Context, limi
 	if err != nil {
 		return err
 	}
-	// controller reference
 	if err := r.SetOwnerReference(limitadorObj, limitsConfigMap); err != nil {
 		return err
 	}
 
-	err = r.ReconcileConfigMap(ctx, limitsConfigMap, mutateLimitsConfigMap)
+	err = r.ReconcileConfigMap(ctx, limitsConfigMap)
 	logger.V(1).Info("reconcile limits ConfigMap", "error", err)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func mutateLimitsConfigMap(desiredObj, existingObj client.Object) (bool, error) {
-	existing, ok := existingObj.(*corev1.ConfigMap)
-	if !ok {
-		return false, fmt.Errorf("%T is not a *corev1.ConfigMap", existingObj)
-	}
-	desired, ok := desiredObj.(*corev1.ConfigMap)
-	if !ok {
-		return false, fmt.Errorf("%T is not a *corev1.ConfigMap", desiredObj)
-	}
-
-	updated := false
-
-	// Limits in limitador.LimitadorConfigFileName field
-	var desiredLimits []limitadorv1alpha1.RateLimit
-	err := yaml.Unmarshal([]byte(desired.Data[limitador.LimitadorConfigFileName]), &desiredLimits)
-	if err != nil {
-		return false, err
-	}
-
-	var existingLimits []limitadorv1alpha1.RateLimit
-	err = yaml.Unmarshal([]byte(existing.Data[limitador.LimitadorConfigFileName]), &existingLimits)
-	if err != nil {
-		// if existing content cannot be parsed, leave existingLimits as nil, so the operator will
-		// enforce desired content.
-		existingLimits = nil
-	}
-
-	// TODO(eastizle): deepEqual returns false when the order in the list is not equal.
-	// Improvement would be checking to equality of slices ignoring order
-	if !reflect.DeepEqual(desiredLimits, existingLimits) {
-		existing.Data[limitador.LimitadorConfigFileName] = desired.Data[limitador.LimitadorConfigFileName]
-		updated = true
-	}
-	return updated, nil
+	return err
 }
 
 func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *limitadorv1alpha1.Limitador) (limitador.DeploymentOptions, error) {
