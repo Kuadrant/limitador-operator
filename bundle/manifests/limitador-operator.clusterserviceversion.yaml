@@ -37,7 +37,7 @@ metadata:
     capabilities: Basic Install
     categories: Integration & Delivery
     containerImage: quay.io/kuadrant/limitador-operator:latest
-    createdAt: "2025-12-10T13:11:22Z"
+    createdAt: "2025-12-12T10:40:57Z"
     description: The Limitador operator installs and maintains limitador instances
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -84,6 +84,7 @@ spec:
           - pods
           verbs:
           - list
+          - patch
           - update
           - watch
         - apiGroups:
