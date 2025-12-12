@@ -1414,6 +1414,7 @@ rules:
   - pods
   verbs:
   - list
+  - patch
   - update
   - watch
 - apiGroups:
