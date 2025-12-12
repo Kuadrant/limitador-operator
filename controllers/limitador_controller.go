@@ -46,7 +46,7 @@ type LimitadorReconciler struct {
 //+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services;configmaps;secrets;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch;update
+//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch;update;patch
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
@@ -157,16 +157,12 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 	}
 
 	for idx := range podList.Items {
-		pod := podList.Items[idx]
+		pod := &podList.Items[idx]
 		annotations := pod.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
 		// Update only if there is a change in resource version value
 		if annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] != cm.ResourceVersion {
-			annotations[limitadorv1alpha1.PodAnnotationConfigMapResourceVersion] = cm.ResourceVersion
-			pod.SetAnnotations(annotations)
-			if err := r.Client().Update(ctx, &pod); err != nil {
+			if err := r.ReconcilePodAnnotation(ctx, pod.Name, pod.Namespace,
+				limitadorv1alpha1.PodAnnotationConfigMapResourceVersion, cm.ResourceVersion); err != nil {
 				return ctrl.Result{}, err
 			}
 		}

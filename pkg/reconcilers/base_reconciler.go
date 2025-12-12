@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -202,8 +203,33 @@ func (b *BaseReconciler) UpdateResourceStatus(ctx context.Context, obj client.Ob
 		return err
 	}
 
-	logger.Info("update object status", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
-	return b.Client().Status().Update(ctx, obj)
+	logger.Info("apply object status", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
+	return b.Client().Status().Patch(ctx, obj, client.Apply,
+		client.ForceOwnership, client.FieldOwner(FieldManagerName))
+}
+
+func (b *BaseReconciler) ReconcilePodAnnotation(ctx context.Context, podName, podNamespace, annotationKey, annotationValue string) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	podPatch := &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Pod",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName,
+			Namespace: podNamespace,
+			Annotations: map[string]string{
+				annotationKey: annotationValue,
+			},
+		},
+	}
+
+	logger.Info("apply pod annotation", "name", podName, "namespace", podNamespace, "key", annotationKey)
+	return b.ReconcileResource(ctx, podPatch)
 }
 
 // SetOwnerReference sets owner as a Controller OwnerReference on owned
