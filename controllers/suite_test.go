@@ -114,10 +114,10 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	sharedCfg := SharedConfig{
 		Host: cfg.Host,
 		TLSClientConfig: TLSClientConfig{
-			Insecure: cfg.TLSClientConfig.Insecure,
-			CertData: cfg.TLSClientConfig.CertData,
-			KeyData:  cfg.TLSClientConfig.KeyData,
-			CAData:   cfg.TLSClientConfig.CAData,
+			Insecure: cfg.Insecure,
+			CertData: cfg.CertData,
+			KeyData:  cfg.KeyData,
+			CAData:   cfg.CAData,
 		},
 	}
 
