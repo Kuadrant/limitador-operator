@@ -34,7 +34,7 @@ jobs:
           ref: ${{ inputs.gitRef }}
           token: ${{ secrets.KUADRANT_DEV_PAT }}
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
         id: go

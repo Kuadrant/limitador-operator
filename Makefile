@@ -112,7 +112,7 @@ operator-sdk: $(OPERATOR_SDK) ## Download operator-sdk locally if necessary.
 
 CONTROLLER_GEN = $(PROJECT_PATH)/bin/controller-gen
 $(CONTROLLER_GEN):
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN)  ## Download controller-gen locally if necessary.
@@ -162,7 +162,7 @@ act: $(ACT) ## Download act locally if necessary.
 
 GOLANGCI-LINT = $(PROJECT_PATH)/bin/golangci-lint
 $(GOLANGCI-LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v2.1.6
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v2.7.2
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.
