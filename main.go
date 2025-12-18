@@ -17,10 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -37,6 +39,7 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/controllers"
 	"github.com/kuadrant/limitador-operator/pkg/log"
+	"github.com/kuadrant/limitador-operator/pkg/observability"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
 )
@@ -80,12 +83,33 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8083", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
+
+	// Initialize OpenTelemetry
+	ctx := context.Background()
+	otelConfig := observability.NewConfig(version)
+	otelProvider, err := observability.InitProvider(ctx, otelConfig)
+	if err != nil {
+		setupLog.Error(err, "unable to initialize OpenTelemetry")
+		os.Exit(1)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := otelProvider.Shutdown(shutdownCtx); err != nil {
+			setupLog.Error(err, "error shutting down OpenTelemetry")
+		}
+	}()
+	if otelConfig.Endpoint == "" {
+		setupLog.Info("OpenTelemetry tracing disabled")
+	} else {
+		setupLog.Info("OpenTelemetry tracing initialized", "endpoint", otelConfig.Endpoint)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -101,7 +125,9 @@ func main() {
 	}
 
 	limitadorBaseReconciler := reconcilers.NewBaseReconciler(
-		mgr.GetClient(), mgr.GetScheme(), mgr.GetAPIReader(),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetAPIReader(),
 		log.Log.WithName("limitador"),
 		mgr.GetEventRecorderFor("Limitador"),
 	)
