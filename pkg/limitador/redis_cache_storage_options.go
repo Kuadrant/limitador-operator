@@ -36,6 +36,6 @@ func RedisCachedDeploymentOptions(ctx context.Context, cl client.Client, defSecr
 	}
 
 	return DeploymentStorageOptions{
-		Command: command,
+		Args: command,
 	}, nil
 }

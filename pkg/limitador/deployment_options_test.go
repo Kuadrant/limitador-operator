@@ -13,7 +13,7 @@ import (
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 )
 
-func TestDeploymentCommand(t *testing.T) {
+func TestDeploymentArgs(t *testing.T) {
 	basicLimitador := func() *limitadorv1alpha1.Limitador {
 		return &limitadorv1alpha1.Limitador{
 			TypeMeta:   metav1.TypeMeta{Kind: "Limitador", APIVersion: "limitador.kuadrant.io/v1alpha1"},
@@ -24,10 +24,9 @@ func TestDeploymentCommand(t *testing.T) {
 
 	t.Run("when default spec", func(subT *testing.T) {
 		limObj := basicLimitador()
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
-		assert.DeepEqual(subT, command,
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{Args: []string{"memory"}})
+		assert.DeepEqual(subT, args,
 			[]string{
-				"limitador-server",
 				"--http-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
@@ -40,10 +39,9 @@ func TestDeploymentCommand(t *testing.T) {
 		limObj := basicLimitador()
 		metricLabelsDefault := "descriptors[1][\"metrics-labels\"]"
 		limObj.Spec.MetricLabelsDefault = &metricLabelsDefault
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
-		assert.DeepEqual(subT, command,
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{Args: []string{"memory"}})
+		assert.DeepEqual(subT, args,
 			[]string{
-				"limitador-server",
 				"--http-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
@@ -59,10 +57,9 @@ func TestDeploymentCommand(t *testing.T) {
 		limObj := basicLimitador()
 		limObj.Spec.RateLimitHeaders = ptr.To(limitadorv1alpha1.RateLimitHeadersType("DRAFT_VERSION_03"))
 
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{Command: []string{"memory"}})
-		assert.DeepEqual(subT, command,
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{Args: []string{"memory"}})
+		assert.DeepEqual(subT, args,
 			[]string{
-				"limitador-server",
 				"--rate-limit-headers",
 				"DRAFT_VERSION_03",
 				"--http-port",
@@ -76,10 +73,9 @@ func TestDeploymentCommand(t *testing.T) {
 
 	t.Run("hardcoded config file path included", func(subT *testing.T) {
 		limObj := basicLimitador()
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{})
-		assert.DeepEqual(subT, command,
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.DeepEqual(subT, args,
 			[]string{
-				"limitador-server",
 				"--http-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
@@ -90,12 +86,11 @@ func TestDeploymentCommand(t *testing.T) {
 
 	t.Run("commands from storage option appended", func(subT *testing.T) {
 		limObj := basicLimitador()
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{
-			Command: []string{"a", "b", "c"},
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{
+			Args: []string{"a", "b", "c"},
 		})
-		assert.DeepEqual(subT, command,
+		assert.DeepEqual(subT, args,
 			[]string{
-				"limitador-server",
 				"--http-port",
 				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 				"--rls-port",
@@ -120,8 +115,8 @@ func TestDeploymentCommand(t *testing.T) {
 			subT.Run(tt.Name, func(subTest *testing.T) {
 				limObj := basicLimitador()
 				limObj.Spec.Verbosity = ptr.To(tt.VerbosityLevel)
-				command := DeploymentCommand(limObj, DeploymentStorageOptions{})
-				assert.Assert(subTest, is.Contains(command, tt.ExpectedArg))
+				args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+				assert.Assert(subTest, is.Contains(args, tt.ExpectedArg))
 			})
 		}
 	})
@@ -132,10 +127,9 @@ func TestDeploymentCommand(t *testing.T) {
 		limObj.Spec.Tracing = &limitadorv1alpha1.Tracing{
 			Endpoint: testEndpoint,
 		}
-		command := DeploymentCommand(limObj, DeploymentStorageOptions{})
-		assert.DeepEqual(subT, command,
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.DeepEqual(subT, args,
 			[]string{
-				"limitador-server",
 				"--tracing-endpoint",
 				testEndpoint,
 				"--http-port",

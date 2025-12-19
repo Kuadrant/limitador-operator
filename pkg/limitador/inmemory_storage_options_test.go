@@ -12,7 +12,7 @@ func TestInMemoryDeploymentOptions(t *testing.T) {
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"memory"},
+				Args: []string{"memory"},
 			})
 	})
 }

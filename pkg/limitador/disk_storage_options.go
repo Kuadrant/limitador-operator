@@ -22,7 +22,7 @@ func DiskDeploymentOptions(limObj *limitadorv1alpha1.Limitador, diskObj limitado
 	command = append(command, DiskPath)
 
 	return DeploymentStorageOptions{
-		Command:      command,
+		Args:         command,
 		VolumeMounts: diskVolumeMounts(),
 		Volumes:      diskVolumes(limObj),
 		// Disk storage requires killing all existing pods before creating a new one, as the PV canont be shared.

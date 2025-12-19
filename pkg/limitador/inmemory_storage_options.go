@@ -2,6 +2,6 @@ package limitador
 
 func InMemoryDeploymentOptions() (DeploymentStorageOptions, error) {
 	return DeploymentStorageOptions{
-		Command: []string{"memory"},
+		Args: []string{"memory"},
 	}, nil
 }
