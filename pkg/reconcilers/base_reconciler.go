@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -35,12 +36,9 @@ import (
 	"github.com/kuadrant/limitador-operator/pkg/helpers"
 )
 
-// MutateFn is a function which mutates the existing object into it's desired state.
-type MutateFn func(desired, existing client.Object) (bool, error)
-
-func CreateOnlyMutator(_, _ client.Object) (bool, error) {
-	return false, nil
-}
+const (
+	FieldManagerName = "limitador-operator"
+)
 
 type BaseReconciler struct {
 	client          client.Client
@@ -93,70 +91,66 @@ func (b *BaseReconciler) EventRecorder() record.EventRecorder {
 	return b.recorder
 }
 
-// ReconcileResource attempts to mutate the existing state
-// in order to match the desired state. The object's desired state must be reconciled
-// with the existing state inside the passed in callback MutateFn.
+// ReconcileResource uses server-side apply to reconcile the desired state.
+// The operator declares ownership only over the fields it explicitly sets,
+// allowing external controllers to manage additional fields without conflicts.
 //
-// obj: Object of the same type as the 'desired' object.
-//
-//	Used to read the resource from the kubernetes cluster.
-//	Could be zero-valued initialized object.
-//
-// desired: Object representing the desired state
+// obj: The desired object state to apply
 //
 // It returns an error.
-func (b *BaseReconciler) ReconcileResource(ctx context.Context, obj, desired client.Object, mutateFn MutateFn) error {
-	key := client.ObjectKeyFromObject(desired)
-
-	if err := b.Client().Get(ctx, key, obj); err != nil {
-		if !errors.IsNotFound(err) {
-			return err
-		}
-
-		// Not found
-		if !helpers.IsObjectTaggedToDelete(desired) {
-			return b.CreateResource(ctx, desired)
-		}
-
-		// Marked for deletion and not found. Nothing to do.
-		return nil
-	}
-
-	// item found successfully
-	if helpers.IsObjectTaggedToDelete(desired) {
-		return b.DeleteResource(ctx, desired)
-	}
-
-	update, err := mutateFn(desired, obj)
+func (b *BaseReconciler) ReconcileResource(ctx context.Context, obj client.Object) error {
+	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	if update {
-		return b.UpdateResource(ctx, obj)
+	if helpers.IsObjectTaggedToDelete(obj) {
+		return b.DeleteResource(ctx, obj)
 	}
 
+	logger.Info("apply object", "GKV", obj.GetObjectKind().GroupVersionKind(),
+		"name", obj.GetName(), "namespace", obj.GetNamespace())
+	return b.Client().Patch(ctx, obj, client.Apply,
+		client.ForceOwnership, client.FieldOwner(FieldManagerName))
+}
+
+func (b *BaseReconciler) ReconcileService(ctx context.Context, desired *corev1.Service) error {
+	return b.ReconcileResource(ctx, desired)
+}
+
+func (b *BaseReconciler) ReconcileDeployment(ctx context.Context, desired *appsv1.Deployment) error {
+	return b.ReconcileResource(ctx, desired)
+}
+
+func (b *BaseReconciler) ReconcileConfigMap(ctx context.Context, desired *corev1.ConfigMap) error {
+	return b.ReconcileResource(ctx, desired)
+}
+
+func (b *BaseReconciler) ReconcilePodDisruptionBudget(ctx context.Context, desired *policyv1.PodDisruptionBudget) error {
+	return b.ReconcileResource(ctx, desired)
+}
+
+// ReconcilePersistentVolumeClaim handles PVC reconciliation with create-only semantics.
+func (b *BaseReconciler) ReconcilePersistentVolumeClaim(ctx context.Context, desired *corev1.PersistentVolumeClaim) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if helpers.IsObjectTaggedToDelete(desired) {
+		return b.DeleteResource(ctx, desired)
+	}
+
+	key := client.ObjectKeyFromObject(desired)
+	obj := &corev1.PersistentVolumeClaim{}
+	if err := b.Client().Get(ctx, key, obj); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		return b.CreateResource(ctx, desired)
+	}
+	logger.V(1).Info("pvc already exists, skipping update", "name", desired.GetName(), "namespace", desired.GetNamespace())
 	return nil
-}
-
-func (b *BaseReconciler) ReconcileService(ctx context.Context, desired *corev1.Service, mutatefn MutateFn) error {
-	return b.ReconcileResource(ctx, &corev1.Service{}, desired, mutatefn)
-}
-
-func (b *BaseReconciler) ReconcileDeployment(ctx context.Context, desired *appsv1.Deployment, mutatefn MutateFn) error {
-	return b.ReconcileResource(ctx, &appsv1.Deployment{}, desired, mutatefn)
-}
-
-func (b *BaseReconciler) ReconcileConfigMap(ctx context.Context, desired *corev1.ConfigMap, mutatefn MutateFn) error {
-	return b.ReconcileResource(ctx, &corev1.ConfigMap{}, desired, mutatefn)
-}
-
-func (b *BaseReconciler) ReconcilePodDisruptionBudget(ctx context.Context, desired *policyv1.PodDisruptionBudget, mutatefn MutateFn) error {
-	return b.ReconcileResource(ctx, &policyv1.PodDisruptionBudget{}, desired, mutatefn)
-}
-
-func (b *BaseReconciler) ReconcilePersistentVolumeClaim(ctx context.Context, desired *corev1.PersistentVolumeClaim, mutatefn MutateFn) error {
-	return b.ReconcileResource(ctx, &corev1.PersistentVolumeClaim{}, desired, mutatefn)
 }
 
 func (b *BaseReconciler) GetResource(ctx context.Context, objKey types.NamespacedName, obj client.Object) error {
@@ -196,7 +190,11 @@ func (b *BaseReconciler) DeleteResource(ctx context.Context, obj client.Object, 
 	}
 
 	logger.Info("delete object", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
-	return b.Client().Delete(ctx, obj, options...)
+	err = b.Client().Delete(ctx, obj, options...)
+	if err != nil && errors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 func (b *BaseReconciler) UpdateResourceStatus(ctx context.Context, obj client.Object) error {
@@ -205,8 +203,33 @@ func (b *BaseReconciler) UpdateResourceStatus(ctx context.Context, obj client.Ob
 		return err
 	}
 
-	logger.Info("update object status", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
-	return b.Client().Status().Update(ctx, obj)
+	logger.Info("apply object status", "GKV", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
+	return b.Client().Status().Patch(ctx, obj, client.Apply,
+		client.ForceOwnership, client.FieldOwner(FieldManagerName))
+}
+
+func (b *BaseReconciler) ReconcilePodAnnotation(ctx context.Context, podName, podNamespace, annotationKey, annotationValue string) error {
+	logger, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	podPatch := &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Pod",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName,
+			Namespace: podNamespace,
+			Annotations: map[string]string{
+				annotationKey: annotationValue,
+			},
+		},
+	}
+
+	logger.Info("apply pod annotation", "name", podName, "namespace", podNamespace, "key", annotationKey)
+	return b.ReconcileResource(ctx, podPatch)
 }
 
 // SetOwnerReference sets owner as a Controller OwnerReference on owned

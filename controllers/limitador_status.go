@@ -42,15 +42,20 @@ func (r *LimitadorReconciler) reconcileStatus(ctx context.Context, limitadorObj 
 
 	logger.V(1).Info("Updating Status", "sequence no:", fmt.Sprintf("sequence No: %v->%v", limitadorObj.Status.ObservedGeneration, newStatus.ObservedGeneration))
 
-	limitadorObj.Status = *newStatus
-	updateErr := r.Client().Status().Update(ctx, limitadorObj)
-	if updateErr != nil {
-		// Ignore conflicts, resource might just be outdated.
-		if apierrors.IsConflict(updateErr) {
-			logger.Info("Failed to update status: resource might just be outdated")
-			return reconcile.Result{Requeue: true}, nil
-		}
+	patch := &limitadorv1alpha1.Limitador{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: limitadorv1alpha1.GroupVersion.String(),
+			Kind:       "Limitador",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      limitadorObj.Name,
+			Namespace: limitadorObj.Namespace,
+		},
+		Status: *newStatus,
+	}
 
+	updateErr := r.UpdateResourceStatus(ctx, patch)
+	if updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to update status: %w", updateErr)
 	}
 	return ctrl.Result{}, nil

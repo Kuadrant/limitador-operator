@@ -87,6 +87,7 @@ INTEGRATION_TEST_SUITE_PATHS := ./controllers/...
 INTEGRATION_COVER_PKGS := ./pkg/...,./controllers/...,./api/...
 INTEGRATION_TEST_NUM_CORES ?= 4
 INTEGRATION_TEST_NUM_PROCESSES ?= 10
+INTEGRATION_TESTS_EXTRA_ARGS ?=
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -111,7 +112,7 @@ operator-sdk: $(OPERATOR_SDK) ## Download operator-sdk locally if necessary.
 
 CONTROLLER_GEN = $(PROJECT_PATH)/bin/controller-gen
 $(CONTROLLER_GEN):
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN)  ## Download controller-gen locally if necessary.
@@ -161,7 +162,7 @@ act: $(ACT) ## Download act locally if necessary.
 
 GOLANGCI-LINT = $(PROJECT_PATH)/bin/golangci-lint
 $(GOLANGCI-LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v1.64.8
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v2.7.2
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.
@@ -249,7 +250,7 @@ test-integration: clean-cov generate fmt vet ginkgo ## Run Integration tests.
 		--keep-going \
 		--race \
 		--trace \
-		$(INTEGRATION_TEST_SUITE_PATHS)
+		$(INTEGRATION_TESTS_EXTRA_ARGS) $(INTEGRATION_TEST_SUITE_PATHS)
 
 ifdef TEST_NAME
 test-unit: TEST_PATTERN := --run $(TEST_NAME)

@@ -16,6 +16,7 @@ rules:
   - delete
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -24,6 +25,7 @@ rules:
   - pods
   verbs:
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -35,6 +37,7 @@ rules:
   - delete
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -72,5 +75,6 @@ rules:
   - delete
   - get
   - list
+  - patch
   - update
   - watch
