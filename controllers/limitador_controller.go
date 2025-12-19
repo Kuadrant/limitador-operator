@@ -364,7 +364,7 @@ func (r *LimitadorReconciler) getDeploymentOptions(ctx context.Context, limObj *
 		return deploymentOptions, err
 	}
 
-	deploymentOptions.Command = limitador.DeploymentCommand(limObj, deploymentStorageOptions)
+	deploymentOptions.Args = limitador.DeploymentArgs(limObj, deploymentStorageOptions)
 	deploymentOptions.VolumeMounts = limitador.DeploymentVolumeMounts(deploymentStorageOptions)
 	deploymentOptions.Volumes = limitador.DeploymentVolumes(limObj, deploymentStorageOptions)
 	deploymentOptions.DeploymentStrategy = deploymentStorageOptions.DeploymentStrategy

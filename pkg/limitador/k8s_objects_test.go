@@ -101,13 +101,13 @@ func TestDeployment(t *testing.T) {
 			})
 	})
 
-	t.Run("command", func(subT *testing.T) {
+	t.Run("args", func(subT *testing.T) {
 		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
 		deployment := Deployment(limObj, DeploymentOptions{
-			Command: []string{"a", "b", "c"},
+			Args: []string{"a", "b", "c"},
 		})
 		assert.Assert(subT, len(deployment.Spec.Template.Spec.Containers) == 1)
-		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Command,
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Args,
 			[]string{"a", "b", "c"},
 		)
 	})

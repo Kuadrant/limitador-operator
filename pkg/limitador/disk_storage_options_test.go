@@ -27,7 +27,7 @@ func TestDiskDeploymentOptions(t *testing.T) {
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"disk", DiskPath},
+				Args: []string{"disk", DiskPath},
 				VolumeMounts: []v1.VolumeMount{
 					v1.VolumeMount{ReadOnly: false, Name: DiskVolumeName, MountPath: DiskPath},
 				},
@@ -55,7 +55,7 @@ func TestDiskDeploymentOptions(t *testing.T) {
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"disk", "--optimize", string(limitadorv1alpha1.DiskOptimizeTypeDisk), DiskPath},
+				Args: []string{"disk", "--optimize", string(limitadorv1alpha1.DiskOptimizeTypeDisk), DiskPath},
 				VolumeMounts: []v1.VolumeMount{
 					{ReadOnly: false, Name: DiskVolumeName, MountPath: DiskPath},
 				},

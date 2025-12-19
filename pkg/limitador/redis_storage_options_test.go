@@ -96,7 +96,7 @@ func TestRedisDeploymentOptions(t *testing.T) {
 		assert.NilError(subT, err)
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
-				Command: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
+				Args: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
 			},
 		)
 	})

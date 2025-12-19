@@ -13,7 +13,7 @@ import (
 )
 
 type DeploymentOptions struct {
-	Command            []string
+	Args               []string
 	VolumeMounts       []corev1.VolumeMount
 	Volumes            []corev1.Volume
 	DeploymentStrategy appsv1.DeploymentStrategy
@@ -22,7 +22,7 @@ type DeploymentOptions struct {
 }
 
 type DeploymentStorageOptions struct {
-	Command            []string
+	Args               []string
 	VolumeMounts       []corev1.VolumeMount
 	Volumes            []corev1.Volume
 	DeploymentStrategy appsv1.DeploymentStrategy
@@ -34,43 +34,43 @@ const (
 	LimitsCMVolumeName      = "config-file"
 )
 
-func DeploymentCommand(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []string {
-	command := []string{"limitador-server"}
+func DeploymentArgs(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []string {
+	args := []string{}
 
 	// stick to the same default as Limitador
 	if limObj.Spec.RateLimitHeaders != nil {
-		command = append(command, "--rate-limit-headers", string(*limObj.Spec.RateLimitHeaders))
+		args = append(args, "--rate-limit-headers", string(*limObj.Spec.RateLimitHeaders))
 	}
 
 	if limObj.Spec.Telemetry != nil && *limObj.Spec.Telemetry == "exhaustive" {
-		command = append(command, "--limit-name-in-labels")
+		args = append(args, "--limit-name-in-labels")
 	}
 
 	if limObj.Spec.Tracing != nil {
-		command = append(command, "--tracing-endpoint", limObj.Spec.Tracing.Endpoint)
+		args = append(args, "--tracing-endpoint", limObj.Spec.Tracing.Endpoint)
 	}
 
 	if limObj.Spec.Verbosity != nil {
-		command = append(command, fmt.Sprintf("-%s", strings.Repeat("v", int(*limObj.Spec.Verbosity))))
+		args = append(args, fmt.Sprintf("-%s", strings.Repeat("v", int(*limObj.Spec.Verbosity))))
 	}
 
 	// let's set explicitly the HTTP port,
 	// as it is being set in the readiness and liveness probe and in the service
-	command = append(command, "--http-port", strconv.Itoa(int(limObj.HTTPPort())))
+	args = append(args, "--http-port", strconv.Itoa(int(limObj.HTTPPort())))
 
 	// let's set explicitly the GRPC port,
 	// as it is being set in the service
-	command = append(command, "--rls-port", strconv.Itoa(int(limObj.GRPCPort())))
+	args = append(args, "--rls-port", strconv.Itoa(int(limObj.GRPCPort())))
 
 	// sets the metrics-label-default
 	if limObj.Spec.MetricLabelsDefault != nil {
-		command = append(command, "--metric-labels-default", *limObj.Spec.MetricLabelsDefault)
+		args = append(args, "--metric-labels-default", *limObj.Spec.MetricLabelsDefault)
 	}
 
-	command = append(command, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
-	command = append(command, storageOptions.Command...)
+	args = append(args, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
+	args = append(args, storageOptions.Args...)
 
-	return command
+	return args
 }
 
 func DeploymentVolumeMounts(storageOptions DeploymentStorageOptions) []corev1.VolumeMount {

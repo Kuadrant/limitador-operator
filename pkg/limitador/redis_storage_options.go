@@ -22,7 +22,7 @@ func RedisDeploymentOptions(ctx context.Context, cl client.Client, defSecretName
 	}
 
 	return DeploymentStorageOptions{
-		Command: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
+		Args: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
 	}, nil
 }
 
