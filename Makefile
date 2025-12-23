@@ -6,6 +6,11 @@ SHELL = /usr/bin/env bash -o pipefail
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
 VERSION ?= 0.0.0
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -102,98 +107,112 @@ all: build
 
 ##@ Tools
 
-OPERATOR_SDK = $(PROJECT_PATH)/bin/operator-sdk
-OPERATOR_SDK_VERSION = v1.32.0
-$(OPERATOR_SDK):
-	./utils/install-operator-sdk.sh $(OPERATOR_SDK) $(OPERATOR_SDK_VERSION)
+# go-install-tool will 'go install' a package $2 with version $3 to $1 creating a versioned binary.
+define go-install-tool
+@[ -f "$(1)-$(3)" ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+rm -f $(1) || true ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
+mv $(1) $(1)-$(3) ;\
+} ;\
+ln -sf $(shell basename $(1))-$(3) $(1)
+endef
+
+## Tool Binaries
+OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+YQ ?= $(LOCALBIN)/yq
+OPM ?= $(LOCALBIN)/opm
+HELM ?= $(LOCALBIN)/helm
+KIND ?= $(LOCALBIN)/kind
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GINKGO ?= $(LOCALBIN)/ginkgo
+ACT ?= $(LOCALBIN)/act
+
+## Tool Versions
+OPERATOR_SDK_VERSION ?= v1.32.0
+CONTROLLER_GEN_VERSION ?= v0.19.0
+KUSTOMIZE_VERSION ?= v4.5.5
+YQ_VERSION ?= v4.34.2
+OPM_VERSION ?= v1.48.0
+HELM_VERSION ?= v3.15.0
+KIND_VERSION ?= v0.23.0
+GOLANGCI_LINT_VERSION ?= v2.7.2
+ACT_VERSION ?= latest
+
+## Versioned Binaries (the actual files that 'make' will check for)
+OPERATOR_SDK_V_BINARY := $(LOCALBIN)/operator-sdk-$(OPERATOR_SDK_VERSION)
+CONTROLLER_GEN_V_BINARY := $(LOCALBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)
+KUSTOMIZE_V_BINARY := $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
+YQ_V_BINARY := $(LOCALBIN)/yq-$(YQ_VERSION)
+OPM_V_BINARY := $(LOCALBIN)/opm-$(OPM_VERSION)
+HELM_V_BINARY := $(LOCALBIN)/helm-$(HELM_VERSION)
+KIND_V_BINARY := $(LOCALBIN)/kind-$(KIND_VERSION)
+GOLANGCI_LINT_V_BINARY := $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+ACT_V_BINARY := $(LOCALBIN)/act-$(ACT_VERSION)
 
 .PHONY: operator-sdk
-operator-sdk: $(OPERATOR_SDK) ## Download operator-sdk locally if necessary.
-
-CONTROLLER_GEN = $(PROJECT_PATH)/bin/controller-gen
-$(CONTROLLER_GEN):
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0)
+operator-sdk: $(OPERATOR_SDK_V_BINARY) ## Download operator-sdk locally if necessary.
+$(OPERATOR_SDK_V_BINARY): $(LOCALBIN)
+	@./utils/install-operator-sdk.sh $(OPERATOR_SDK)-$(OPERATOR_SDK_VERSION) $(OPERATOR_SDK_VERSION)
+	@ln -sf $(shell basename $(OPERATOR_SDK))-$(OPERATOR_SDK_VERSION) $(OPERATOR_SDK)
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN)  ## Download controller-gen locally if necessary.
-
-KUSTOMIZE = $(PROJECT_PATH)/bin/kustomize
-$(KUSTOMIZE):
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.5)
+controller-gen: $(CONTROLLER_GEN_V_BINARY) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_GEN_VERSION))
 
 .PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-
-YQ=$(PROJECT_PATH)/bin/yq
-YQ_VERSION := v4.34.2
-$(YQ):
-	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4@$(YQ_VERSION))
+kustomize: $(KUSTOMIZE_V_BINARY) ## Download kustomize locally if necessary.
+$(KUSTOMIZE_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4,$(KUSTOMIZE_VERSION))
 
 .PHONY: yq
-yq: $(YQ) ## Download yq locally if necessary.
-
-OPM = $(PROJECT_PATH)/bin/opm
-OPM_VERSION = v1.26.2
-$(OPM):
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/$${OS}-$${ARCH}-opm ;\
-	chmod +x $(OPM) ;\
-	}
+yq: $(YQ_V_BINARY) ## Download yq locally if necessary.
+$(YQ_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
 
 .PHONY: opm
-opm: $(OPM) ## Download opm locally if necessary.
+opm: $(OPM_V_BINARY) ## Download opm locally if necessary.
+$(OPM_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(OPM),github.com/operator-framework/operator-registry/cmd/opm,$(OPM_VERSION))
 
-KIND = $(PROJECT_PATH)/bin/kind
-$(KIND):
-	$(call go-install-tool,$(KIND),sigs.k8s.io/kind@v0.22.0)
+.PHONY: helm
+helm: $(HELM_V_BINARY) ## Download helm locally if necessary.
+$(HELM_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(HELM),helm.sh/helm/v3/cmd/helm,$(HELM_VERSION))
 
 .PHONY: kind
-kind: $(KIND) ## Download kind locally if necessary.
-
-ACT = $(PROJECT_PATH)/bin/act
-$(ACT):
-	$(call go-install-tool,$(ACT),github.com/nektos/act@latest)
-
-.PHONY: act
-act: $(ACT) ## Download act locally if necessary.
-
-GOLANGCI-LINT = $(PROJECT_PATH)/bin/golangci-lint
-$(GOLANGCI-LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_PATH)/bin v2.7.2
+kind: $(KIND_V_BINARY) ## Download kind locally if necessary.
+$(KIND_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(KIND),sigs.k8s.io/kind,$(KIND_VERSION))
 
 .PHONY: golangci-lint
-golangci-lint: $(GOLANGCI-LINT) ## Download golangci-lint locally if necessary.
+golangci-lint: $(GOLANGCI_LINT_V_BINARY) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT_V_BINARY): $(LOCALBIN)
+	@[ -f "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] || { \
+	set -e ;\
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
+	mv $(GOLANGCI_LINT) $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION) ;\
+	} ;\
+	ln -sf $(shell basename $(GOLANGCI_LINT))-$(GOLANGCI_LINT_VERSION) $(GOLANGCI_LINT)
 
-GINKGO = $(PROJECT_PATH)/bin/ginkgo
-$(GINKGO):
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
+$(GINKGO): $(LOCALBIN) go.mod
 	# In order to make sure the version of the ginkgo cli installed
 	# is the same as the version of go.mod,
 	# instead of calling go-install-tool,
 	# running go install from the current module will pick version from current go.mod file.
-	GOBIN=$(PROJECT_PATH)/bin go install github.com/onsi/ginkgo/v2/ginkgo
+	@GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo
 
-.PHONY: ginkgo
-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
-
-HELM = $(PROJECT_PATH)/bin/helm
-HELM_VERSION = v3.15.0
-$(HELM):
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(HELM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	wget -O helm.tar.gz https://get.helm.sh/helm-$(HELM_VERSION)-$${OS}-$${ARCH}.tar.gz ;\
-	tar -zxvf helm.tar.gz ;\
-	mv $${OS}-$${ARCH}/helm $(HELM) ;\
-	chmod +x $(HELM) ;\
-	rm -rf $${OS}-$${ARCH} helm.tar.gz ;\
-	}
-
-.PHONY: helm
-helm: $(HELM) ## Download helm locally if necessary.
+.PHONY: act
+act: $(ACT_V_BINARY) ## Download act locally if necessary.
+$(ACT_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(ACT),github.com/nektos/act,$(ACT_VERSION))
 
 ##@ General
 
@@ -305,28 +324,15 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 .PHONY: install-olm
-install-olm: $(OPERATOR_SDK)
+install-olm: operator-sdk
 	$(OPERATOR_SDK) olm install
 
 .PHONY: uninstall-olm
-uninstall-olm:
+uninstall-olm: operator-sdk
 	$(OPERATOR_SDK) olm uninstall
 
-# go-install-tool will 'go install' any package $2 and install it to $1.
-define go-install-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_PATH)/bin go install $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
-
 .PHONY: bundle
-bundle: $(KUSTOMIZE) $(OPERATOR_SDK) $(YQ) manifests ## Generate bundle manifests and metadata, then validate generated files.
+bundle: kustomize operator-sdk yq manifests ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	# Set desired operator image and related limitador image
 	V="$(RELATED_IMAGE_LIMITADOR)" $(YQ) eval '(select(.kind == "Deployment").spec.template.spec.containers[].env[] | select(.name == "RELATED_IMAGE_LIMITADOR").value) = strenv(V)' -i config/manager/manager.yaml
@@ -372,7 +378,7 @@ bundle-push: ## Push the bundle image.
 	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
 
 .PHONY: bundle-operator-image-url
-bundle-operator-image-url: $(YQ) ## Read operator image reference URL from the manifest bundle.
+bundle-operator-image-url: yq ## Read operator image reference URL from the manifest bundle.
 	@$(YQ) '.metadata.annotations.containerImage' bundle/manifests/limitador-operator.clusterserviceversion.yaml
 
 print-bundle-image: ## Pring bundle images.
@@ -431,8 +437,8 @@ local-redeploy: ## re-deploy operator in local kind cluster
 ##@ Code Style
 
 .PHONY: run-lint
-run-lint: $(GOLANGCI-LINT) ## Run lint tests
-	$(GOLANGCI-LINT) run
+run-lint: golangci-lint ## Run lint tests
+	$(GOLANGCI_LINT) run
 
 # Include last to avoid changing MAKEFILE_LIST used above
 include ./make/*.mk
