@@ -101,8 +101,8 @@ func DeploymentImageMutator(desired, existing *appsv1.Deployment) bool {
 func DeploymentCommandMutator(desired, existing *appsv1.Deployment) bool {
 	update := false
 
-	if !reflect.DeepEqual(existing.Spec.Template.Spec.Containers[0].Command, desired.Spec.Template.Spec.Containers[0].Command) {
-		existing.Spec.Template.Spec.Containers[0].Command = desired.Spec.Template.Spec.Containers[0].Command
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.Containers[0].Args, desired.Spec.Template.Spec.Containers[0].Args) {
+		existing.Spec.Template.Spec.Containers[0].Args = desired.Spec.Template.Spec.Containers[0].Args
 		update = true
 	}
 
