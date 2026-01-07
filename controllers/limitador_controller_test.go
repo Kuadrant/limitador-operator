@@ -106,10 +106,9 @@ var _ = Describe("Limitador controller", func() {
 			Expect(createdLimitadorDeployment.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.Name).Should(
 				Equal(limitador.LimitsConfigMapName(limitadorObj)),
 			)
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).Should(
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Args).Should(
 				// asserts no additional command line arg is added
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",
@@ -196,9 +195,8 @@ var _ = Describe("Limitador controller", func() {
 					&createdLimitadorDeployment)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--rate-limit-headers",
 					"DRAFT_VERSION_03",
 					"--http-port",
@@ -248,8 +246,7 @@ var _ = Describe("Limitador controller", func() {
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
 					&updatedLimitadorDeployment)).To(Succeed())
-				g.Expect(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).To(Equal([]string{
-					"limitador-server",
+				g.Expect(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Args).To(Equal([]string{
 					"--rate-limit-headers",
 					"DRAFT_VERSION_03",
 					"--http-port",
@@ -301,9 +298,8 @@ var _ = Describe("Limitador controller", func() {
 					},
 					&updatedLimitadorDeployment)).Should(Succeed())
 
-				g.Expect(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Command).To(
+				g.Expect(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Args).To(
 					Equal([]string{
-						"limitador-server",
 						"--limit-name-in-labels",
 						"--http-port",
 						strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
@@ -337,9 +333,8 @@ var _ = Describe("Limitador controller", func() {
 					}, deployment)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"-vvv",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
@@ -384,9 +379,8 @@ var _ = Describe("Limitador controller", func() {
 			}).WithContext(ctx).Should(Succeed())
 
 			// verbosity level command line arg should be missing
-			Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",
@@ -417,8 +411,7 @@ var _ = Describe("Limitador controller", func() {
 						Name:      limitador.DeploymentName(limitadorObj),
 					}, newDeployment)).To(Succeed())
 
-				g.Expect(newDeployment.Spec.Template.Spec.Containers[0].Command).To(Equal([]string{
-					"limitador-server",
+				g.Expect(newDeployment.Spec.Template.Spec.Containers[0].Args).To(Equal([]string{
 					"-vvv",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
@@ -574,9 +567,8 @@ var _ = Describe("Limitador controller", func() {
 			}).WithContext(ctx).Should(Succeed())
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",
@@ -631,9 +623,8 @@ var _ = Describe("Limitador controller", func() {
 			}).WithContext(ctx).Should(Succeed())
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",
@@ -669,9 +660,8 @@ var _ = Describe("Limitador controller", func() {
 			}).WithContext(ctx).Should(Succeed())
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",
@@ -720,9 +710,8 @@ var _ = Describe("Limitador controller", func() {
 				))
 
 			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deploymentObj.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",

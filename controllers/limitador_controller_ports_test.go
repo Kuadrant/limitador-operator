@@ -78,9 +78,8 @@ var _ = Describe("Limitador controller manages ports", func() {
 				},
 			))
 
-			Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(httpPortNumber)),
 					"--rls-port",
@@ -163,9 +162,8 @@ var _ = Describe("Limitador controller manages ports", func() {
 				},
 			))
 
-			Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(
+			Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(
 				HaveExactElements(
-					"limitador-server",
 					"--http-port",
 					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
 					"--rls-port",
@@ -248,8 +246,7 @@ var _ = Describe("Limitador controller manages ports", func() {
 					Name: "grpc", ContainerPort: grpcPortNumber, Protocol: v1.ProtocolTCP,
 				}))
 
-				g.Expect(newDeployment.Spec.Template.Spec.Containers[0].Command).To(Equal([]string{
-					"limitador-server",
+				g.Expect(newDeployment.Spec.Template.Spec.Containers[0].Args).To(Equal([]string{
 					"--http-port",
 					strconv.Itoa(int(httpPortNumber)),
 					"--rls-port",

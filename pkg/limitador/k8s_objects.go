@@ -91,10 +91,10 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 					ImagePullSecrets: deploymentOptions.ImagePullSecrets,
 					Containers: []v1.Container{
 						{
-							Name:    "limitador",
-							Image:   image,
-							Command: deploymentOptions.Command,
-							Env:     deploymentOptions.EnvVar,
+							Name:  "limitador",
+							Image: image,
+							Args:  deploymentOptions.Args,
+							Env:   deploymentOptions.EnvVar,
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
