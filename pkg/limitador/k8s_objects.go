@@ -27,7 +27,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ServiceName(limitador),
-			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
+			Namespace: limitador.Namespace, // TODO: revisit later. For now assume same.
 			Labels:    Labels(limitador),
 		},
 		Spec: v1.ServiceSpec{
@@ -73,7 +73,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName(limitador),
-			Namespace: limitador.ObjectMeta.Namespace, // TODO: revisit later. For now assume same.
+			Namespace: limitador.Namespace, // TODO: revisit later. For now assume same.
 			Labels:    Labels(limitador),
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -154,6 +154,10 @@ func LimitsConfigMap(limitadorObj *limitadorv1alpha1.Limitador) (*v1.ConfigMap, 
 	}
 
 	return &v1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
 		Data: map[string]string{
 			LimitadorConfigFileName: string(limitsMarshalled),
 		},
@@ -183,9 +187,13 @@ func DeploymentName(limitadorObj *limitadorv1alpha1.Limitador) string {
 
 func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.PodDisruptionBudget {
 	pdb := &policyv1.PodDisruptionBudget{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PodDisruptionBudget",
+			APIVersion: "policy/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PodDisruptionBudgetName(limitadorObj),
-			Namespace: limitadorObj.ObjectMeta.Namespace,
+			Namespace: limitadorObj.Namespace,
 			Labels:    Labels(limitadorObj),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
@@ -213,7 +221,7 @@ func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
 func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
 	return map[string]string{
 		helpers.LabelKeyApp:               "limitador",
-		helpers.LabelKeyLimitadorResource: limitador.ObjectMeta.Name,
+		helpers.LabelKeyLimitadorResource: limitador.Name,
 	}
 }
 
@@ -225,12 +233,12 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      PVCName(limitador),
-			Namespace: limitador.ObjectMeta.Namespace,
+			Namespace: limitador.Namespace,
 			Labels:    Labels(limitador),
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-			Resources: v1.ResourceRequirements{
+			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					// Default value for resources
 					v1.ResourceStorage: resource.MustParse("1Gi"),
@@ -252,7 +260,7 @@ func PVC(limitador *limitadorv1alpha1.Limitador) *v1.PersistentVolumeClaim {
 
 		// Default value for resources
 		if limitador.Spec.Storage.Disk.PVC.Resources != nil {
-			pvc.Spec.Resources = v1.ResourceRequirements{
+			pvc.Spec.Resources = v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: limitador.Spec.Storage.Disk.PVC.Resources.Requests,
 				},

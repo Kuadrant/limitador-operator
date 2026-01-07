@@ -31,7 +31,7 @@ var (
 
 var _ = Describe("Limitador controller", func() {
 	const (
-		nodeTimeOut = NodeTimeout(time.Second * 30)
+		nodeTimeOut = NodeTimeout(time.Second * 40)
 		specTimeOut = SpecTimeout(time.Minute * 2)
 	)
 	var testNamespace string
@@ -433,34 +433,82 @@ var _ = Describe("Limitador controller", func() {
 			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
 		})
 
-		It("User tries adding side-cars to deployment CR", func(ctx SpecContext) {
-			deploymentObj := appsv1.Deployment{}
+		It("Should preserve sidecar containers when reconciling spec changes", func(ctx SpecContext) {
+			deployment := &appsv1.Deployment{}
 			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(
-					ctx,
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
-					&deploymentObj)).To(Succeed())
+					deployment)).To(Succeed())
 			}).WithContext(ctx).Should(Succeed())
 
-			Expect(deploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
-			containerObj := corev1.Container{Name: "newcontainer", Image: "someImage"}
+			Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(1))
+			Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("limitador"))
 
-			deploymentObj.Spec.Template.Spec.Containers = append(deploymentObj.Spec.Template.Spec.Containers, containerObj)
+			sidecarContainer := corev1.Container{
+				Name:    "monitoring-sidecar",
+				Image:   "busybox:latest",
+				Command: []string{"sleep", "infinity"},
+			}
 
-			Expect(k8sClient.Update(ctx, &deploymentObj)).Should(Succeed())
-			updateDeploymentObj := appsv1.Deployment{}
+			// Shorter grace period to speed up termination during cleanup
+			deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = ptr.To[int64](5)
+			deployment.Spec.Template.Spec.Containers = append(
+				deployment.Spec.Template.Spec.Containers,
+				sidecarContainer,
+			)
+			Expect(k8sClient.Update(ctx, deployment)).To(Succeed())
+
 			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(
-					ctx,
+				updatedDeployment := &appsv1.Deployment{}
+				g.Expect(k8sClient.Get(ctx,
 					types.NamespacedName{
 						Namespace: testNamespace,
 						Name:      limitador.DeploymentName(limitadorObj),
 					},
-					&updateDeploymentObj)).To(Succeed())
-				g.Expect(updateDeploymentObj.Spec.Template.Spec.Containers).To(HaveLen(1))
+					updatedDeployment)).To(Succeed())
+				g.Expect(updatedDeployment.Spec.Template.Spec.Containers).To(HaveLen(2))
+			}).WithContext(ctx).Should(Succeed())
+
+			// Trigger reconciliation by updating Limitador spec
+			Eventually(func(g Gomega) {
+				updateLimitador := &limitadorv1alpha1.Limitador{}
+				g.Expect(k8sClient.Get(ctx,
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitadorObj.Name,
+					},
+					updateLimitador)).To(Succeed())
+				updateLimitador.Spec.Replicas = ptr.To(2)
+				g.Expect(k8sClient.Update(ctx, updateLimitador)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				finalDeployment := &appsv1.Deployment{}
+				g.Expect(k8sClient.Get(ctx,
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					},
+					finalDeployment)).To(Succeed())
+
+				g.Expect(finalDeployment.Spec.Template.Spec.Containers).To(HaveLen(2))
+				var limitadorFound, sidecarFound bool
+				for _, c := range finalDeployment.Spec.Template.Spec.Containers {
+					if c.Name == "limitador" {
+						limitadorFound = true
+					}
+					if c.Name == "monitoring-sidecar" {
+						sidecarFound = true
+					}
+				}
+				g.Expect(limitadorFound).To(BeTrue(), "limitador container should exist")
+				g.Expect(sidecarFound).To(BeTrue(), "sidecar container should be preserved")
+
+				// Verify change was applied
+				g.Expect(*finalDeployment.Spec.Replicas).To(Equal(int32(2)))
 			}).WithContext(ctx).Should(Succeed())
 		}, specTimeOut)
 	})
@@ -731,6 +779,7 @@ var _ = Describe("Limitador controller", func() {
 			)
 		}, specTimeOut)
 	})
+
 })
 
 func basicLimitador(ns string) *limitadorv1alpha1.Limitador {

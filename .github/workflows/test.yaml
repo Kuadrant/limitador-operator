@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
         id: go
@@ -65,7 +65,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Create k8s Kind Cluster
@@ -96,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
         id: go
@@ -111,7 +111,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Run make verify-bundle
@@ -126,7 +126,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Run make verify-fmt
@@ -141,7 +141,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Run go mod tidy
@@ -159,7 +159,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Go Lint
@@ -173,7 +173,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Verify generate command
@@ -188,7 +188,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Verify generate command
@@ -203,7 +203,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v5 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Run make verify-helm-charts
