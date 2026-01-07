@@ -246,10 +246,6 @@ var _ = Describe("Limitador controller manages ports", func() {
 					Name: "grpc", ContainerPort: grpcPortNumber, Protocol: v1.ProtocolTCP,
 				}))
 
-				// Debug: Print actual args
-				actualArgs := newDeployment.Spec.Template.Spec.Containers[0].Args
-				GinkgoWriter.Printf("DEBUG: Actual args: %v\n", actualArgs)
-
 				g.Expect(newDeployment.Spec.Template.Spec.Containers[0].Args).To(Equal([]string{
 					"--http-port",
 					strconv.Itoa(int(httpPortNumber)),
