@@ -220,7 +220,7 @@ func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
 
 func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
 	return map[string]string{
-		helpers.LabelKeyApp:               "limitador",
+		helpers.LabelKeyApp:               helpers.LabelValueLimitador,
 		helpers.LabelKeyLimitadorResource: limitador.Name,
 	}
 }
