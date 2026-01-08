@@ -9,6 +9,7 @@ const (
 	DeleteTagAnnotation       = "limitador.kuadrant.io/delete"
 	LabelKeyApp               = "app"
 	LabelKeyLimitadorResource = "limitador-resource"
+	LabelValueLimitador       = "limitador"
 )
 
 func ObjectInfo(obj client.Object) string {
