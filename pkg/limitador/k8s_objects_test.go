@@ -86,18 +86,33 @@ func TestDeployment(t *testing.T) {
 		deployment := Deployment(limObj, DeploymentOptions{})
 		assert.DeepEqual(subT, deployment.Labels,
 			map[string]string{
-				"app":                "limitador",
-				"limitador-resource": "some-name",
+				"app":                          "limitador",
+				"limitador-resource":           "some-name",
+				"app.kubernetes.io/name":       helpers.LimitadorAppName,
+				"app.kubernetes.io/instance":   "some-name",
+				"app.kubernetes.io/component":  helpers.LimitadorAppName,
+				"app.kubernetes.io/managed-by": "limitador-operator",
+				"app.kubernetes.io/part-of":    "kuadrant",
 			})
 		assert.DeepEqual(subT, deployment.Spec.Template.Labels,
 			map[string]string{
-				"app":                "limitador",
-				"limitador-resource": "some-name",
+				"app":                          "limitador",
+				"limitador-resource":           "some-name",
+				"app.kubernetes.io/name":       helpers.LimitadorAppName,
+				"app.kubernetes.io/instance":   "some-name",
+				"app.kubernetes.io/component":  helpers.LimitadorAppName,
+				"app.kubernetes.io/managed-by": "limitador-operator",
+				"app.kubernetes.io/part-of":    "kuadrant",
 			})
 		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
 			map[string]string{
-				"app":                "limitador",
-				"limitador-resource": "some-name",
+				"app":                          "limitador",
+				"limitador-resource":           "some-name",
+				"app.kubernetes.io/name":       helpers.LimitadorAppName,
+				"app.kubernetes.io/instance":   "some-name",
+				"app.kubernetes.io/component":  helpers.LimitadorAppName,
+				"app.kubernetes.io/managed-by": "limitador-operator",
+				"app.kubernetes.io/part-of":    "kuadrant",
 			})
 	})
 
@@ -241,8 +256,13 @@ func TestLimitsConfigMap(t *testing.T) {
 		assert.Assert(subT, configMap != nil)
 		assert.DeepEqual(subT, configMap.Labels,
 			map[string]string{
-				"app":                "limitador",
-				"limitador-resource": "some-name",
+				"app":                          "limitador",
+				"limitador-resource":           "some-name",
+				"app.kubernetes.io/name":       helpers.LimitadorAppName,
+				"app.kubernetes.io/instance":   "some-name",
+				"app.kubernetes.io/component":  helpers.LimitadorAppName,
+				"app.kubernetes.io/managed-by": "limitador-operator",
+				"app.kubernetes.io/part-of":    "kuadrant",
 			})
 	})
 
@@ -340,8 +360,13 @@ func TestPVC(t *testing.T) {
 		pvc := PVC(limObj)
 		assert.DeepEqual(subT, pvc.Labels,
 			map[string]string{
-				"app":                "limitador",
-				"limitador-resource": "this-is-resource-name",
+				"app":                          "limitador",
+				"limitador-resource":           "this-is-resource-name",
+				"app.kubernetes.io/name":       helpers.LimitadorAppName,
+				"app.kubernetes.io/instance":   "this-is-resource-name",
+				"app.kubernetes.io/component":  helpers.LimitadorAppName,
+				"app.kubernetes.io/managed-by": "limitador-operator",
+				"app.kubernetes.io/part-of":    "kuadrant",
 			})
 	})
 

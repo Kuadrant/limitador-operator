@@ -24,18 +24,25 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/utils/env"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
 	"github.com/kuadrant/limitador-operator/controllers"
+	"github.com/kuadrant/limitador-operator/pkg/helpers"
 	"github.com/kuadrant/limitador-operator/pkg/log"
 	"github.com/kuadrant/limitador-operator/pkg/reconcilers"
 	//+kubebuilder:scaffold:imports
@@ -87,8 +94,46 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
+	cacheOptions := cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
+				}),
+			},
+			&appsv1.Deployment{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
+				}),
+			},
+			&policyv1.PodDisruptionBudget{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
+				}),
+			},
+			&corev1.Pod{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
+				}),
+			},
+			&corev1.PersistentVolumeClaim{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
+				}),
+			},
+		},
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
+		Scheme: scheme,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Secret{},
+				},
+			},
+		},
+		Cache:                  cacheOptions,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		WebhookServer:          webhook.NewServer(webhook.Options{Port: 9443}),
 		HealthProbeBindAddress: probeAddr,
