@@ -98,27 +98,27 @@ func main() {
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.ConfigMap{}: {
 				Label: labels.SelectorFromSet(labels.Set{
-					helpers.LabelKeyApp: helpers.LabelValueLimitador,
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
 				}),
 			},
 			&appsv1.Deployment{}: {
 				Label: labels.SelectorFromSet(labels.Set{
-					helpers.LabelKeyApp: helpers.LabelValueLimitador,
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
 				}),
 			},
 			&policyv1.PodDisruptionBudget{}: {
 				Label: labels.SelectorFromSet(labels.Set{
-					helpers.LabelKeyApp: helpers.LabelValueLimitador,
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
 				}),
 			},
 			&corev1.Pod{}: {
 				Label: labels.SelectorFromSet(labels.Set{
-					helpers.LabelKeyApp: helpers.LabelValueLimitador,
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
 				}),
 			},
 			&corev1.PersistentVolumeClaim{}: {
 				Label: labels.SelectorFromSet(labels.Set{
-					helpers.LabelKeyApp: helpers.LabelValueLimitador,
+					helpers.LabelKeyApp: helpers.LimitadorAppName,
 				}),
 			},
 		},

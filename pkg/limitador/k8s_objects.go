@@ -220,8 +220,13 @@ func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
 
 func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {
 	return map[string]string{
-		helpers.LabelKeyApp:               helpers.LabelValueLimitador,
+		helpers.LabelKeyApp:               helpers.LimitadorAppName,
 		helpers.LabelKeyLimitadorResource: limitador.Name,
+		"app.kubernetes.io/name":          helpers.LimitadorAppName,
+		"app.kubernetes.io/instance":      limitador.Name,
+		"app.kubernetes.io/component":     helpers.LimitadorAppName,
+		"app.kubernetes.io/managed-by":    "limitador-operator",
+		"app.kubernetes.io/part-of":       "kuadrant",
 	}
 }
 

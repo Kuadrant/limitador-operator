@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -9,7 +10,7 @@ const (
 	DeleteTagAnnotation       = "limitador.kuadrant.io/delete"
 	LabelKeyApp               = "app"
 	LabelKeyLimitadorResource = "limitador-resource"
-	LabelValueLimitador       = "limitador"
+	LimitadorAppName          = "limitador"
 )
 
 func ObjectInfo(obj client.Object) string {
