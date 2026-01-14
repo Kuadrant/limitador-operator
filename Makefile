@@ -279,7 +279,7 @@ test-unit: VERBOSE_FLAG = -v
 endif
 test-unit: clean-cov generate fmt vet ## Run Unit tests.
 	mkdir -p $(PROJECT_PATH)/coverage/unit
-	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out $(VERBOSE_FLAG) -timeout 0 $(TEST_PATTERN)
+	go test $(UNIT_DIRS) -coverprofile $(PROJECT_PATH)/coverage/unit/cover.out $(VERBOSE_FLAG) -timeout 0 $(TEST_PATTERN) -race
 
 ##@ Build
 build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
