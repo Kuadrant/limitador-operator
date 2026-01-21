@@ -170,8 +170,6 @@ func RecordReconcileResult(span trace.Span, result ctrl.Result, err error) {
 }
 
 // SetResourceOperation sets the operation type as a span attribute.
-// This follows OpenTelemetry best practices of using attributes rather than events
-// for categorizing what happened during the span.
 func SetResourceOperation(span trace.Span, operation string) {
 	span.SetAttributes(attribute.String(attrResourceOperation, operation))
 }

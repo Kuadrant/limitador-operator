@@ -55,42 +55,49 @@ type LimitadorReconciler struct {
 
 func (r *LimitadorReconciler) Reconcile(eventCtx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.Logger().WithValues("limitador", req.NamespacedName)
+	// Store base logger (without trace context) in context
+	ctx := observability.StoreBaseLogger(eventCtx, logger)
+	// Start reconcile span at the very beginning to capture the entire reconciliation
+	// This automatically refreshes the logger in context with the span's trace context
+	ctx, span := r.Tracer().StartReconcileSpan(ctx, req)
+	defer span.End()
+
+	if span.IsRecording() {
+		logger = logger.WithValues(
+			"trace_id", span.SpanContext().TraceID().String(),
+			"span_id", span.SpanContext().SpanID().String(),
+		)
+	}
+
 	logger.V(1).Info("Reconciling Limitador")
 
-	// Get Limitador object first to extract trace context from annotations
+	// Get Limitador object (now within the trace span)
 	limitadorObj := &limitadorv1alpha1.Limitador{}
-	if err := r.Client().Get(eventCtx, req.NamespacedName, limitadorObj); err != nil {
+	if err := r.Client().Get(ctx, req.NamespacedName, limitadorObj); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("no object found")
+			observability.RecordReconcileResult(span, ctrl.Result{}, nil)
 			return ctrl.Result{}, nil
 		}
 
 		logger.Error(err, "Failed to get Limitador object.")
+		observability.RecordError(span, err, "failed to get Limitador object")
 		return ctrl.Result{}, err
 	}
 
-	// Extract trace context from CR annotations as a LINK (not parent)
+	// Extract trace context from CR annotations and add as a LINK (not parent)
 	// Since reconciliation is event-driven and asynchronous, we use a link rather than
 	// a parent-child relationship to connect the operator trace with the operation that
-	// created/updated the CR (e.g., kubectl apply, GitOps controller)
-	var spanOpts []trace.SpanStartOption
+	// created/updated the CR
 	carrier := propagation.MapCarrier(limitadorObj.Annotations)
 	linkCtx := otel.GetTextMapPropagator().Extract(context.Background(), carrier)
 	linkSpanCtx := trace.SpanFromContext(linkCtx).SpanContext()
 
 	if linkSpanCtx.IsValid() {
-		spanOpts = append(spanOpts, trace.WithLinks(trace.Link{
+		span.AddLink(trace.Link{
 			SpanContext: linkSpanCtx,
-		}))
+		})
 	}
-
-	// Store base logger (without trace context) in context
-	ctx := observability.StoreBaseLogger(eventCtx, logger)
-
-	// Start reconcile span with link to the original operation (if traceparent exists)
-	// This automatically refreshes the logger in context with the span's trace context
-	ctx, span := r.Tracer().StartReconcileSpan(ctx, req, spanOpts...)
-	defer span.End()
 
 	// Add Limitador-specific attributes to span
 	storageType := "memory" // default
