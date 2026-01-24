@@ -71,7 +71,7 @@ type Provider struct {
 func NewConfig(version string) *Config {
 	serviceName := env.GetString(envServiceName, defaultServiceName)
 	endpoint := env.GetString(envOTLPEndpoint, defaultEndpoint)
-	insecure, _ := strconv.ParseBool(env.GetString(envOTLPInsecure, "true"))
+	insecure, _ := strconv.ParseBool(env.GetString(envOTLPInsecure, "false"))
 
 	// Parse resource attributes (key=value,key=value format)
 	resourceAttrs := make(map[string]string)

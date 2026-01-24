@@ -33,15 +33,9 @@ const (
 	tracerName = "limitador-operator"
 
 	// Span names
-	spanReconcile                    = "Reconcile"
-	spanReconcileSpec                = "reconcileSpec"
-	spanReconcileStatus              = "reconcileStatus"
-	spanReconcileService             = "reconcileService"
-	spanReconcilePVC                 = "reconcilePVC"
-	spanReconcileDeployment          = "reconcileDeployment"
-	spanReconcileLimitsConfigMap     = "reconcileLimitsConfigMap"
-	spanReconcilePodDisruptionBudget = "reconcilePodDisruptionBudget"
-	spanReconcilePodAnnotation       = "reconcilePodLimitsHashAnnotation"
+	spanReconcile       = "Reconcile"
+	spanReconcileSpec   = "reconcileSpec"
+	spanReconcileStatus = "reconcileStatus"
 
 	// Attribute keys for spans
 	attrK8sLimitadorReplicas  = "k8s.limitador.replicas"
@@ -121,23 +115,7 @@ func (t *Tracer) StartReconcileStatusSpan(ctx context.Context) (context.Context,
 // StartResourceSpan starts a span for reconciling a specific resource
 // Automatically refreshes the logger in context with the new span's trace context
 func (t *Tracer) StartResourceSpan(ctx context.Context, resourceType, namespace, name string) (context.Context, trace.Span) {
-	var spanName string
-	switch resourceType {
-	case "Service":
-		spanName = spanReconcileService
-	case "PersistentVolumeClaim":
-		spanName = spanReconcilePVC
-	case "Deployment":
-		spanName = spanReconcileDeployment
-	case "ConfigMap":
-		spanName = spanReconcileLimitsConfigMap
-	case "PodDisruptionBudget":
-		spanName = spanReconcilePodDisruptionBudget
-	case "PodAnnotation":
-		spanName = spanReconcilePodAnnotation
-	default:
-		spanName = fmt.Sprintf("reconcile%s", resourceType)
-	}
+	spanName := fmt.Sprintf("reconcile%s", resourceType)
 
 	ctx, span := t.tracer.Start(ctx, spanName,
 		trace.WithAttributes(
