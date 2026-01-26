@@ -292,7 +292,7 @@ run: export LOG_MODE = development
 run: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
 run: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
 run: manifests generate fmt vet ## Run a controller from your host.)
-	go run -ldflags "-X main.version=v$(VERSION) -X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go
+	go run -ldflags "-X main.version=v$(VERSION) -X main.gitSHA=${GIT_SHA} -X main.dirty=${DIRTY}" ./main.go $(MAIN_EXTRA_ARGS)
 
 docker-build: GIT_SHA=$(shell git rev-parse HEAD || echo "unknown")
 docker-build: DIRTY=$(shell $(PROJECT_PATH)/utils/check-git-dirty.sh || echo "unknown")
