@@ -97,6 +97,10 @@ func TestRedisDeploymentOptions(t *testing.T) {
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
 				Args: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
+				DeploymentStrategy: appsv1.DeploymentStrategy{
+					Type:          appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{},
+				},
 			},
 		)
 	})
