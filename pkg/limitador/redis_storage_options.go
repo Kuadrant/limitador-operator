@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,10 @@ func RedisDeploymentOptions(ctx context.Context, cl client.Client, defSecretName
 
 	return DeploymentStorageOptions{
 		Args: []string{"redis", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
+		DeploymentStrategy: appsv1.DeploymentStrategy{
+			Type:          appsv1.RollingUpdateDeploymentStrategyType,
+			RollingUpdate: &appsv1.RollingUpdateDeployment{},
+		},
 	}, nil
 }
 

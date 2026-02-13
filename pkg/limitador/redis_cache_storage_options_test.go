@@ -88,6 +88,10 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
 				Args: []string{"redis_cached", "$(LIMITADOR_OPERATOR_REDIS_URL)"},
+				DeploymentStrategy: appsv1.DeploymentStrategy{
+					Type:          appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{},
+				},
 			},
 		)
 	})
@@ -122,6 +126,10 @@ func TestRedisCachedDeploymentOptions(t *testing.T) {
 					"--max-cached", "4",
 					"--response-timeout", "5",
 					"--batch-size", "6",
+				},
+				DeploymentStrategy: appsv1.DeploymentStrategy{
+					Type:          appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{},
 				},
 			},
 		)

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	limitadorv1alpha1 "github.com/kuadrant/limitador-operator/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,5 +38,9 @@ func RedisCachedDeploymentOptions(ctx context.Context, cl client.Client, defSecr
 
 	return DeploymentStorageOptions{
 		Args: command,
+		DeploymentStrategy: appsv1.DeploymentStrategy{
+			Type:          appsv1.RollingUpdateDeploymentStrategyType,
+			RollingUpdate: &appsv1.RollingUpdateDeployment{},
+		},
 	}, nil
 }

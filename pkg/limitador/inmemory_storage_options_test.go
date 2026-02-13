@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gotest.tools/assert"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 func TestInMemoryDeploymentOptions(t *testing.T) {
@@ -13,6 +14,9 @@ func TestInMemoryDeploymentOptions(t *testing.T) {
 		assert.DeepEqual(subT, options,
 			DeploymentStorageOptions{
 				Args: []string{"memory"},
-			})
+				DeploymentStrategy: appsv1.DeploymentStrategy{
+					Type:          appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{},
+				}})
 	})
 }
