@@ -117,6 +117,9 @@ func TestDeployment(t *testing.T) {
 			Args: []string{"a", "b", "c"},
 		})
 		assert.Assert(subT, len(deployment.Spec.Template.Spec.Containers) == 1)
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Command,
+			[]string{"limitador-server"},
+		)
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Args,
 			[]string{"a", "b", "c"},
 		)
