@@ -203,7 +203,7 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 
 	podList := &corev1.PodList{}
 	options := &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
+		LabelSelector: labels.SelectorFromSet(limitador.SelectorLabels(limitadorObj)),
 		Namespace:     limitadorObj.Namespace,
 	}
 	if err := r.Client().List(ctx, podList, options); err != nil {

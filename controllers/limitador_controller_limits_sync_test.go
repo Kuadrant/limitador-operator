@@ -68,7 +68,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 		It("Should annotate limitador pods with annotation of limits cm resource version", func(ctx SpecContext) {
 			podList := &corev1.PodList{}
 			options := &client.ListOptions{
-				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
+				LabelSelector: labels.SelectorFromSet(limitador.SelectorLabels(limitadorObj)),
 				Namespace:     limitadorObj.Namespace,
 			}
 			Eventually(func(g Gomega) {
@@ -123,7 +123,7 @@ var _ = Describe("Limitador controller syncs limits to pod", func() {
 			// Check cm resource version of pods before update
 			podList := &corev1.PodList{}
 			options := &client.ListOptions{
-				LabelSelector: labels.SelectorFromSet(limitador.Labels(limitadorObj)),
+				LabelSelector: labels.SelectorFromSet(limitador.SelectorLabels(limitadorObj)),
 				Namespace:     limitadorObj.Namespace,
 			}
 			Eventually(func(g Gomega) {
