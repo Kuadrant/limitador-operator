@@ -45,7 +45,7 @@ func Service(limitador *limitadorv1alpha1.Limitador) *v1.Service {
 					TargetPort: intstr.FromString("grpc"),
 				},
 			},
-			Selector:  Labels(limitador),
+			Selector:  SelectorLabels(limitador),
 			ClusterIP: v1.ClusterIPNone,
 			Type:      v1.ServiceTypeClusterIP,
 		},
@@ -80,7 +80,7 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 			Replicas: &replicas,
 			Strategy: deploymentOptions.DeploymentStrategy,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: Labels(limitador),
+				MatchLabels: SelectorLabels(limitador),
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -91,10 +91,11 @@ func Deployment(limitador *limitadorv1alpha1.Limitador, deploymentOptions Deploy
 					ImagePullSecrets: deploymentOptions.ImagePullSecrets,
 					Containers: []v1.Container{
 						{
-							Name:  "limitador",
-							Image: image,
-							Args:  deploymentOptions.Args,
-							Env:   deploymentOptions.EnvVar,
+							Name:    "limitador",
+							Image:   image,
+							Command: []string{"limitador-server"},
+							Args:    deploymentOptions.Args,
+							Env:     deploymentOptions.EnvVar,
 							Ports: []v1.ContainerPort{
 								{
 									Name:          "http",
@@ -198,7 +199,7 @@ func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.Po
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: Labels(limitadorObj),
+				MatchLabels: SelectorLabels(limitadorObj),
 			},
 		},
 	}
@@ -216,6 +217,13 @@ func PodDisruptionBudget(limitadorObj *limitadorv1alpha1.Limitador) *policyv1.Po
 
 func PodDisruptionBudgetName(limitadorObj *limitadorv1alpha1.Limitador) string {
 	return fmt.Sprintf("limitador-%s", limitadorObj.Name)
+}
+
+func SelectorLabels(limitador *limitadorv1alpha1.Limitador) map[string]string {
+	return map[string]string{
+		helpers.LabelKeyApp:               helpers.LimitadorAppName,
+		helpers.LabelKeyLimitadorResource: limitador.Name,
+	}
 }
 
 func Labels(limitador *limitadorv1alpha1.Limitador) map[string]string {

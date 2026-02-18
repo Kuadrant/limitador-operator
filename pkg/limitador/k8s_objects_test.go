@@ -106,13 +106,8 @@ func TestDeployment(t *testing.T) {
 			})
 		assert.DeepEqual(subT, deployment.Spec.Selector.MatchLabels,
 			map[string]string{
-				"app":                          "limitador",
-				"limitador-resource":           "some-name",
-				"app.kubernetes.io/name":       helpers.LimitadorAppName,
-				"app.kubernetes.io/instance":   "some-name",
-				"app.kubernetes.io/component":  helpers.LimitadorAppName,
-				"app.kubernetes.io/managed-by": "limitador-operator",
-				"app.kubernetes.io/part-of":    "kuadrant",
+				"app":                "limitador",
+				"limitador-resource": "some-name",
 			})
 	})
 
@@ -122,6 +117,9 @@ func TestDeployment(t *testing.T) {
 			Args: []string{"a", "b", "c"},
 		})
 		assert.Assert(subT, len(deployment.Spec.Template.Spec.Containers) == 1)
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Command,
+			[]string{"limitador-server"},
+		)
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Containers[0].Args,
 			[]string{"a", "b", "c"},
 		)
@@ -229,7 +227,7 @@ func TestPodDisruptionBudget(t *testing.T) {
 	limitadorObj := newTestLimitadorObj("my-limitador-instance", "default", nil)
 	pdb := PodDisruptionBudget(limitadorObj)
 	assert.DeepEqual(t, pdb.Spec.MaxUnavailable, intStrOne)
-	assert.DeepEqual(t, pdb.Spec.Selector.MatchLabels, Labels(limitadorObj))
+	assert.DeepEqual(t, pdb.Spec.Selector.MatchLabels, SelectorLabels(limitadorObj))
 }
 
 func TestLimitsConfigMap(t *testing.T) {
