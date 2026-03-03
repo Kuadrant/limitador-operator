@@ -8,7 +8,7 @@ on:
         default: 0.0.0
         type: string
       operatorTag:
-        description: Operator tag
+        description: Image tag
         default: latest
         type: string
       limitadorVersion:
@@ -34,7 +34,7 @@ on:
         default: 0.0.0
         type: string
       operatorTag:
-        description: Operator tag
+        description: Image tag
         default: latest
         type: string
       limitadorVersion:
@@ -55,8 +55,6 @@ on:
         type: string
 
 env:
-  IMG_TAGS: ${{ inputs.operatorTag }}
-  VERSION: ${{ inputs.operatorVersion }}
   IMG_REGISTRY_HOST: quay.io
   IMG_REGISTRY_ORG: kuadrant
   MAIN_BRANCH_NAME: main
@@ -84,8 +82,7 @@ jobs:
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}
           tags: |
-            type=raw,value=${{ env.IMG_TAGS }}
-            type=raw,value=${{ github.sha }},enable={{is_default_branch}}
+            type=raw,value=${{ inputs.operatorTag }}
       - name: Build and Push Image
         id: build-image
         uses: docker/build-push-action@v5
@@ -122,10 +119,8 @@ jobs:
         id: make-bundle
         run: |
           make bundle \
-            REGISTRY=${{ env.IMG_REGISTRY_HOST }} \
-            ORG=${{ env.IMG_REGISTRY_ORG }} \
-            VERSION=${{ env.VERSION }} \
-            IMAGE_TAG=${{ inputs.operatorTag }} \
+            IMG=${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}:${{ inputs.operatorTag }} \
+            VERSION=${{ inputs.operatorVersion }} \
             LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
             DEFAULT_CHANNEL=${{ inputs.defaultChannel }} \
             CHANNELS=${{ inputs.channels }}
@@ -143,8 +138,7 @@ jobs:
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle
           tags: |
-            type=raw,value=${{ env.IMG_TAGS }}
-            type=raw,value=${{ github.sha }},enable={{is_default_branch}}
+            type=raw,value=${{ inputs.operatorTag }}
       - name: Build and Push Bundle Image
         id: build-bundle-image
         uses: docker/build-push-action@v5
@@ -176,9 +170,7 @@ jobs:
       - name: Generate Catalog Content
         run: |
           make catalog \
-            REGISTRY=${{ env.IMG_REGISTRY_HOST }} ORG=${{ env.IMG_REGISTRY_ORG }} \
-            VERSION=${{ env.VERSION }} IMAGE_TAG=${{ inputs.operatorTag }} \
-            LIMITADOR_VERSION=${{ inputs.limitadorVersion }} \
+            BUNDLE_IMG=${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle:${{ inputs.operatorTag }} \
             DEFAULT_CHANNEL=${{ inputs.defaultChannel }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -194,8 +186,7 @@ jobs:
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog
           tags: |
-            type=raw,value=${{ env.IMG_TAGS }}
-            type=raw,value=${{ github.sha }},enable={{is_default_branch}}
+            type=raw,value=${{ inputs.operatorTag }}
       - name: Build and Push Catalog Image
         id: build-catalog-image
         uses: docker/build-push-action@v5

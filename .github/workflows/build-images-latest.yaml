@@ -1,8 +1,9 @@
-name: Build images for branches
+name: Build images for latest
 
 on:
   push:
-    branches: ["*"]
+    branches:
+      - main
   workflow_dispatch: {}
 
 jobs:
@@ -12,6 +13,6 @@ jobs:
     secrets: inherit
     with:
       operatorVersion: 0.0.0
-      operatorTag: ${{ github.ref_name }}
-      quayImageExpiry: 1w
+      operatorTag: latest
+      quayImageExpiry: never
       limitadorVersion: latest
