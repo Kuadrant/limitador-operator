@@ -2,7 +2,7 @@ name: Schedule nightly build
 
 on:
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
   workflow_dispatch: {}
 
 jobs:
@@ -14,22 +14,21 @@ jobs:
     steps:
       - id: release_date
         run: echo "release_date=nightly-$(date +'%d-%m-%Y')" >> $GITHUB_OUTPUT
-  limitador-latest-revision:
-    name: Get the latest git commit from limitador in the default branch
+  limitador-latest-digest:
+    name: Get the digest sha of the latest docker image
     runs-on: ubuntu-latest
     outputs:
-      limitador_last_hash: ${{ steps.lastcommit.outputs.hash }}
+      limitador_digest: ${{ steps.get-digest.outputs.digest }}
     steps:
-      - id: lastcommit
-        uses: nmbgeek/github-action-get-latest-commit@v0.1.0
-        with:
-          repository: Kuadrant/limitador
-          # avoid the action failing due to API rate limiting
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Print Limitador's last commit revision
-        run: echo "${{ steps.lastcommit.outputs.hash }}"
+      - id: get-digest
+        name: Get digest of latest limitador image
+        run: |
+          # Get the manifest digest of the latest tag
+          DIGEST=$(docker manifest inspect quay.io/kuadrant/limitador:latest -v | jq -r '.Descriptor.digest')
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "Limitador latest digest: ${DIGEST}"
   check-limitador-image:
-    needs: limitador-latest-revision
+    needs: limitador-latest-digest
     name: Check limitador image exists
     runs-on: ubuntu-latest
     steps:
@@ -39,9 +38,9 @@ jobs:
           registry: quay.io
           organization: kuadrant
           repository: limitador
-          tag: ${{ needs.limitador-latest-revision.outputs.limitador_last_hash }}
+          tag: ${{ needs.limitador-latest-digest.outputs.limitador_digest }}
   workflow-build:
-    needs: [release-date, check-limitador-image, limitador-latest-revision]
+    needs: [release-date, check-limitador-image, limitador-latest-digest]
     name: Calls build-images-base workflow
     uses: ./.github/workflows/build-images-base.yaml
     secrets: inherit
@@ -49,4 +48,4 @@ jobs:
       operatorVersion: 0.0.0
       operatorTag: ${{ needs.release-date.outputs.release_date }}
       quayImageExpiry: 1w
-      limitadorVersion: ${{ needs.limitador-latest-revision.outputs.limitador_last_hash }}
+      limitadorVersion: ${{ needs.limitador-latest-digest.outputs.limitador_digest }}

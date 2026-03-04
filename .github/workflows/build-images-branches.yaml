@@ -2,7 +2,9 @@ name: Build images for branches
 
 on:
   push:
-    branches: ["*"]
+    branches:
+      - "*"
+      - "!main"
   workflow_dispatch: {}
 
 jobs:

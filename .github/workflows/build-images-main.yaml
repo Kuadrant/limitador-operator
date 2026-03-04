@@ -1,4 +1,4 @@
-name: Build images for latest
+name: Build images for main
 
 on:
   push:
