@@ -27,20 +27,8 @@ jobs:
           DIGEST=$(docker manifest inspect quay.io/kuadrant/limitador:latest -v | jq -r '.Descriptor.digest')
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
           echo "Limitador latest digest: ${DIGEST}"
-  check-limitador-image:
-    needs: limitador-latest-digest
-    name: Check limitador image exists
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check image
-        uses: cloudposse/github-action-docker-image-exists@0.2.0
-        with:
-          registry: quay.io
-          organization: kuadrant
-          repository: limitador
-          tag: ${{ needs.limitador-latest-digest.outputs.limitador_digest }}
   workflow-build:
-    needs: [release-date, check-limitador-image, limitador-latest-digest]
+    needs: [release-date, limitador-latest-digest]
     name: Calls build-images-base workflow
     uses: ./.github/workflows/build-images-base.yaml
     secrets: inherit
