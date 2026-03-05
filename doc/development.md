@@ -222,6 +222,15 @@ Remove CRDs
 make uninstall
 ```
 
+## Image builds
+
+| Docker image | Tag | Expiration | When | Bundle operand reference | Bundle operator reference |
+| --- | --- | --- | --- | --- | --- |
+| latest image | `latest` | never | Push to `main` | `latest` | `latest` |
+| branch images | `${{ github.ref_name }}` | 1w | Push to branch | `latest` | `${{ github.ref_name }}` |
+| nightly images | `${{ nightly-$(date +'%d-%m-%Y') }}` | 1w | Scheduled daily `cron: '0 0 * * *'` | digest sha of the `latest` docker image | `${{ nightly-$(date +'%d-%m-%Y') }}`  |
+| release images | release version | never | release created | release tag of the operand | release tag of the operator |
+
 [git_tool]:https://git-scm.com/downloads
 [operator-sdk]:https://github.com/operator-framework/operator-sdk
 [go]:https://golang.org/
