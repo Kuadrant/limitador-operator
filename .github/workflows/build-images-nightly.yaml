@@ -20,11 +20,13 @@ jobs:
     outputs:
       limitador_digest: ${{ steps.get-digest.outputs.digest }}
     steps:
+      - name: Install crane
+        uses: imjasonh/setup-crane@v0.1
       - id: get-digest
         name: Get digest of latest limitador image
         run: |
-          # Get the manifest digest of the latest tag
-          DIGEST=$(docker manifest inspect quay.io/kuadrant/limitador:latest -v | jq -r '.Descriptor.digest')
+          # Get the manifest digest of the latest tag (works for both single-arch and multi-arch images)
+          DIGEST=$(crane digest quay.io/kuadrant/limitador:latest)
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
           echo "Limitador latest digest: ${DIGEST}"
   workflow-build:
