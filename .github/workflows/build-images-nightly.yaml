@@ -37,5 +37,5 @@ jobs:
     with:
       operatorVersion: 0.0.0
       operatorTag: ${{ needs.release-date.outputs.release_date }}
-      quayImageExpiry: 1w
+      quayImageExpiry: 2w
       relatedImageLimitador: quay.io/kuadrant/limitador@${{ needs.limitador-latest-digest.outputs.limitador_digest }}
