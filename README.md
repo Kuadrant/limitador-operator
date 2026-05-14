@@ -54,6 +54,18 @@ how to test your changes before submitting a patch or opening a PR.
 Join us on the [#kuadrant](https://kubernetes.slack.com/archives/C05J0D0V525) channel in the Kubernetes Slack workspace, 
 for live discussions about the roadmap and more.
 
+## Profiling
+
+The operator supports runtime profiling via Go's built-in [pprof](https://pkg.go.dev/net/http/pprof) tooling. Enabled by default on `:8084`.
+
+Connect to a running instance:
+
+```bash
+kubectl port-forward -n limitador-operator-system deploy/limitador-operator-controller-manager 8084:8084
+go tool pprof -http=:8080 http://localhost:8084/debug/pprof/profile?seconds=30
+go tool pprof -http=:8080 http://localhost:8084/debug/pprof/heap
+```
+
 ## Licensing
 
 This software is licensed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
