@@ -38,10 +38,15 @@ jobs:
         with:
           go-version-file: go.mod
         id: go
-      - name: Create release branch
-        if: ${{ !startsWith(inputs.gitRef, 'release-v') }}
+      - name: Derive release branch name
+        id: release-branch
         run: |
-          git checkout -b release-v${{ inputs.limitadorOperatorVersion }}
+          release_branch=release-$(echo "${{ inputs.limitadorOperatorVersion }}" | sed 's/[+-].*//; s/\.[0-9]*$//')
+          echo "name=$release_branch" >> $GITHUB_OUTPUT
+      - name: Create release branch
+        if: ${{ !startsWith(inputs.gitRef, 'release-') }}
+        run: |
+          git checkout -b ${{ steps.release-branch.outputs.name }}
       - name: Prepare release
         run: |
           make prepare-release \
@@ -53,7 +58,7 @@ jobs:
           commit_message: "Prepared release v${{ inputs.limitadorOperatorVersion }}"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          branch: release-v${{ inputs.limitadorOperatorVersion }}
+          branch: ${{ steps.release-branch.outputs.name }}
           create_branch: true
           tagging_message: v${{ inputs.limitadorOperatorVersion }}
           commit_options: '--signoff'
@@ -64,6 +69,6 @@ jobs:
           tag_name: v${{ inputs.limitadorOperatorVersion }}
           body: "**This release enables installations of Limitador v${{ inputs.limitadorVersion }}**"
           generate_release_notes: true
-          target_commitish: release-v${{ inputs.limitadorOperatorVersion }}
+          target_commitish: ${{ steps.release-branch.outputs.name }}
           prerelease: ${{ inputs.prerelease }}
           token: ${{ secrets.KUADRANT_DEV_PAT }}
