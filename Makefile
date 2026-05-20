@@ -11,6 +11,10 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+# Include release defaults early so variables like LIMITADOR_VERSION and VERSION
+# are available for immediate (:=) and conditional (ifeq) evaluation below.
+-include $(PROJECT_PATH)/make/release.mk
+
 VERSION ?= 0.0.0
 
 # CHANNELS define the bundle channels used in the bundle.
