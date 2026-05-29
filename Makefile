@@ -6,6 +6,10 @@ SHELL = /usr/bin/env bash -o pipefail
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 
+# Load release defaults early so version-dependent conditionals (e.g. LIMITADOR_VERSION)
+# evaluate correctly. The full include at the bottom of this file is kept for other .mk files.
+-include $(PROJECT_PATH)/make/release.mk
+
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
