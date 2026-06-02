@@ -87,6 +87,11 @@ endif
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(IMAGE_TAG)
 
+# USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
+# You can enable this value if you would like to use SHA Based Digests
+# To enable set flag to true
+USE_IMAGE_DIGESTS ?= false
+
 # Image URL to use all building/pushing image targets
 DEFAULT_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_TAG)
 IMG ?= $(DEFAULT_IMG)
@@ -335,6 +340,12 @@ install-olm: operator-sdk
 uninstall-olm: operator-sdk
 	$(OPERATOR_SDK) olm uninstall
 
+# BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
+BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
+ifeq ($(USE_IMAGE_DIGESTS), true)
+	BUNDLE_GEN_FLAGS += --use-image-digests
+endif
+
 .PHONY: bundle
 bundle: kustomize operator-sdk yq manifests ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
@@ -346,7 +357,7 @@ bundle: kustomize operator-sdk yq manifests ## Generate bundle manifests and met
 	V="$(BUNDLE_VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	V="$(IMG)" $(YQ) eval '.metadata.annotations.containerImage = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
 	# Generate bundle
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(MAKE) bundle-post-generate
 	# Validate bundle manifests
 	$(OPERATOR_SDK) bundle validate ./bundle
@@ -361,6 +372,10 @@ bundle-post-generate:
 	# Set Openshift version in bundle annotations
 	$(YQ) -i '.annotations[$(OPENSHIFT_VERSIONS_ANNOTATION_KEY)] = $(OPENSHIFT_SUPPORTED_VERSIONS)' bundle/metadata/annotations.yaml
 	$(YQ) -i '(.annotations[$(OPENSHIFT_VERSIONS_ANNOTATION_KEY)] | key) headComment = "Custom annotations"' bundle/metadata/annotations.yaml
+ifeq ($(USE_IMAGE_DIGESTS),true)
+	# Deduplicate relatedImages and remove name field (operator-sdk --use-image-digests creates duplicates)
+	$(YQ) -i '.spec.relatedImages |= unique_by(.image) | del(.spec.relatedImages[].name)' bundle/manifests/limitador-operator.clusterserviceversion.yaml
+endif
 
 .PHONY: bundle-ignore-createdAt
 bundle-ignore-createdAt:
