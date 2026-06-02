@@ -77,7 +77,7 @@ BUNDLE_VERSION = $(VERSION)
 IMAGE_TAG = latest
 else ifeq ($(bundle_is_semantic),true)
 BUNDLE_VERSION = $(VERSION)
-IMAGE_TAG = v$(VERSION)
+IMAGE_TAG ?= v$(VERSION)
 else
 BUNDLE_VERSION = 0.0.0
 IMAGE_TAG ?= $(DEFAULT_IMAGE_TAG)
@@ -391,13 +391,19 @@ print-bundle-image: ## Pring bundle images.
 .PHONY: prepare-release
 prepare-release: IMG_TAG=v$(VERSION)
 prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
-	echo -e "#Release default values\\nLIMITADOR_VERSION=$(LIMITADOR_VERSION)\nIMG=$(IMAGE_TAG_BASE):$(IMG_TAG)\nBUNDLE_IMG=$(IMAGE_TAG_BASE)-bundle:$(IMG_TAG)\n\
-	CATALOG_IMG=$(IMAGE_TAG_BASE)-catalog:$(IMG_TAG)\nCHANNELS=$(CHANNELS)\nBUNDLE_CHANNELS=--channels=$(CHANNELS)\n\
-	VERSION=$(VERSION)" > $(RELEASE_FILE)
-	$(MAKE) bundle VERSION=$(VERSION) \
-		LIMITADOR_VERSION=$(LIMITADOR_VERSION) \
-	$(MAKE) helm-build VERSION=$(VERSION) \
-		LIMITADOR_VERSION=$(LIMITADOR_VERSION)
+	printf '%s\n' \
+		'#Release default values' \
+		'LIMITADOR_VERSION?=$(LIMITADOR_VERSION)' \
+		'IMAGE_TAG?=$(IMG_TAG)' \
+		'IMG?=$(IMAGE_TAG_BASE):$$(IMAGE_TAG)' \
+		'BUNDLE_IMG?=$(IMAGE_TAG_BASE)-bundle:$$(IMAGE_TAG)' \
+		'CATALOG_IMG?=$(IMAGE_TAG_BASE)-catalog:$$(IMAGE_TAG)' \
+		'CHANNELS?=$(CHANNELS)' \
+		'BUNDLE_CHANNELS?=--channels=$(CHANNELS)' \
+		'VERSION?=$(VERSION)' \
+		> $(RELEASE_FILE)
+	$(MAKE) bundle VERSION=$(VERSION) LIMITADOR_VERSION=$(LIMITADOR_VERSION)
+	$(MAKE) helm-build VERSION=$(VERSION) LIMITADOR_VERSION=$(LIMITADOR_VERSION)
 
 .PHONY: read-release-version
 read-release-version: ## Reads release version
