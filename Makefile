@@ -204,7 +204,7 @@ golangci-lint: $(GOLANGCI_LINT_V_BINARY) ## Download golangci-lint locally if ne
 $(GOLANGCI_LINT_V_BINARY): $(LOCALBIN)
 	@[ -f "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] || { \
 	set -e ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
 	mv $(GOLANGCI_LINT) $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION) ;\
 	} ;\
 	ln -sf $(shell basename $(GOLANGCI_LINT))-$(GOLANGCI_LINT_VERSION) $(GOLANGCI_LINT)
