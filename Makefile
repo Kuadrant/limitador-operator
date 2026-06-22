@@ -149,7 +149,7 @@ YQ_VERSION ?= v4.34.2
 OPM_VERSION ?= v1.48.0
 HELM_VERSION ?= v3.15.0
 KIND_VERSION ?= v0.23.0
-GOLANGCI_LINT_VERSION ?= v2.7.2
+GOLANGCI_LINT_VERSION ?= v2.12.2
 ACT_VERSION ?= latest
 
 ## Versioned Binaries (the actual files that 'make' will check for)
