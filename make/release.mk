@@ -6,4 +6,6 @@ BUNDLE_IMG?=quay.io/kuadrant/limitador-operator-bundle:$(IMAGE_TAG)
 CATALOG_IMG?=quay.io/kuadrant/limitador-operator-catalog:$(IMAGE_TAG)
 CHANNELS?=stable
 BUNDLE_CHANNELS?=--channels=stable
+DEFAULT_CHANNEL?=stable
+BUNDLE_DEFAULT_CHANNEL?=--default-channel=stable
 VERSION?=0.18.3
