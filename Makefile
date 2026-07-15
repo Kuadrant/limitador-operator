@@ -400,6 +400,8 @@ prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
 		'CATALOG_IMG?=$(IMAGE_TAG_BASE)-catalog:$$(IMAGE_TAG)' \
 		'CHANNELS?=$(CHANNELS)' \
 		'BUNDLE_CHANNELS?=--channels=$(CHANNELS)' \
+		'DEFAULT_CHANNEL?=$(DEFAULT_CHANNEL)' \
+		'BUNDLE_DEFAULT_CHANNEL?=--default-channel=$(DEFAULT_CHANNEL)' \
 		'VERSION?=$(VERSION)' \
 		> $(RELEASE_FILE)
 	$(MAKE) bundle VERSION=$(VERSION) LIMITADOR_VERSION=$(LIMITADOR_VERSION)
