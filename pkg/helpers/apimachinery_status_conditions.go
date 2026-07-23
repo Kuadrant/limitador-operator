@@ -19,7 +19,7 @@ func DeepCopyConditions(conditions []metav1.Condition) []metav1.Condition {
 
 // ConditionMarshal marshals the set of conditions as a JSON array, sorted by condition type.
 func ConditionMarshal(conditions []metav1.Condition) ([]byte, error) {
-	var condCopy []metav1.Condition
+	condCopy := make([]metav1.Condition, 0, len(conditions))
 	condCopy = append(condCopy, conditions...)
 	sort.Slice(condCopy, func(a, b int) bool {
 		return condCopy[a].Type < condCopy[b].Type

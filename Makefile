@@ -144,7 +144,7 @@ YQ_VERSION ?= v4.34.2
 OPM_VERSION ?= v1.48.0
 HELM_VERSION ?= v3.15.0
 KIND_VERSION ?= v0.23.0
-GOLANGCI_LINT_VERSION ?= v2.7.2
+GOLANGCI_LINT_VERSION ?= v2.12.2
 ACT_VERSION ?= latest
 
 ## Versioned Binaries (the actual files that 'make' will check for)
@@ -199,7 +199,7 @@ golangci-lint: $(GOLANGCI_LINT_V_BINARY) ## Download golangci-lint locally if ne
 $(GOLANGCI_LINT_V_BINARY): $(LOCALBIN)
 	@[ -f "$(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION)" ] || { \
 	set -e ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
 	mv $(GOLANGCI_LINT) $(GOLANGCI_LINT)-$(GOLANGCI_LINT_VERSION) ;\
 	} ;\
 	ln -sf $(shell basename $(GOLANGCI_LINT))-$(GOLANGCI_LINT_VERSION) $(GOLANGCI_LINT)

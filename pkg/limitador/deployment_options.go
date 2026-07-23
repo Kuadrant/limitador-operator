@@ -74,29 +74,27 @@ func DeploymentArgs(limObj *limitadorv1alpha1.Limitador, storageOptions Deployme
 }
 
 func DeploymentVolumeMounts(storageOptions DeploymentStorageOptions) []corev1.VolumeMount {
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      LimitsCMVolumeName,
-			MountPath: LimitadorCMMountPath,
-		},
-	}
+	volumeMounts := make([]corev1.VolumeMount, 0, 1+len(storageOptions.VolumeMounts))
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      LimitsCMVolumeName,
+		MountPath: LimitadorCMMountPath,
+	})
 	volumeMounts = append(volumeMounts, storageOptions.VolumeMounts...)
 	return volumeMounts
 }
 
 func DeploymentVolumes(limObj *limitadorv1alpha1.Limitador, storageOptions DeploymentStorageOptions) []corev1.Volume {
-	volumes := []corev1.Volume{
-		{
-			Name: LimitsCMVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: LimitsConfigMapName(limObj),
-					},
+	volumes := make([]corev1.Volume, 0, 1+len(storageOptions.Volumes))
+	volumes = append(volumes, corev1.Volume{
+		Name: LimitsCMVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: LimitsConfigMapName(limObj),
 				},
 			},
 		},
-	}
+	})
 	volumes = append(volumes, storageOptions.Volumes...)
 	return volumes
 }
