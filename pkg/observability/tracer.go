@@ -71,13 +71,14 @@ func NewTracer() *Tracer {
 // Automatically refreshes the logger in context with the new span's trace context
 func (t *Tracer) StartReconcileSpan(ctx context.Context, req ctrl.Request, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	// Base options for reconciliation spans
-	spanOpts := []trace.SpanStartOption{
+	spanOpts := make([]trace.SpanStartOption, 0, 2+len(opts))
+	spanOpts = append(spanOpts,
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(
 			semconv.K8SNamespaceNameKey.String(req.Namespace),
 			attribute.String("k8s.limitador.name", req.Name),
 		),
-	}
+	)
 
 	// Append any additional options (e.g., links)
 	spanOpts = append(spanOpts, opts...)

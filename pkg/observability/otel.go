@@ -125,10 +125,11 @@ func InitProvider(ctx context.Context, cfg *Config) (*Provider, error) {
 // newResource creates a resource with service information and custom attributes
 func newResource(cfg *Config) (*resource.Resource, error) {
 	// Start with service attributes
-	serviceAttrs := []attribute.KeyValue{
+	serviceAttrs := make([]attribute.KeyValue, 0, 2+len(cfg.ResourceAttributes))
+	serviceAttrs = append(serviceAttrs,
 		semconv.ServiceNameKey.String(cfg.ServiceName),
 		semconv.ServiceVersionKey.String(cfg.ServiceVersion),
-	}
+	)
 
 	// Add custom resource attributes from config
 	for k, v := range cfg.ResourceAttributes {
