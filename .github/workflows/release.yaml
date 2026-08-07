@@ -29,12 +29,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gettext-base
       - name: Checkout code at git ref
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
         with:
           ref: ${{ inputs.gitRef }}
           token: ${{ secrets.KUADRANT_DEV_PAT }}
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
           go-version-file: go.mod
         id: go
@@ -62,7 +62,7 @@ jobs:
           DEFAULT_CHANNEL=stable \
           LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
       - name: Commit and push
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # ratchet:stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Prepared release v${{ inputs.limitadorOperatorVersion }}"
           commit_user_name: "github-actions[bot]"
@@ -72,7 +72,7 @@ jobs:
           tagging_message: v${{ inputs.limitadorOperatorVersion }}
           commit_options: '--signoff'
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # ratchet:softprops/action-gh-release@v2
         with:
           name: v${{ inputs.limitadorOperatorVersion }}
           tag_name: v${{ inputs.limitadorOperatorVersion }}
