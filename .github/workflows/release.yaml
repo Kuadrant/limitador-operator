@@ -1,83 +1,221 @@
-name: Release Operator
+name: Release
 
 on:
   workflow_dispatch:
     inputs:
-      gitRef:
-        description: Commit SHA, tag or branch name
+      release-branch:
+        description: "Release branch (e.g. release-0.17)"
         required: true
-      limitadorOperatorVersion:
-        description: Limitador Operator bundle version
-        default: 0.0.0
         type: string
-      limitadorVersion:
-        description: Limitador service version
-        default: 0.0.0
-        type: string
-      prerelease:
-        description: Is the release a pre release?
-        required: false
-        type: boolean
+
+concurrency:
+  group: release-${{ inputs.release-branch }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMG_REGISTRY_HOST: quay.io
+  IMG_REGISTRY_ORG: kuadrant
+  OPERATOR_NAME: limitador-operator
 
 jobs:
-  build:
-    name: Release operator
+  read-version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+      major: ${{ steps.parse.outputs.major }}
+      minor: ${{ steps.parse.outputs.minor }}
+      limitador-version: ${{ steps.parse.outputs.limitador-version }}
+      release-commit-sha: ${{ steps.freeze-commit.outputs.sha }}
     steps:
-      - name: Install gettext-base
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gettext-base
-      - name: Checkout code at git ref
-        uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ inputs.gitRef }}
-          token: ${{ secrets.KUADRANT_DEV_PAT }}
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-        id: go
-      - name: Derive release branch name
-        id: release-branch
+          ref: ${{ inputs.release-branch }}
+          persist-credentials: false
+
+      - uses: ./.github/actions/install-yq
+
+      - name: Parse version from release.yaml
+        id: parse
+        run: .github/scripts/parse-version.sh
+
+      - name: Freeze release commit
+        id: freeze-commit
         run: |
-          version="${{ inputs.limitadorOperatorVersion }}"
-          if ! echo "$version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([+-].+)?$'; then
-            echo "Error: version must be semver format (e.g., 0.17.1, 0.18.0-rc1)"
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Frozen release commit: $SHA"
+
+      - name: Validate branch matches version
+        env:
+          INPUT_BRANCH: ${{ inputs.release-branch }}
+          MAJOR: ${{ steps.parse.outputs.major }}
+          MINOR: ${{ steps.parse.outputs.minor }}
+          VERSION: ${{ steps.parse.outputs.version }}
+        run: |
+          EXPECTED_BRANCH="release-${MAJOR}.${MINOR}"
+          if [[ "$INPUT_BRANCH" != "$EXPECTED_BRANCH" ]]; then
+            echo "::error::Branch '${INPUT_BRANCH}' does not match version ${VERSION} (expected branch: ${EXPECTED_BRANCH})"
             exit 1
           fi
-          # Extract major.minor from version (e.g., 0.17.1 → 0.17)
-          # Removes: pre-release suffix ([+-].*) and patch version (\.[0-9]*$)
-          release_branch=release-$(echo "$version" | sed 's/[+-].*//; s/\.[0-9]*$//')
-          echo "name=$release_branch" >> $GITHUB_OUTPUT
-      - name: Create release branch
-        if: ${{ !startsWith(inputs.gitRef, 'release-') }}
+
+      - name: Verify no existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.parse.outputs.version }}
         run: |
-          git checkout -b ${{ steps.release-branch.outputs.name }}
-      - name: Prepare release
+          TAG="v${VERSION}"
+          if gh release view "$TAG" &>/dev/null; then
+            echo "::error::GitHub Release $TAG already exists"
+            exit 1
+          fi
+
+  smoke-tests:
+    needs: read-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.read-version.outputs.release-commit-sha }}
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+
+      - name: Verify release version matches
+        env:
+          EXPECTED: v${{ needs.read-version.outputs.version }}
         run: |
-          make prepare-release \
-          VERSION=${{ inputs.limitadorOperatorVersion }} \
-          CHANNELS=stable \
-          DEFAULT_CHANNEL=stable \
-          LIMITADOR_VERSION=${{ inputs.limitadorVersion }}
-      - name: Commit and push
-        uses: stefanzweifel/git-auto-commit-action@v5
+          version=$(make read-release-version)
+          if [[ "$version" != "$EXPECTED" ]]; then
+            echo "::error::Makefile version '$version' does not match release version '$EXPECTED'"
+            exit 1
+          fi
+
+      - name: Verify manifests
+        run: make verify-manifests
+
+      - name: Verify bundle
+        run: make verify-bundle
+
+      - name: Verify helm charts
+        run: make verify-helm-charts
+
+      - name: Run unit tests
+        run: make test-unit
+
+  tag:
+    needs: [read-version, smoke-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          commit_message: "Prepared release v${{ inputs.limitadorOperatorVersion }}"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          branch: ${{ steps.release-branch.outputs.name }}
-          create_branch: true
-          tagging_message: v${{ inputs.limitadorOperatorVersion }}
-          commit_options: '--signoff'
-      - name: Create release
-        uses: softprops/action-gh-release@v2
+          ref: ${{ needs.read-version.outputs.release-commit-sha }}
+          fetch-depth: 0
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ needs.read-version.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+  build-images:
+    needs: [read-version, tag]
+    uses: ./.github/workflows/build-images-base.yaml
+    secrets:
+      IMG_REGISTRY_USERNAME: ${{ secrets.IMG_REGISTRY_USERNAME }}
+      IMG_REGISTRY_TOKEN: ${{ secrets.IMG_REGISTRY_TOKEN }}
+    with:
+      gitRef: ${{ needs.read-version.outputs.release-commit-sha }}
+      operatorVersion: ${{ needs.read-version.outputs.version }}
+      operatorTag: v${{ needs.read-version.outputs.version }}
+      relatedImageLimitador: quay.io/kuadrant/limitador:v${{ needs.read-version.outputs.limitador-version }}
+      channels: stable
+      defaultChannel: stable
+      quayImageExpiry: never
+
+  build-helm-chart:
+    needs: [read-version, tag]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          name: v${{ inputs.limitadorOperatorVersion }}
-          tag_name: v${{ inputs.limitadorOperatorVersion }}
-          body: "**This release enables installations of Limitador v${{ inputs.limitadorVersion }}**"
-          generate_release_notes: true
-          target_commitish: ${{ steps.release-branch.outputs.name }}
-          prerelease: ${{ inputs.prerelease }}
-          token: ${{ secrets.KUADRANT_DEV_PAT }}
+          ref: ${{ needs.read-version.outputs.release-commit-sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure GPG Key
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.HELM_CHARTS_SIGNING_KEY }}
+        run: |
+          mkdir -p ~/.gnupg
+          echo -n "$GPG_SIGNING_KEY" | base64 -d > ~/.gnupg/pubring.gpg
+
+      - name: Package and sign Helm Chart
+        run: |
+          GPG_KEY_UID="Kuadrant Development Team" \
+          make helm-package-sign
+
+      - name: Upload chart artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: helm-chart
+          path: |
+            limitador-operator-${{ needs.read-version.outputs.version }}.tgz
+            limitador-operator-${{ needs.read-version.outputs.version }}.tgz.prov
+
+      - name: Sync Helm Chart with repository
+        run: |
+          make helm-sync-package-created \
+            VERSION=${{ needs.read-version.outputs.version }} \
+            HELM_WORKFLOWS_TOKEN=${{ secrets.HELM_WORKFLOWS_TOKEN }}
+
+  create-release:
+    needs: [read-version, build-images, build-helm-chart]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.read-version.outputs.release-commit-sha }}
+
+      - name: Download helm chart artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: helm-chart
+          path: release-assets/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.read-version.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+
+          # Check if this is a prerelease version (contains -, e.g., 1.0.0-rc1)
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          else
+            PRERELEASE_FLAG=""
+          fi
+
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --generate-notes \
+            $PRERELEASE_FLAG \
+            release-assets/*

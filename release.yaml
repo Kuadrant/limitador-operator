@@ -1,0 +1,4 @@
+limitador-operator:
+  version: "0.0.0"
+dependencies:
+  limitador: "0.0.0"
