@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestLimitadorGetResourceRequirements(t *testing.T) {
@@ -89,6 +90,28 @@ func TestLimitadorLimits(t *testing.T) {
 		limits := []RateLimit{{Conditions: []string{"test"}}}
 		l := Limitador{Spec: LimitadorSpec{Limits: limits}}
 		assert.DeepEqual(subT, l.Limits(), limits)
+	})
+}
+
+func TestLimitadorReservationsEnabled(t *testing.T) {
+	t.Run("test true when reservations spec is nil", func(subT *testing.T) {
+		l := Limitador{}
+		assert.Equal(subT, l.ReservationsEnabled(), true)
+	})
+
+	t.Run("test true when reservations spec is set but enabled is nil", func(subT *testing.T) {
+		l := Limitador{Spec: LimitadorSpec{Reservations: &Reservations{}}}
+		assert.Equal(subT, l.ReservationsEnabled(), true)
+	})
+
+	t.Run("test true when enabled is explicitly true", func(subT *testing.T) {
+		l := Limitador{Spec: LimitadorSpec{Reservations: &Reservations{Enabled: ptr.To(true)}}}
+		assert.Equal(subT, l.ReservationsEnabled(), true)
+	})
+
+	t.Run("test false when enabled is explicitly false", func(subT *testing.T) {
+		l := Limitador{Spec: LimitadorSpec{Reservations: &Reservations{Enabled: ptr.To(false)}}}
+		assert.Equal(subT, l.ReservationsEnabled(), false)
 	})
 }
 

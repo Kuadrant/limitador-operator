@@ -1067,6 +1067,42 @@ spec:
                 type: string
               replicas:
                 type: integer
+              reservations:
+                description: |-
+                  Reservations configures Limitador's token rate limit reservations
+                  (the Reserve/Commit gRPC RPCs).
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled controls whether Limitador's Reserve/Commit gRPC RPCs
+                      (token rate limit reservations) are available.
+                      Defaults to true. When set to false, the operator passes
+                      `--disable-reservations` to the Limitador process.
+                    type: boolean
+                  maxFraction:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxFraction sets the maximum fraction of a limit's max_value that a
+                      single Reserve call may hold. Passed to the Limitador process as the
+                      `--max-reservation-fraction` command-line flag. Limitador's own
+                      default is 0.5.
+                      Must be greater than 0 and at most 1.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    x-kubernetes-validations:
+                    - message: maxFraction must be greater than 0
+                      rule: quantity(self).isGreaterThan(quantity('0'))
+                    - message: maxFraction must be at most 1
+                      rule: '!quantity(self).isGreaterThan(quantity(''1''))'
+                  maxTtl:
+                    description: |-
+                      MaxTTL sets the maximum ttl a Reserve call may request. Passed to the
+                      Limitador process as the `--max-reservation-ttl` command-line flag,
+                      in seconds. Limitador's own default is 60s.
+                    type: string
+                type: object
               resourceRequirements:
                 description: ResourceRequirements describes the compute resource requirements.
                 properties:

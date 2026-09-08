@@ -118,6 +118,11 @@ type LimitadorSpec struct {
 	// `--metric-labels-default` command-line flag.
 	// +optional
 	MetricLabelsDefault *string `json:"metricLabelsDefault,omitempty"`
+
+	// Reservations configures Limitador's token rate limit reservations
+	// (the Reserve/Commit gRPC RPCs).
+	// +optional
+	Reservations *Reservations `json:"reservations,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -354,6 +359,43 @@ type Ports struct {
 
 type Tracing struct {
 	Endpoint string `json:"endpoint"`
+}
+
+// Reservations configures Limitador's token rate limit reservations
+// (the Reserve/Commit gRPC RPCs).
+type Reservations struct {
+	// Enabled controls whether Limitador's Reserve/Commit gRPC RPCs
+	// (token rate limit reservations) are available.
+	// Defaults to true. When set to false, the operator passes
+	// `--disable-reservations` to the Limitador process.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// MaxFraction sets the maximum fraction of a limit's max_value that a
+	// single Reserve call may hold. Passed to the Limitador process as the
+	// `--max-reservation-fraction` command-line flag. Limitador's own
+	// default is 0.5.
+	// Must be greater than 0 and at most 1.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="quantity(self).isGreaterThan(quantity('0'))",message="maxFraction must be greater than 0"
+	// +kubebuilder:validation:XValidation:rule="!quantity(self).isGreaterThan(quantity('1'))",message="maxFraction must be at most 1"
+	MaxFraction *resource.Quantity `json:"maxFraction,omitempty"`
+
+	// MaxTTL sets the maximum ttl a Reserve call may request. Passed to the
+	// Limitador process as the `--max-reservation-ttl` command-line flag,
+	// in seconds. Limitador's own default is 60s.
+	// +optional
+	MaxTTL *metav1.Duration `json:"maxTtl,omitempty"`
+}
+
+// ReservationsEnabled returns whether token rate limit reservations are
+// enabled for this Limitador instance. Defaults to true.
+func (l *Limitador) ReservationsEnabled() bool {
+	if l.Spec.Reservations == nil || l.Spec.Reservations.Enabled == nil {
+		return true
+	}
+
+	return *l.Spec.Reservations.Enabled
 }
 
 // +kubebuilder:validation:XValidation:rule="!(has(self.maxUnavailable) && has(self.minAvailable))",message="pdb spec invalid, maxUnavailable and minAvailable are mutually exclusive"

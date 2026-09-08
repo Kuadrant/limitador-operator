@@ -260,6 +260,102 @@ var _ = Describe("Limitador controller", func() {
 		}, specTimeOut)
 	})
 
+	Context("Creating a new Limitador object with reservations disabled", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func(ctx SpecContext) {
+			limitadorObj = basicLimitador(testNamespace)
+			limitadorObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+				Enabled: ptr.To(false),
+			}
+
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		})
+
+		It("Should create a new deployment with --disable-reservations command line arg", func(ctx SpecContext) {
+			createdLimitadorDeployment := appsv1.Deployment{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(
+					ctx,
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					},
+					&createdLimitadorDeployment)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
+
+			Expect(createdLimitadorDeployment.Spec.Template.Spec.Containers[0].Args).To(
+				HaveExactElements(
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"--disable-reservations",
+					"/home/limitador/etc/limitador-config.yaml",
+					"memory",
+				),
+			)
+		}, specTimeOut)
+	})
+
+	Context("Reconciling command line args for reservations", func() {
+		var limitadorObj *limitadorv1alpha1.Limitador
+
+		BeforeEach(func(ctx SpecContext) {
+			limitadorObj = basicLimitador(testNamespace)
+
+			Expect(k8sClient.Create(ctx, limitadorObj)).Should(Succeed())
+			Eventually(testLimitadorIsReady(ctx, limitadorObj)).WithContext(ctx).Should(Succeed())
+		})
+
+		It("Should modify the limitador deployment command line args to disable reservations", func(ctx SpecContext) {
+			updatedLimitador := limitadorv1alpha1.Limitador{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(
+					ctx,
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitadorObj.Name,
+					},
+					&updatedLimitador)).To(Succeed())
+
+				g.Expect(updatedLimitador.Spec.Reservations).To(BeNil())
+
+				updatedLimitador.Spec.Reservations = &limitadorv1alpha1.Reservations{
+					Enabled:     ptr.To(false),
+					MaxFraction: ptr.To(resource.MustParse("0.75")),
+					MaxTTL:      &metav1.Duration{Duration: 2 * time.Minute},
+				}
+				g.Expect(k8sClient.Update(ctx, &updatedLimitador)).To(Succeed())
+			}).WithContext(ctx).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				updatedLimitadorDeployment := appsv1.Deployment{}
+				g.Expect(k8sClient.Get(
+					ctx,
+					types.NamespacedName{
+						Namespace: testNamespace,
+						Name:      limitador.DeploymentName(limitadorObj),
+					},
+					&updatedLimitadorDeployment)).To(Succeed())
+				g.Expect(updatedLimitadorDeployment.Spec.Template.Spec.Containers[0].Args).To(Equal([]string{
+					"--http-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+					"--rls-port",
+					strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+					"--disable-reservations",
+					"--max-reservation-fraction",
+					"0.75",
+					"--max-reservation-ttl",
+					"120",
+					"/home/limitador/etc/limitador-config.yaml",
+					"memory",
+				}))
+			}).WithContext(ctx).Should(Succeed())
+		}, specTimeOut)
+	})
+
 	Context("Reconciling command line args for telemetry", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 
