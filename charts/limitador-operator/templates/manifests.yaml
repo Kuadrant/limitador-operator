@@ -1549,7 +1549,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      control-plane: controller-manager
+      app: limitador-operator
   template:
     metadata:
       labels:
