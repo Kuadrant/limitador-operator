@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -77,7 +78,7 @@ func DeploymentArgs(limObj *limitadorv1alpha1.Limitador, storageOptions Deployme
 	}
 
 	if limObj.Spec.Reservations != nil && limObj.Spec.Reservations.MaxTTL != nil {
-		seconds := int64(limObj.Spec.Reservations.MaxTTL.Duration.Seconds())
+		seconds := int64(limObj.Spec.Reservations.MaxTTL.Duration / time.Second)
 		args = append(args, "--max-reservation-ttl", strconv.FormatInt(seconds, 10))
 	}
 

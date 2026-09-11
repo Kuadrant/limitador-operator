@@ -384,7 +384,10 @@ type Reservations struct {
 	// MaxTTL sets the maximum ttl a Reserve call may request. Passed to the
 	// Limitador process as the `--max-reservation-ttl` command-line flag,
 	// in seconds. Limitador's own default is 60s.
+	// Must be a positive duration expressed in whole seconds.
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="maxTtl must be greater than 0"
+	// +kubebuilder:validation:XValidation:rule="duration(self).getMilliseconds() % 1000 == 0",message="maxTtl must be a whole number of seconds"
 	MaxTTL *metav1.Duration `json:"maxTtl,omitempty"`
 }
 

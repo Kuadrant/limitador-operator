@@ -299,6 +299,32 @@ var _ = Describe("Limitador controller", func() {
 		}, specTimeOut)
 	})
 
+	Context("Creating a new Limitador object with an invalid reservations maxTtl", func() {
+		It("Should reject a maxTtl with sub-second precision", func(ctx SpecContext) {
+			limitadorObj := basicLimitador(testNamespace)
+			limitadorObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+				MaxTTL: &metav1.Duration{Duration: 500 * time.Millisecond},
+			}
+
+			err := k8sClient.Create(ctx, limitadorObj)
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsInvalid(err)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("maxTtl must be a whole number of seconds"))
+		}, specTimeOut)
+
+		It("Should reject a non-positive maxTtl", func(ctx SpecContext) {
+			limitadorObj := basicLimitador(testNamespace)
+			limitadorObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+				MaxTTL: &metav1.Duration{Duration: 0},
+			}
+
+			err := k8sClient.Create(ctx, limitadorObj)
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsInvalid(err)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("maxTtl must be greater than 0"))
+		}, specTimeOut)
+	})
+
 	Context("Reconciling command line args for reservations", func() {
 		var limitadorObj *limitadorv1alpha1.Limitador
 

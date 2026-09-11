@@ -194,6 +194,15 @@ func TestDeploymentArgs(t *testing.T) {
 			})
 	})
 
+	t.Run("when reservations max ttl is an exact number of seconds not divisible by 60, no truncation occurs", func(subT *testing.T) {
+		limObj := basicLimitador()
+		limObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+			MaxTTL: &metav1.Duration{Duration: 61 * time.Second},
+		}
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.Assert(subT, is.Contains(args, "61"))
+	})
+
 	t.Run("command from tracing endpoint appended", func(subT *testing.T) {
 		testEndpoint := "rpc://tracing-endpoint:4317"
 		limObj := basicLimitador()

@@ -1101,7 +1101,13 @@ spec:
                       MaxTTL sets the maximum ttl a Reserve call may request. Passed to the
                       Limitador process as the `--max-reservation-ttl` command-line flag,
                       in seconds. Limitador's own default is 60s.
+                      Must be a positive duration expressed in whole seconds.
                     type: string
+                    x-kubernetes-validations:
+                    - message: maxTtl must be greater than 0
+                      rule: duration(self) > duration('0s')
+                    - message: maxTtl must be a whole number of seconds
+                      rule: duration(self).getMilliseconds() % 1000 == 0
                 type: object
               resourceRequirements:
                 description: ResourceRequirements describes the compute resource requirements.
