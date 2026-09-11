@@ -373,8 +373,7 @@ type Reservations struct {
 
 	// MaxFraction sets the maximum fraction of a limit's max_value that a
 	// single Reserve call may hold. Passed to the Limitador process as the
-	// `--max-reservation-fraction` command-line flag. Limitador's own
-	// default is 0.5.
+	// `--max-reservation-fraction` command-line flag.
 	// Must be greater than 0 and at most 1.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="quantity(self).isGreaterThan(quantity('0'))",message="maxFraction must be greater than 0"
@@ -383,7 +382,7 @@ type Reservations struct {
 
 	// MaxTTL sets the maximum ttl a Reserve call may request. Passed to the
 	// Limitador process as the `--max-reservation-ttl` command-line flag,
-	// in seconds. Limitador's own default is 60s.
+	// in seconds.
 	// Must be a positive duration expressed in whole seconds.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="duration(self) > duration('0s')",message="maxTtl must be greater than 0"
