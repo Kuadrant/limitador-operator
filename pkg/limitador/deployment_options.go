@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,6 +66,20 @@ func DeploymentArgs(limObj *limitadorv1alpha1.Limitador, storageOptions Deployme
 	// sets the metrics-label-default
 	if limObj.Spec.MetricLabelsDefault != nil {
 		args = append(args, "--metric-labels-default", *limObj.Spec.MetricLabelsDefault)
+	}
+
+	if !limObj.ReservationsEnabled() {
+		args = append(args, "--disable-reservations")
+	}
+
+	if limObj.Spec.Reservations != nil && limObj.Spec.Reservations.MaxFraction != nil {
+		fraction := limObj.Spec.Reservations.MaxFraction.AsApproximateFloat64()
+		args = append(args, "--max-reservation-fraction", strconv.FormatFloat(fraction, 'f', -1, 64))
+	}
+
+	if limObj.Spec.Reservations != nil && limObj.Spec.Reservations.MaxTTL != nil {
+		seconds := int64(limObj.Spec.Reservations.MaxTTL.Duration / time.Second)
+		args = append(args, "--max-reservation-ttl", strconv.FormatInt(seconds, 10))
 	}
 
 	args = append(args, filepath.Join(LimitadorCMMountPath, LimitadorConfigFileName))
