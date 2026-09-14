@@ -3,6 +3,10 @@ name: Build Images
 on:
   workflow_call:
     inputs:
+      gitRef:
+        description: Git ref (branch, tag, or commit SHA) to check out and build from
+        default: ""
+        type: string
       operatorVersion:
         description: Operator bundle version
         default: 0.0.0
@@ -27,8 +31,17 @@ on:
         description: When to expire the built quay images. The time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively, from the time the image is built.
         default: never
         type: string
+    secrets:
+      IMG_REGISTRY_USERNAME:
+        required: true
+      IMG_REGISTRY_TOKEN:
+        required: true
   workflow_dispatch:
     inputs:
+      gitRef:
+        description: Git ref (branch, tag, or commit SHA) to check out and build from
+        default: ""
+        type: string
       operatorVersion:
         description: Operator bundle version
         default: 0.0.0
@@ -67,25 +80,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.gitRef || github.sha }}
+      - name: Resolve checked-out commit SHA
+        id: gitsha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Login to container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}
           tags: |
             type=raw,value=${{ inputs.operatorTag }}
       - name: Build and Push Image
         id: build-image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: ./Dockerfile
@@ -95,7 +113,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             QUAY_IMAGE_EXPIRY=${{ inputs.quayImageExpiry }}
-            GIT_SHA=${{ github.sha }}
+            GIT_SHA=${{ steps.gitsha.outputs.sha }}
             DIRTY=false
             VERSION=${{ inputs.operatorVersion }}
       - name: Print Image URL
@@ -109,9 +127,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.gitRef || github.sha }}
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: go.mod
         id: go
@@ -125,23 +145,23 @@ jobs:
             DEFAULT_CHANNEL=${{ inputs.defaultChannel }} \
             CHANNELS=${{ inputs.channels }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Login to container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
       - name: Extract bundle metadata
         id: bundle-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle
           tags: |
             type=raw,value=${{ inputs.operatorTag }}
       - name: Build and Push Bundle Image
         id: build-bundle-image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: ./bundle.Dockerfile
@@ -161,9 +181,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ inputs.gitRef || github.sha }}
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: go.mod
         id: go
@@ -173,23 +195,23 @@ jobs:
             BUNDLE_IMG=${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle:${{ inputs.operatorTag }} \
             DEFAULT_CHANNEL=${{ inputs.defaultChannel }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Login to container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
       - name: Extract catalog metadata
         id: catalog-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog
           tags: |
             type=raw,value=${{ inputs.operatorTag }}
       - name: Build and Push Catalog Image
         id: build-catalog-image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./catalog
           file: ./catalog/${{ env.OPERATOR_NAME }}-catalog.Dockerfile
