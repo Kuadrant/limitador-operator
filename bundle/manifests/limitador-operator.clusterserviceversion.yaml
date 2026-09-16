@@ -37,7 +37,7 @@ metadata:
     capabilities: Basic Install
     categories: Integration & Delivery
     containerImage: quay.io/kuadrant/limitador-operator:latest
-    createdAt: "2026-09-10T10:36:35Z"
+    createdAt: "2026-09-16T12:12:24Z"
     description: The Limitador operator installs and maintains limitador instances
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -140,8 +140,8 @@ spec:
         serviceAccountName: limitador-operator-controller-manager
       deployments:
       - label:
-          control-plane: controller-manager
-        name: limitador-operator-controller-manager
+          app: limitador-operator
+        name: limitador-operator-manager
         spec:
           replicas: 1
           selector:
@@ -152,7 +152,6 @@ spec:
             metadata:
               labels:
                 app: limitador-operator
-                control-plane: controller-manager
             spec:
               containers:
               - args:

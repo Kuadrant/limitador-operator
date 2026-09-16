@@ -66,7 +66,7 @@ To enable control plane tracing in a deployed operator, add the environment vari
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: limitador-operator-controller-manager
+  name: limitador-operator-manager
 spec:
   template:
     spec:

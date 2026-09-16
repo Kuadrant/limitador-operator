@@ -3,7 +3,7 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    control-plane: controller-manager
+    app: limitador-operator
   name: limitador-operator-metrics
 spec:
   ports:
@@ -12,6 +12,5 @@ spec:
     targetPort: metrics
   selector:
     app: limitador-operator
-    control-plane: controller-manager
 status:
   loadBalancer: {}

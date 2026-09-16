@@ -4,7 +4,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    control-plane: controller-manager
+    app: limitador-operator
   name: controller-manager-metrics-monitor
   namespace: system
 spec:
@@ -14,5 +14,4 @@ spec:
       scheme: http
   selector:
     matchLabels:
-      control-plane: controller-manager
       app: limitador-operator

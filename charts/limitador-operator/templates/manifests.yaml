@@ -1524,8 +1524,8 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app: limitador-operator
     app.kubernetes.io/managed-by: helm
-    control-plane: controller-manager
   name: limitador-operator-metrics
   namespace: '{{ .Release.Namespace }}'
 spec:
@@ -1535,15 +1535,14 @@ spec:
     targetPort: metrics
   selector:
     app: limitador-operator
-    control-plane: controller-manager
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app: limitador-operator
     app.kubernetes.io/managed-by: helm
-    control-plane: controller-manager
-  name: limitador-operator-controller-manager
+  name: limitador-operator-manager
   namespace: '{{ .Release.Namespace }}'
 spec:
   replicas: 1
@@ -1555,7 +1554,6 @@ spec:
       labels:
         app: limitador-operator
         app.kubernetes.io/managed-by: helm
-        control-plane: controller-manager
     spec:
       containers:
       - args:

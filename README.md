@@ -61,7 +61,7 @@ The operator supports runtime profiling via Go's built-in [pprof](https://pkg.go
 Connect to a running instance:
 
 ```bash
-kubectl port-forward -n limitador-operator-system deploy/limitador-operator-controller-manager 8084:8084
+kubectl port-forward -n limitador-operator-system deploy/limitador-operator-manager 8084:8084
 go tool pprof -http=:8080 http://localhost:8084/debug/pprof/profile?seconds=30
 go tool pprof -http=:8080 http://localhost:8084/debug/pprof/heap
 ```

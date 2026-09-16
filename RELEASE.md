@@ -37,11 +37,11 @@
    ```
     The output should be:
    ```
-   deployment.apps/limitador-operator-controller-manager condition met
+   deployment.apps/limitador-operator-manager condition met
    ```
    4.3. Check the logs:
    ```sh
-   kubectl -n limitador-system logs deployment/limitador-operator-controller-manager
+   kubectl -n limitador-system logs deployment/limitador-operator-manager
    ```
    4.4. Check the version of the components deployed:
    ```sh
