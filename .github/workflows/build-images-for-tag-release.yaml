@@ -18,18 +18,18 @@ jobs:
       image: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # ratchet:docker/setup-buildx-action@v3
       - name: Login to container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2
         with:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # ratchet:docker/metadata-action@v5
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}
           flavor: |
@@ -49,7 +49,7 @@ jobs:
       - name: Build and Push Image
         if: github.repository_owner == 'kuadrant'
         id: build-image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # ratchet:docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
@@ -74,7 +74,7 @@ jobs:
       image: ${{ steps.bundle-meta.outputs.tags }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Install yq tool
         run: |
           # following sub-shells running make target should have yq already installed
@@ -90,16 +90,16 @@ jobs:
         if: ${{ needs.build.outputs.image != steps.parsed-operator-image.outputs.url }}
         run: exit 1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # ratchet:docker/setup-buildx-action@v3
       - name: Login to container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2
         with:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
       - name: Extract bundle metadata
         id: bundle-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # ratchet:docker/metadata-action@v5
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-bundle
           flavor: |
@@ -109,7 +109,7 @@ jobs:
       - name: Build and Push Bundle Image
         if: github.repository_owner == 'kuadrant'
         id: build-bundle-image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # ratchet:docker/build-push-action@v5
         with:
           context: .
           file: ./bundle.Dockerfile
@@ -130,7 +130,7 @@ jobs:
       image: ${{ steps.catalog-meta.outputs.tags }}
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Install yq tool
         run: |
           # following sub-shells running make target should have yq already installed
@@ -148,16 +148,16 @@ jobs:
       - name: Generate Catalog Content
         run: make catalog DEFAULT_CHANNEL=stable
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # ratchet:docker/setup-buildx-action@v3
       - name: Login to container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # ratchet:docker/login-action@v2
         with:
           username: ${{ secrets.IMG_REGISTRY_USERNAME }}
           password: ${{ secrets.IMG_REGISTRY_TOKEN }}
           registry: ${{ env.IMG_REGISTRY_HOST }}
       - name: Extract catalog metadata
         id: catalog-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # ratchet:docker/metadata-action@v5
         with:
           images: ${{ env.IMG_REGISTRY_HOST }}/${{ env.IMG_REGISTRY_ORG }}/${{ env.OPERATOR_NAME }}-catalog
           flavor: |
@@ -167,7 +167,7 @@ jobs:
       - name: Build and Push Catalog Image
         if: github.repository_owner == 'kuadrant'
         id: build-catalog-image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # ratchet:docker/build-push-action@v5
         with:
           context: ./catalog
           file: ./catalog/${{ env.OPERATOR_NAME }}-catalog.Dockerfile
