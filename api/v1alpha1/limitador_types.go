@@ -373,14 +373,17 @@ type Reservations struct {
 
 	// The XValidation rules below use the CEL quantity() library function,
 	// which requires Kubernetes 1.28+ (see minKubeVersion in the CSV).
+	// self is int|string (x-kubernetes-int-or-string), so it must be
+	// converted to string before being passed to quantity() when it holds
+	// an integer value; quantity() has no overload for int.
 
 	// MaxFraction sets the maximum fraction of a limit's max_value that a
 	// single Reserve call may hold. Passed to the Limitador process as the
 	// `--max-reservation-fraction` command-line flag.
 	// Must be greater than 0 and at most 1.
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="quantity(self).isGreaterThan(quantity('0'))",message="maxFraction must be greater than 0"
-	// +kubebuilder:validation:XValidation:rule="!quantity(self).isGreaterThan(quantity('1'))",message="maxFraction must be at most 1"
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? quantity(self).isGreaterThan(quantity('0')) : quantity(string(self)).isGreaterThan(quantity('0'))",message="maxFraction must be greater than 0"
+	// +kubebuilder:validation:XValidation:rule="type(self) == string ? !quantity(self).isGreaterThan(quantity('1')) : !quantity(string(self)).isGreaterThan(quantity('1'))",message="maxFraction must be at most 1"
 	MaxFraction *resource.Quantity `json:"maxFraction,omitempty"`
 
 	// MaxTTL sets the maximum ttl a Reserve call may request. Passed to the
