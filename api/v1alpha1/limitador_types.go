@@ -371,6 +371,9 @@ type Reservations struct {
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 
+	// The XValidation rules below use the CEL quantity() library function,
+	// which requires Kubernetes 1.28+ (see minKubeVersion in the CSV).
+
 	// MaxFraction sets the maximum fraction of a limit's max_value that a
 	// single Reserve call may hold. Passed to the Limitador process as the
 	// `--max-reservation-fraction` command-line flag.
