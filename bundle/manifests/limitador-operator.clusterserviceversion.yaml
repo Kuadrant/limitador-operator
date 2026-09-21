@@ -37,7 +37,7 @@ metadata:
     capabilities: Basic Install
     categories: Integration & Delivery
     containerImage: quay.io/kuadrant/limitador-operator:latest
-    createdAt: "2026-09-11T10:28:50Z"
+    createdAt: "2026-09-18T11:23:41Z"
     description: The Limitador operator installs and maintains limitador instances
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -243,7 +243,7 @@ spec:
   - email: didier@redhat.com
     name: Didier Di Cesare
   maturity: alpha
-  minKubeVersion: 1.25.0
+  minKubeVersion: 1.28.0
   provider:
     name: Red Hat
     url: https://github.com/Kuadrant/limitador-operator
