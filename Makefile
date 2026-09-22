@@ -140,6 +140,7 @@ KIND ?= $(LOCALBIN)/kind
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 GINKGO ?= $(LOCALBIN)/ginkgo
 ACT ?= $(LOCALBIN)/act
+RATCHET ?= $(LOCALBIN)/ratchet
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.32.0
@@ -151,6 +152,7 @@ HELM_VERSION ?= v3.15.0
 KIND_VERSION ?= v0.23.0
 GOLANGCI_LINT_VERSION ?= v2.12.2
 ACT_VERSION ?= latest
+RATCHET_VERSION ?= v0.11.4
 
 ## Versioned Binaries (the actual files that 'make' will check for)
 OPERATOR_SDK_V_BINARY := $(LOCALBIN)/operator-sdk-$(OPERATOR_SDK_VERSION)
@@ -162,6 +164,7 @@ HELM_V_BINARY := $(LOCALBIN)/helm-$(HELM_VERSION)
 KIND_V_BINARY := $(LOCALBIN)/kind-$(KIND_VERSION)
 GOLANGCI_LINT_V_BINARY := $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 ACT_V_BINARY := $(LOCALBIN)/act-$(ACT_VERSION)
+RATCHET_V_BINARY := $(LOCALBIN)/ratchet-$(RATCHET_VERSION)
 
 .PHONY: operator-sdk
 operator-sdk: $(OPERATOR_SDK_V_BINARY) ## Download operator-sdk locally if necessary.
@@ -222,6 +225,11 @@ $(GINKGO): $(LOCALBIN) go.mod
 act: $(ACT_V_BINARY) ## Download act locally if necessary.
 $(ACT_V_BINARY): $(LOCALBIN)
 	$(call go-install-tool,$(ACT),github.com/nektos/act,$(ACT_VERSION))
+
+.PHONY: ratchet
+ratchet: $(RATCHET_V_BINARY) ## Download ratchet locally if necessary.
+$(RATCHET_V_BINARY): $(LOCALBIN)
+	$(call go-install-tool,$(RATCHET),github.com/sethvargo/ratchet,$(RATCHET_VERSION))
 
 ##@ General
 
@@ -466,6 +474,10 @@ local-redeploy: ## re-deploy operator in local kind cluster
 .PHONY: run-lint
 run-lint: golangci-lint ## Run lint tests
 	$(GOLANGCI_LINT) run
+
+.PHONY: ratchet-pin
+ratchet-pin: ratchet ## Pin GitHub Actions to commit SHAs.
+	$(RATCHET) pin $$(find .github/workflows -name '*.yaml' -o -name '*.yml')
 
 # Include last to avoid changing MAKEFILE_LIST used above
 include ./make/*.mk
