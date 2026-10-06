@@ -45,6 +45,7 @@ spec:
 * [Logging](./doc/logging.md)
 * [Tracing](./doc/tracing.md)
 * [Custom Image](./doc/custom-image.md)
+* [Reservations](./doc/reservations.md)
 
 ## Contributing
 

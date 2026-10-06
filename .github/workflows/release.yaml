@@ -204,7 +204,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.read-version.outputs.version }}
-        run: |
+        run: |-
           TAG="v${VERSION}"
 
           # Check if this is a prerelease version (contains -, e.g., 1.0.0-rc1)

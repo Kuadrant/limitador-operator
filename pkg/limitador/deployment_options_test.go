@@ -3,10 +3,12 @@ package limitador
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -119,6 +121,86 @@ func TestDeploymentArgs(t *testing.T) {
 				assert.Assert(subTest, is.Contains(args, tt.ExpectedArg))
 			})
 		}
+	})
+
+	t.Run("when reservations spec is nil, no reservation flags added", func(subT *testing.T) {
+		limObj := basicLimitador()
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.Assert(subT, !is.Contains(args, "--disable-reservations")().Success())
+		assert.Assert(subT, !is.Contains(args, "--max-reservation-fraction")().Success())
+		assert.Assert(subT, !is.Contains(args, "--max-reservation-ttl")().Success())
+	})
+
+	t.Run("when reservations enabled explicitly true, no --disable-reservations flag added", func(subT *testing.T) {
+		limObj := basicLimitador()
+		limObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+			Enabled: ptr.To(true),
+		}
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.Assert(subT, !is.Contains(args, "--disable-reservations")().Success())
+	})
+
+	t.Run("when reservations disabled, command line args includes --disable-reservations", func(subT *testing.T) {
+		limObj := basicLimitador()
+		limObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+			Enabled: ptr.To(false),
+		}
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.DeepEqual(subT, args,
+			[]string{
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+				"--disable-reservations",
+				"/home/limitador/etc/limitador-config.yaml",
+			})
+	})
+
+	t.Run("when reservations max fraction is set, command line args includes --max-reservation-fraction", func(subT *testing.T) {
+		limObj := basicLimitador()
+		maxFraction := resource.MustParse("0.75")
+		limObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+			MaxFraction: &maxFraction,
+		}
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.DeepEqual(subT, args,
+			[]string{
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+				"--max-reservation-fraction",
+				"0.75",
+				"/home/limitador/etc/limitador-config.yaml",
+			})
+	})
+
+	t.Run("when reservations max ttl is set, command line args includes --max-reservation-ttl in seconds", func(subT *testing.T) {
+		limObj := basicLimitador()
+		limObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+			MaxTTL: &metav1.Duration{Duration: 2 * time.Minute},
+		}
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.DeepEqual(subT, args,
+			[]string{
+				"--http-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceHTTPPort)),
+				"--rls-port",
+				strconv.Itoa(int(limitadorv1alpha1.DefaultServiceGRPCPort)),
+				"--max-reservation-ttl",
+				"120",
+				"/home/limitador/etc/limitador-config.yaml",
+			})
+	})
+
+	t.Run("when reservations max ttl is an exact number of seconds not divisible by 60, no truncation occurs", func(subT *testing.T) {
+		limObj := basicLimitador()
+		limObj.Spec.Reservations = &limitadorv1alpha1.Reservations{
+			MaxTTL: &metav1.Duration{Duration: 61 * time.Second},
+		}
+		args := DeploymentArgs(limObj, DeploymentStorageOptions{})
+		assert.Assert(subT, is.Contains(args, "61"))
 	})
 
 	t.Run("command from tracing endpoint appended", func(subT *testing.T) {

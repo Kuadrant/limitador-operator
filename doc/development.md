@@ -6,7 +6,7 @@
 * [kind] version v0.22.0
 * [git][git_tool]
 * [go] version 1.25+
-* [kubernetes] version v1.25+
+* [kubernetes] version v1.28+
 * [kubectl] version v1.25+
 
 ## Build

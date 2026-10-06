@@ -34,3 +34,7 @@ verify-go-mod: ## Verify go.mod matches source code
 verify-helm-charts: helm-build ## Verify helm charts update.
 	git diff --exit-code ./charts
 	[ -z "$$(git ls-files --other --exclude-standard --directory --no-empty-directory ./charts)" ]
+
+.PHONY: verify-ratchet
+verify-ratchet: ratchet ## Verify GitHub Actions are pinned to commit SHAs.
+	$(RATCHET) lint $$(find .github/workflows -name '*.yaml' -o -name '*.yml')
