@@ -1,0 +1,34 @@
+name: Install yq
+description: Install mikefarah/yq at a pinned version
+
+inputs:
+  version:
+    description: "yq version to install"
+    required: false
+    default: "4.53.3"
+
+runs:
+  using: composite
+  steps:
+    - name: Install yq v${{ inputs.version }}
+      shell: bash
+      run: |
+        # Download yq binary and checksums
+        wget -O yq_linux_amd64 \
+          "https://github.com/mikefarah/yq/releases/download/v${{ inputs.version }}/yq_linux_amd64"
+        wget -O checksums \
+          "https://github.com/mikefarah/yq/releases/download/v${{ inputs.version }}/checksums"
+        wget -O checksums_hashes_order \
+          "https://github.com/mikefarah/yq/releases/download/v${{ inputs.version }}/checksums_hashes_order"
+
+        # Extract SHA-256 checksum (column 19) for exact yq_linux_amd64 match
+        sha256_column=$(awk '$0 == "SHA-256" { print NR + 1; exit }' checksums_hashes_order)
+        checksum=$(awk -v column="$sha256_column" '$1 == "yq_linux_amd64" { print $column; exit }' checksums)
+
+        # Validate checksum format and verify
+        [[ "$checksum" =~ ^[[:xdigit:]]{64}$ ]]
+        echo "$checksum  yq_linux_amd64" | sha256sum --check --status
+
+        # Install if verification passes
+        sudo mv yq_linux_amd64 /usr/local/bin/yq
+        sudo chmod +x /usr/local/bin/yq
