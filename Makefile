@@ -17,22 +17,8 @@ $(LOCALBIN):
 
 VERSION ?= 0.0.0
 
-# CHANNELS define the bundle channels used in the bundle.
-# Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
-# To re-generate a bundle for other specific channels without changing the standard setup, you can:
-# - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
-# - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNELS ?= alpha
-BUNDLE_CHANNELS := --channels=$(CHANNELS)
-
-# DEFAULT_CHANNEL defines the default channel used in the bundle.
-# Add a new line here if you would like to change its default config. (E.g DEFAULT_CHANNEL = "stable")
-# To re-generate a bundle for any other default channel without changing the default setup, you can:
-# - use the DEFAULT_CHANNEL as arg of the bundle target (e.g make bundle DEFAULT_CHANNEL=stable)
-# - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
-DEFAULT_CHANNEL ?= alpha
-BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
-BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+# Quay image default expiry
+QUAY_IMAGE_EXPIRY ?= never
 
 # Address of the container registry
 REGISTRY = quay.io
@@ -48,10 +34,9 @@ ifeq ($(shell uname -sm),Darwin arm64)
 endif
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
-# This variable is used to construct full image tags for bundle and catalog images.
 #
-# For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# quay.io/kuadrant/limitador-operator-bundle:$VERSION and quay.io/kuadrant/limitador-operator-catalog:$VERSION.
+# For example, running 'make docker-build docker-push' will build and push
+# quay.io/kuadrant/limitador-operator:$IMAGE_TAG.
 IMAGE_TAG_BASE ?= $(REGISTRY)/$(ORG)/limitador-operator
 
 # Semantic versioning (i.e. Major.Minor.Patch)
@@ -69,28 +54,16 @@ RELATED_IMAGE_LIMITADOR ?= quay.io/kuadrant/limitador:$(LIMITADOR_VERSION)
 endif
 
 
-# BUNDLE_VERSION defines the version for the limitador-operator bundle.
+# IMAGE_TAG defines the tag used for the operator image.
 # If the version is not semantic, will use the default one
-bundle_is_semantic := $(call is_semantic_version,$(VERSION))
+version_is_semantic := $(call is_semantic_version,$(VERSION))
 ifeq (0.0.0,$(VERSION))
-BUNDLE_VERSION = $(VERSION)
 IMAGE_TAG = latest
-else ifeq ($(bundle_is_semantic),true)
-BUNDLE_VERSION = $(VERSION)
+else ifeq ($(version_is_semantic),true)
 IMAGE_TAG ?= v$(VERSION)
 else
-BUNDLE_VERSION = 0.0.0
 IMAGE_TAG ?= $(DEFAULT_IMAGE_TAG)
 endif
-
-# BUNDLE_IMG defines the image:tag used for the bundle.
-# You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:$(IMAGE_TAG)
-
-# USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
-# You can enable this value if you would like to use SHA Based Digests
-# To enable set flag to true
-USE_IMAGE_DIGESTS ?= false
 
 # Image URL to use all building/pushing image targets
 DEFAULT_IMG ?= $(IMAGE_TAG_BASE):$(IMAGE_TAG)
@@ -130,11 +103,9 @@ ln -sf $(shell basename $(1))-$(3) $(1)
 endef
 
 ## Tool Binaries
-OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 YQ ?= $(LOCALBIN)/yq
-OPM ?= $(LOCALBIN)/opm
 HELM ?= $(LOCALBIN)/helm
 KIND ?= $(LOCALBIN)/kind
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
@@ -143,11 +114,9 @@ ACT ?= $(LOCALBIN)/act
 RATCHET ?= $(LOCALBIN)/ratchet
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.32.0
 CONTROLLER_GEN_VERSION ?= v0.19.0
 KUSTOMIZE_VERSION ?= v4.5.5
 YQ_VERSION ?= v4.34.2
-OPM_VERSION ?= v1.48.0
 HELM_VERSION ?= v3.15.0
 KIND_VERSION ?= v0.23.0
 GOLANGCI_LINT_VERSION ?= v2.12.2
@@ -155,22 +124,14 @@ ACT_VERSION ?= latest
 RATCHET_VERSION ?= v0.11.4
 
 ## Versioned Binaries (the actual files that 'make' will check for)
-OPERATOR_SDK_V_BINARY := $(LOCALBIN)/operator-sdk-$(OPERATOR_SDK_VERSION)
 CONTROLLER_GEN_V_BINARY := $(LOCALBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)
 KUSTOMIZE_V_BINARY := $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
 YQ_V_BINARY := $(LOCALBIN)/yq-$(YQ_VERSION)
-OPM_V_BINARY := $(LOCALBIN)/opm-$(OPM_VERSION)
 HELM_V_BINARY := $(LOCALBIN)/helm-$(HELM_VERSION)
 KIND_V_BINARY := $(LOCALBIN)/kind-$(KIND_VERSION)
 GOLANGCI_LINT_V_BINARY := $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 ACT_V_BINARY := $(LOCALBIN)/act-$(ACT_VERSION)
 RATCHET_V_BINARY := $(LOCALBIN)/ratchet-$(RATCHET_VERSION)
-
-.PHONY: operator-sdk
-operator-sdk: $(OPERATOR_SDK_V_BINARY) ## Download operator-sdk locally if necessary.
-$(OPERATOR_SDK_V_BINARY): $(LOCALBIN)
-	@./utils/install-operator-sdk.sh $(OPERATOR_SDK)-$(OPERATOR_SDK_VERSION) $(OPERATOR_SDK_VERSION)
-	@ln -sf $(shell basename $(OPERATOR_SDK))-$(OPERATOR_SDK_VERSION) $(OPERATOR_SDK)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN_V_BINARY) ## Download controller-gen locally if necessary.
@@ -186,11 +147,6 @@ $(KUSTOMIZE_V_BINARY): $(LOCALBIN)
 yq: $(YQ_V_BINARY) ## Download yq locally if necessary.
 $(YQ_V_BINARY): $(LOCALBIN)
 	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
-
-.PHONY: opm
-opm: $(OPM_V_BINARY) ## Download opm locally if necessary.
-$(OPM_V_BINARY): $(LOCALBIN)
-	$(call go-install-tool,$(OPM),github.com/operator-framework/operator-registry/cmd/opm,$(OPM_VERSION))
 
 .PHONY: helm
 helm: $(HELM_V_BINARY) ## Download helm locally if necessary.
@@ -340,94 +296,16 @@ deploy-develmode: manifests kustomize ## Deploy controller in debug mode to the 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
-.PHONY: install-olm
-install-olm: operator-sdk
-	$(OPERATOR_SDK) olm install
-
-.PHONY: uninstall-olm
-uninstall-olm: operator-sdk
-	$(OPERATOR_SDK) olm uninstall
-
-# BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
-BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(BUNDLE_VERSION) $(BUNDLE_METADATA_OPTS)
-ifeq ($(USE_IMAGE_DIGESTS), true)
-	BUNDLE_GEN_FLAGS += --use-image-digests
-endif
-
-.PHONY: bundle
-bundle: kustomize operator-sdk yq manifests ## Generate bundle manifests and metadata, then validate generated files.
-	$(OPERATOR_SDK) generate kustomize manifests -q
-	# Set desired operator image and related limitador image
-	V="$(RELATED_IMAGE_LIMITADOR)" $(YQ) eval '(select(.kind == "Deployment").spec.template.spec.containers[].env[] | select(.name == "RELATED_IMAGE_LIMITADOR").value) = strenv(V)' -i config/manager/manager.yaml
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	# Update CSV
-	V="limitador-operator.v$(BUNDLE_VERSION)" $(YQ) eval '.metadata.name = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
-	V="$(BUNDLE_VERSION)" $(YQ) eval '.spec.version = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
-	V="$(IMG)" $(YQ) eval '.metadata.annotations.containerImage = strenv(V)' -i config/manifests/bases/limitador-operator.clusterserviceversion.yaml
-	# Generate bundle
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
-	$(MAKE) bundle-post-generate
-	# Validate bundle manifests
-	$(OPERATOR_SDK) bundle validate ./bundle
-	$(MAKE) bundle-ignore-createdAt
-	echo "$$QUAY_EXPIRY_TIME_LABEL" >> bundle.Dockerfile
-
-.PHONY: bundle-post-generate
-bundle-post-generate: OPENSHIFT_VERSIONS_ANNOTATION_KEY="com.redhat.openshift.versions"
-# Supports Openshift v4.12+ (https://redhat-connect.gitbook.io/certified-operator-guide/ocp-deployment/operator-metadata/bundle-directory/managing-openshift-versions)
-bundle-post-generate: OPENSHIFT_SUPPORTED_VERSIONS="v4.12"
-bundle-post-generate:
-	# Set Openshift version in bundle annotations
-	$(YQ) -i '.annotations[$(OPENSHIFT_VERSIONS_ANNOTATION_KEY)] = $(OPENSHIFT_SUPPORTED_VERSIONS)' bundle/metadata/annotations.yaml
-	$(YQ) -i '(.annotations[$(OPENSHIFT_VERSIONS_ANNOTATION_KEY)] | key) headComment = "Custom annotations"' bundle/metadata/annotations.yaml
-ifeq ($(USE_IMAGE_DIGESTS),true)
-	# Deduplicate relatedImages and remove name field (operator-sdk --use-image-digests creates duplicates)
-	$(YQ) -i '.spec.relatedImages |= unique_by(.image) | del(.spec.relatedImages[].name)' bundle/manifests/limitador-operator.clusterserviceversion.yaml
-endif
-
-.PHONY: bundle-ignore-createdAt
-bundle-ignore-createdAt:
-	# Since operator-sdk 1.26.0, `make bundle` changes the `createdAt` field from the bundle
-	# even if it is patched:
-	#   https://github.com/operator-framework/operator-sdk/pull/6136
-	# This code checks if only the createdAt field. If is the only change, it is ignored.
-	# Else, it will do nothing.
-	# https://github.com/operator-framework/operator-sdk/issues/6285#issuecomment-1415350333
-	# https://github.com/operator-framework/operator-sdk/issues/6285#issuecomment-1532150678
-	git diff --quiet -I'^    createdAt: ' ./bundle && git checkout ./bundle || true
-
-.PHONY: bundle-build
-bundle-build: ## Build the bundle image.
-	docker build --build-arg QUAY_IMAGE_EXPIRY=$(QUAY_IMAGE_EXPIRY) -f bundle.Dockerfile -t $(BUNDLE_IMG) .
-
-.PHONY: bundle-push
-bundle-push: ## Push the bundle image.
-	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
-
-.PHONY: bundle-operator-image-url
-bundle-operator-image-url: yq ## Read operator image reference URL from the manifest bundle.
-	@$(YQ) '.metadata.annotations.containerImage' bundle/manifests/limitador-operator.clusterserviceversion.yaml
-
-print-bundle-image: ## Pring bundle images.
-	@echo $(BUNDLE_IMG)
-
 .PHONY: prepare-release
 prepare-release: IMG_TAG=v$(VERSION)
-prepare-release: ## Prepare the manifests for OLM and Helm Chart for a release.
+prepare-release: ## Prepare the manifests for the Helm Chart for a release.
 	printf '%s\n' \
 		'#Release default values' \
 		'LIMITADOR_VERSION?=$(LIMITADOR_VERSION)' \
 		'IMAGE_TAG?=$(IMG_TAG)' \
 		'IMG?=$(IMAGE_TAG_BASE):$$(IMAGE_TAG)' \
-		'BUNDLE_IMG?=$(IMAGE_TAG_BASE)-bundle:$$(IMAGE_TAG)' \
-		'CATALOG_IMG?=$(IMAGE_TAG_BASE)-catalog:$$(IMAGE_TAG)' \
-		'CHANNELS?=$(CHANNELS)' \
-		'BUNDLE_CHANNELS?=--channels=$(CHANNELS)' \
-		'DEFAULT_CHANNEL?=$(DEFAULT_CHANNEL)' \
-		'BUNDLE_DEFAULT_CHANNEL?=--default-channel=$(DEFAULT_CHANNEL)' \
 		'VERSION?=$(VERSION)' \
 		> $(RELEASE_FILE)
-	$(MAKE) bundle VERSION=$(VERSION) LIMITADOR_VERSION=$(LIMITADOR_VERSION)
 	$(MAKE) helm-build VERSION=$(VERSION) LIMITADOR_VERSION=$(LIMITADOR_VERSION)
 
 .PHONY: read-release-version

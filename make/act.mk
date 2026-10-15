@@ -22,11 +22,6 @@ act-test-verify-manifests: act kind ## Run verify manifests job.
 	$(ACT) -j verify-manifests
 	$(KIND) delete cluster --name kuadrant-test
 
-.PHONY: act-test-verify-bundle
-act-test-verify-bundle: act kind ## Run verify bundle job.
-	$(ACT) -j verify-bundle
-	$(KIND) delete cluster --name kuadrant-test
-
 .PHONY: act-test-verify-fmt
 act-test-verify-fmt: act kind ## Run verify fmt job.
 	$(ACT) -j verify-fmt
