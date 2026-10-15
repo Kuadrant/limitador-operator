@@ -2,7 +2,6 @@
 
 ## Technology stack required for development
 
-* [operator-sdk] version 1.32.0
 * [kind] version v0.22.0
 * [git][git_tool]
 * [go] version 1.25+
@@ -37,116 +36,52 @@ make run
 make local-setup
 ```
 
-## Deploy the operator using OLM
+## Deploy the operator using the Helm chart
 
-You can deploy the operator using OLM just running a few commands.
-No need to build any image. Kuadrant engineering team provides `latest` and
-released version tagged images. They are available in
+The Helm chart is the packaging mechanism for the operator. The released charts are published to the
+[Kuadrant Helm charts repository](https://kuadrant.io/helm-charts/), and the operator images are available in
 the [Quay.io/Kuadrant](https://quay.io/organization/kuadrant) image repository.
 
-Create kind cluster
+Install the released chart:
 
 ```sh
-make kind-create-cluster
+helm repo add kuadrant https://kuadrant.io/helm-charts/ --force-update
+helm install \
+ limitador-operator kuadrant/limitador-operator \
+ --create-namespace \
+ --namespace limitador-system
 ```
 
-Deploy OLM system
+### Build and install the chart from source
+
+The `make helm-build` target regenerates `charts/limitador-operator/templates/manifests.yaml` from the
+kustomize manifests in `config/helm`. It accepts the following variables:
+
+| **Makefile Variable**     | **Description**    | **Default value**                            | **Notes**                                                                |
+|---------------------------|--------------------|----------------------------------------------|--------------------------------------------------------------------------|
+| `IMG`                     | Operator image URL | `quay.io/kuadrant/limitador-operator:latest` |                                                                          |
+| `VERSION`                 | Chart version      | `0.0.0`                                      |                                                                          |
+| `RELATED_IMAGE_LIMITADOR` | Limitador image URL | `quay.io/kuadrant/limitador:latest`         | `LIMITADOR_VERSION` var could be use to build this URL providing the tag |
 
 ```sh
-make install-olm
+make helm-build [IMG=quay.io/kuadrant/limitador-operator:latest] \
+                [VERSION=0.0.0] \
+                [RELATED_IMAGE_LIMITADOR=quay.io/kuadrant/limitador:latest]
 ```
 
-Deploy the operator using OLM. The `make deploy-catalog` target accepts the following variables:
-
-| **Makefile Variable** | **Description**   | **Default value**                                    |
-|-----------------------|-------------------|------------------------------------------------------|
-| `CATALOG_IMG`         | Catalog image URL | `quay.io/kuadrant/limitador-operator-catalog:latest` |
+Install, upgrade and uninstall the local chart:
 
 ```sh
-make deploy-catalog [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:latest]
+make helm-install
+make helm-upgrade
+make helm-uninstall
 ```
 
-## Build custom OLM catalog
-
-If you want to deploy (using OLM) a custom limitador operator, you need to build your own catalog.
-
-### Build operator bundle image
-
-The `make bundle` target accepts the following variables:
-
-| **Makefile Variable**     | **Description**                                      | **Default value**                            | **Notes**                                                                |
-|---------------------------|------------------------------------------------------|----------------------------------------------|--------------------------------------------------------------------------|
-| `IMG`                     | Operator image URL                                   | `quay.io/kuadrant/limitador-operator:latest` |                                                                          |
-| `VERSION`                 | Bundle version                                       | `0.0.0`                                      |                                                                          |
-| `RELATED_IMAGE_LIMITADOR` | Limitador bundle URL                                 | `quay.io/kuadrant/limitador:latest`          | `LIMITADOR_VERSION` var could be use to build this URL providing the tag |
-| `CHANNELS`                | Bundle channels used in the bundle, comma separated  | `alpha`                                      |                                                                          |
-| `DEFAULT_CHANNEL`         | The default channel used in the bundle               | `alpha`                                      |                                                                          |
-
-* Build the bundle manifests
-
-```bash
-make bundle [IMG=quay.io/kuadrant/limitador-operator:latest] \
-            [VERSION=0.0.0] \
-            [RELATED_IMAGE_LIMITADOR=quay.io/kuadrant/limitador:latest] \
-            [CHANNELS=alpha] \
-            [DEFAULT_CHANNEL=alpha]
-```
-
-* Build the bundle image from the manifests
-
-| **Makefile Variable** | **Description**           | **Default value**                                   |
-|-----------------------|---------------------------|-----------------------------------------------------|
-| `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
+Package the chart as a `.tgz` archive:
 
 ```sh
-make bundle-build [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
+make helm-package
 ```
-
-* Push the bundle image to a registry
-
-| **Makefile Variable** | **Description**           | **Default value**                                   |
-|-----------------------|---------------------------|-----------------------------------------------------|
-| `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
-
-```sh
-make bundle-push [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest]
-```
-
-### Build custom catalog
-
-The catalog format will be [File-based Catalog](https://olm.operatorframework.io/docs/reference/file-based-catalogs/).
-
-Make sure all the required bundles are pushed to the registry. It is required by the `opm` tool.
-
-The `make catalog` target accepts the following variables:
-
-| **Makefile Variable** | **Description**           | **Default value**                                   |
-|-----------------------|---------------------------|-----------------------------------------------------|
-| `BUNDLE_IMG`          | Operator bundle image URL | `quay.io/kuadrant/limitador-operator-bundle:latest` |
-| `DEFAULT_CHANNEL`     | Catalog default channel   | `alpha`                                             |
-
-```sh
-make catalog [BUNDLE_IMG=quay.io/kuadrant/limitador-operator-bundle:latest] [DEFAULT_CHANNEL=alpha]
-```
-
-* Build the catalog image from the manifests
-
-| **Makefile Variable** | **Description**            | **Default value**                                    |
-|-----------------------|----------------------------|------------------------------------------------------|
-| `CATALOG_IMG`         | Operator catalog image URL | `quay.io/kuadrant/limitador-operator-catalog:latest` |
-
-```sh
-make catalog-build [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:latest]
-```
-
-* Push the catalog image to a registry
-
-```sh
-make catalog-push [CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:latest]
-```
-
-You can try out your custom catalog image following the steps of the
-[Deploy the operator using OLM](#deploy-the-operator-using-olm) section.
 
 ## Cleaning up
 
@@ -224,15 +159,14 @@ make uninstall
 
 ## Image builds
 
-| Docker image | Tag | Expiration | When | Bundle operand reference | Bundle operator reference |
-| --- | --- | --- | --- | --- | --- |
-| latest image | `latest` | never | Push to `main` | `latest` | `latest` |
-| branch images | `${{ github.ref_name }}` | 1w | Push to branch | `latest` | `${{ github.ref_name }}` |
-| nightly images | `${{ nightly-$(date +'%d-%m-%Y') }}` | 1w | Scheduled daily `cron: '0 0 * * *'` | digest sha of the `latest` docker image | `${{ nightly-$(date +'%d-%m-%Y') }}`  |
-| release images | release version | never | release created | release tag of the operand | release tag of the operator |
+| Docker image | Tag | Expiration | When |
+| --- | --- | --- | --- |
+| latest image | `latest` | never | Push to `main` |
+| branch images | `${{ github.ref_name }}` | 1w | Push to branch |
+| nightly images | `${{ nightly-$(date +'%d-%m-%Y') }}` | 1w | Scheduled daily `cron: '0 0 * * *'` |
+| release images | release version | never | release created |
 
 [git_tool]:https://git-scm.com/downloads
-[operator-sdk]:https://github.com/operator-framework/operator-sdk
 [go]:https://golang.org/
 [kind]:https://kind.sigs.k8s.io/
 [kubernetes]:https://kubernetes.io/

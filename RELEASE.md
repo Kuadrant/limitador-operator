@@ -25,12 +25,12 @@ A **version gate** CI check validates this file on pull requests to release bran
 2. The workflow will:
    - Create the release branch `release-0.17` from main (if it doesn't exist)
    - Update `release.yaml` with version `0.17.0` and the `limitador` dependency `1.2.0`
-   - Run `make prepare-release VERSION=0.17.0 CHANNELS=stable DEFAULT_CHANNEL=stable`
+   - Run `make prepare-release VERSION=0.17.0`
    - Open a PR from `pre-release-v0.17.0` to `release-0.17`
 
 3. Review the PR:
    - CI runs tests and the version gate check
-   - Verify version numbers, bundle manifests, and helm chart
+   - Verify version numbers and the helm chart manifests
    - Approve and merge
 
 4. Trigger the [Release workflow](https://github.com/Kuadrant/limitador-operator/actions/workflows/release.yaml) with:
@@ -38,15 +38,15 @@ A **version gate** CI check validates this file on pull requests to release bran
 
 5. The workflow will (in order):
    - Read the version from `release.yaml`
-   - Run smoke tests (verify-manifests, verify-bundle, verify-helm-charts, unit tests)
+   - Run smoke tests (verify-manifests, verify-helm-charts, unit tests)
    - Create and push tag `v0.17.0`
-   - Build and push container images (operator, bundle, catalog)
+   - Build and push the operator container image
    - Package and sign the Helm chart
    - Create the GitHub Release with all artifacts attached
 
 6. Verify the release:
-   - Check that all images are available on quay.io
-   - Verify OLM deployment (see [Verify OLM Deployment](#verify-olm-deployment))
+   - Check that the operator image is available on quay.io
+   - Verify the Helm chart deployment (see [Verify Helm Chart Deployment](#verify-helm-chart-deployment))
 
 ## New Patch Release (e.g. 0.17.1)
 
@@ -69,11 +69,9 @@ The release workflow produces the following artifacts:
 | Artifact | Registry/Location |
 |---|---|
 | Operator image | `quay.io/kuadrant/limitador-operator:vX.Y.Z` |
-| Bundle image | `quay.io/kuadrant/limitador-operator-bundle:vX.Y.Z` |
-| Catalog image | `quay.io/kuadrant/limitador-operator-catalog:vX.Y.Z` |
 | Helm chart | GitHub Release asset (GPG signed) |
 
-All container images are built for platforms: `linux/amd64`, `linux/arm64`, `linux/s390x`, `linux/ppc64le`.
+The operator image is built for platforms: `linux/amd64`, `linux/arm64`, `linux/s390x`, `linux/ppc64le`.
 
 ## release.yaml
 
@@ -99,15 +97,10 @@ During the pre-release process (`make prepare-release`), the following files are
 
 ### Modified files
 - `release.yaml`
-- `bundle.Dockerfile`
-- `bundle/manifests/limitador-operator.clusterserviceversion.yaml`
-- `bundle/metadata/annotations.yaml`
 - `charts/limitador-operator/Chart.yaml`
 - `charts/limitador-operator/templates/manifests.yaml`
-- `config/deploy/olm/catalogsource.yaml`
-- `config/deploy/olm/subscription.yaml`
 - `config/manager/kustomization.yaml`
-- `config/manifests/bases/limitador-operator.clusterserviceversion.yaml`
+- `config/manager/manager.yaml`
 
 ### Generated files
 - `make/release.mk`
@@ -118,12 +111,6 @@ The `make/release.mk` contains release-specific variable overrides:
 LIMITADOR_VERSION?=latest
 IMAGE_TAG?=v0.17.0
 IMG?=quay.io/kuadrant/limitador-operator:$(IMAGE_TAG)
-BUNDLE_IMG?=quay.io/kuadrant/limitador-operator-bundle:$(IMAGE_TAG)
-CATALOG_IMG?=quay.io/kuadrant/limitador-operator-catalog:$(IMAGE_TAG)
-CHANNELS?=stable
-BUNDLE_CHANNELS?=--channels=stable
-DEFAULT_CHANNEL?=stable
-BUNDLE_DEFAULT_CHANNEL?=--default-channel=stable
 VERSION?=0.17.0
 ```
 
@@ -136,16 +123,20 @@ The release workflows require the following secrets to be configured in the repo
 | Secret | Used by | Description |
 |---|---|---|
 | `GITHUB_TOKEN` | Pre-release, Release, Version Gate | Built-in GitHub token. Used for creating branches, PRs, tags, and GitHub Releases. No manual configuration needed. |
-| `IMG_REGISTRY_USERNAME` | Release | Quay.io username for pushing container images (operator, bundle, catalog). |
-| `IMG_REGISTRY_TOKEN` | Release | Quay.io API token or password for pushing container images. |
+| `IMG_REGISTRY_USERNAME` | Release | Quay.io username for pushing the operator container image. |
+| `IMG_REGISTRY_TOKEN` | Release | Quay.io API token or password for pushing the operator container image. |
 | `HELM_CHARTS_SIGNING_KEY` | Release | Base64-encoded GPG private key used to sign the Helm chart package. |
 | `HELM_WORKFLOWS_TOKEN` | Release | GitHub token for triggering workflows in the helm-charts repository. |
 
-## Verify OLM Deployment
+## Verify Helm Chart Deployment
 
-1. Deploy the OLM catalog image:
+1. Install the released chart:
 ```sh
-make local-setup install-olm deploy-catalog CATALOG_IMG=quay.io/kuadrant/limitador-operator-catalog:v0.17.0 DEFAULT_CHANNEL=stable
+helm repo add kuadrant https://kuadrant.io/helm-charts/ --force-update
+helm install limitador-operator kuadrant/limitador-operator \
+  --version 0.17.0 \
+  --create-namespace \
+  --namespace limitador-system
 ```
 
 2. Wait for deployment:
