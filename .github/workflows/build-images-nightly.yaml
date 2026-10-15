@@ -14,23 +14,8 @@ jobs:
     steps:
       - id: release_date
         run: echo "release_date=nightly-$(date +'%d-%m-%Y')" >> $GITHUB_OUTPUT
-  limitador-latest-digest:
-    name: Get the digest sha of the latest docker image
-    runs-on: ubuntu-latest
-    outputs:
-      limitador_digest: ${{ steps.get-digest.outputs.digest }}
-    steps:
-      - name: Install crane
-        uses: imjasonh/setup-crane@5146f708a817ea23476677995bf2133943b9be0b # ratchet:imjasonh/setup-crane@v0.1
-      - id: get-digest
-        name: Get digest of latest limitador image
-        run: |
-          # Get the manifest digest of the latest tag (works for both single-arch and multi-arch images)
-          DIGEST=$(crane digest quay.io/kuadrant/limitador:latest)
-          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
-          echo "Limitador latest digest: ${DIGEST}"
   workflow-build:
-    needs: [release-date, limitador-latest-digest]
+    needs: [release-date]
     name: Calls build-images-base workflow
     uses: ./.github/workflows/build-images-base.yaml
     secrets: inherit
@@ -38,4 +23,3 @@ jobs:
       operatorVersion: 0.0.0
       operatorTag: ${{ needs.release-date.outputs.release_date }}
       quayImageExpiry: 2w
-      relatedImageLimitador: quay.io/kuadrant/limitador@${{ needs.limitador-latest-digest.outputs.limitador_digest }}

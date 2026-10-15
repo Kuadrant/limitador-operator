@@ -16,4 +16,3 @@ jobs:
       operatorVersion: 0.0.0
       operatorTag: ${{ github.ref_name }}
       quayImageExpiry: 1w
-      relatedImageLimitador: quay.io/kuadrant/limitador:latest
