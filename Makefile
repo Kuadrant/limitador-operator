@@ -479,5 +479,9 @@ run-lint: golangci-lint ## Run lint tests
 ratchet-pin: ratchet ## Pin GitHub Actions to commit SHAs.
 	$(RATCHET) pin $$(find .github/workflows -name '*.yaml' -o -name '*.yml')
 
+.PHONY: ratchet-update-all
+ratchet-update-all: ratchet ## Update all pinned GitHub Actions to latest SHAs.
+	$(RATCHET) update $$(find .github/workflows -name '*.yaml' -o -name '*.yml')
+
 # Include last to avoid changing MAKEFILE_LIST used above
 include ./make/*.mk
