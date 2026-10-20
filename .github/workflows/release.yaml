@@ -99,9 +99,6 @@ jobs:
       - name: Verify manifests
         run: make verify-manifests
 
-      - name: Verify bundle
-        run: make verify-bundle
-
       - name: Verify helm charts
         run: make verify-helm-charts
 
@@ -143,9 +140,6 @@ jobs:
       gitRef: ${{ needs.read-version.outputs.release-commit-sha }}
       operatorVersion: ${{ needs.read-version.outputs.version }}
       operatorTag: v${{ needs.read-version.outputs.version }}
-      relatedImageLimitador: quay.io/kuadrant/limitador:v${{ needs.read-version.outputs.limitador-version }}
-      channels: stable
-      defaultChannel: stable
       quayImageExpiry: never
 
   build-helm-chart:

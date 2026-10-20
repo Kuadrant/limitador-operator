@@ -6,7 +6,7 @@ CHART_NAME ?= limitador-operator
 CHART_DIRECTORY ?= charts/$(CHART_NAME)
 
 .PHONY: helm-build
-helm-build: kustomize operator-sdk yq manifests ## Build the helm chart from kustomize manifests
+helm-build: kustomize yq manifests ## Build the helm chart from kustomize manifests
 	# Set desired operator image and related limitador image
 	V="$(RELATED_IMAGE_LIMITADOR)" $(YQ) eval '(select(.kind == "Deployment").spec.template.spec.containers[].env[] | select(.name == "RELATED_IMAGE_LIMITADOR").value) = strenv(V)' -i config/manager/manager.yaml
 	# Replace the controller image

@@ -15,4 +15,3 @@ jobs:
       operatorVersion: 0.0.0
       operatorTag: latest
       quayImageExpiry: never
-      relatedImageLimitador: quay.io/kuadrant/limitador:latest

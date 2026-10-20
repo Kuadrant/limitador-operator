@@ -8,7 +8,7 @@ Limitador Operator is a Kubernetes operator that manages [Limitador](https://git
 Limitador is a rate-limiting service. The operator reconciles `Limitador` custom resources (CRD) to create and manage
 deployments, services, ConfigMaps, PVCs, and PodDisruptionBudgets in Kubernetes.
 
-**Built with:** Kubebuilder v3, operator-sdk v1.32.0, Go (see `go.mod`)
+**Built with:** Kubebuilder v3, Go (see `go.mod`)
 
 ## Common Commands
 
@@ -76,9 +76,6 @@ make vet
 # Verify manifests are up to date
 make verify-manifests
 
-# Verify bundle is up to date
-make verify-bundle
-
 # Verify code is formatted
 make verify-fmt
 
@@ -128,40 +125,6 @@ make deploy-develmode [IMG=<image-url>]
 
 # Undeploy operator
 make undeploy
-```
-
-### OLM (Operator Lifecycle Manager)
-
-```bash
-# Install OLM
-make install-olm
-
-# Uninstall OLM
-make uninstall-olm
-
-# Build bundle manifests
-make bundle [IMG=<operator-image>] [VERSION=0.0.0] [LIMITADOR_VERSION=latest]
-
-# Build bundle image
-make bundle-build [BUNDLE_IMG=<bundle-image>]
-
-# Push bundle image
-make bundle-push [BUNDLE_IMG=<bundle-image>]
-
-# Generate catalog
-make catalog [BUNDLE_IMG=<bundle-image>] [DEFAULT_CHANNEL=alpha]
-
-# Build catalog image
-make catalog-build [CATALOG_IMG=<catalog-image>]
-
-# Push catalog image
-make catalog-push [CATALOG_IMG=<catalog-image>]
-
-# Deploy via OLM catalog
-make deploy-catalog [CATALOG_IMG=<catalog-image>]
-
-# Undeploy via OLM catalog
-make undeploy-catalog
 ```
 
 ### Helm Charts
@@ -285,8 +248,6 @@ The project uses kustomize with multiple overlays in `config/`:
 - `config/default/`: Standard deployment with auth proxy
 - `config/deploy-develmode/`: Development mode (debug logging, etc.)
 - `config/helm/`: Helm chart generation base
-- `config/manifests/`: OLM bundle generation base
-- `config/deploy/olm/`: OLM catalog deployment manifests
 
 ### Environment Variables
 
@@ -294,7 +255,7 @@ Operator configuration:
 
 - `LOG_LEVEL`: info, debug, etc. (default: info)
 - `LOG_MODE`: production or development (default: production)
-- `RELATED_IMAGE_LIMITADOR`: Limitador image URL injected at build time
+- `RELATED_IMAGE_LIMITADOR`: Limitador operand image URL, read at runtime by `pkg/limitador/image.go`. Set on the operator Deployment and pinned into the manifests by `make helm-build`.
 
 When running locally with `make run`, defaults to:
 
@@ -321,8 +282,7 @@ When running locally with `make run`, defaults to:
     - `VERSION=0.0.0` maps to `IMAGE_TAG=latest`
 - **Related images**: `RELATED_IMAGE_LIMITADOR` environment variable injects Limitador image reference
 - **Build info**: Git SHA and dirty state are embedded via ldflags at build time
-- **Helm charts**: Generated from kustomize manifests in `config/helm`
-- **OLM Catalogs**: Built using File-based Catalog format via `opm` tool
+- **Helm charts**: Generated from kustomize manifests in `config/helm`. The Helm chart is the sole packaging mechanism.
 - **Quay image expiry**: Controlled via `QUAY_IMAGE_EXPIRY` variable (default: never)
 
 ## Important Makefile Variables
@@ -330,11 +290,7 @@ When running locally with `make run`, defaults to:
 - `VERSION`: Operator version (default: 0.0.0)
 - `LIMITADOR_VERSION`: Limitador image version (default: latest)
 - `IMG`: Operator image URL
-- `BUNDLE_IMG`: Bundle image URL for OLM
-- `CATALOG_IMG`: Catalog image URL for OLM
 - `KIND_CLUSTER_NAME`: Kind cluster name (default: limitador-local)
-- `CHANNELS`: Bundle channels (default: alpha)
-- `DEFAULT_CHANNEL`: Default bundle channel (default: alpha)
 - `QUAY_IMAGE_EXPIRY`: Quay image expiration (default: never)
 
 ## Important Constants
@@ -357,11 +313,10 @@ Typical development workflow:
 
 1. Make code changes
 2. Run `make generate` and `make manifests` to update generated code
-3. Run `make bundle` to update bundle manifests
-4. Run `make helm-build` to update helm chart
-5. Run `make fmt` to format code
-6. Run `make test-unit` for quick feedback
-7. Run `make local-env-setup` to create test cluster
-8. Run `make run` to test locally OR `make local-setup` to deploy in cluster
-9. Run `make test-integration` for full integration tests
-10. Run verify commands before committing: `make verify-manifests verify-bundle verify-fmt`
+3. Run `make helm-build` to update helm chart
+4. Run `make fmt` to format code
+5. Run `make test-unit` for quick feedback
+6. Run `make local-env-setup` to create test cluster
+7. Run `make run` to test locally OR `make local-setup` to deploy in cluster
+8. Run `make test-integration` for full integration tests
+9. Run verify commands before committing: `make verify-manifests verify-helm-charts verify-fmt`
