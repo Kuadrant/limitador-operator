@@ -1,6 +1,6 @@
 module github.com/kuadrant/limitador-operator
 
-go 1.26.7
+go 1.26.0
 
 require (
 	github.com/go-logr/logr v1.4.4
