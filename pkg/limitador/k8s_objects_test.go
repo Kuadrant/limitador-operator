@@ -216,6 +216,77 @@ func TestDeployment(t *testing.T) {
 			[]corev1.LocalObjectReference{{Name: "regcred"}},
 		)
 	})
+
+	t.Run("affinity", func(subT *testing.T) {
+		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
+		affinity := &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+					NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+						MatchExpressions: []corev1.NodeSelectorRequirement{{
+							Key:      "kubernetes.io/arch",
+							Operator: corev1.NodeSelectorOpIn,
+							Values:   []string{"arm64"},
+						}},
+					}},
+				},
+			},
+		}
+		limObj.Spec.Affinity = affinity
+
+		deployment := Deployment(limObj, DeploymentOptions{
+			Affinity: affinity,
+		})
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Affinity, affinity)
+	})
+
+	t.Run("topologySpreadConstraints", func(subT *testing.T) {
+		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
+		topologySpreadConstraints := []corev1.TopologySpreadConstraint{{
+			MaxSkew:           1,
+			TopologyKey:       "topology.kubernetes.io/zone",
+			WhenUnsatisfiable: corev1.DoNotSchedule,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"authorino-resource": "authorino"},
+			},
+			MatchLabelKeys: []string{"pod-template-hash"},
+		}}
+		limObj.Spec.TopologySpreadConstraints = topologySpreadConstraints
+
+		deployment := Deployment(limObj, DeploymentOptions{
+			TopologySpreadConstraints: topologySpreadConstraints,
+		})
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.TopologySpreadConstraints, topologySpreadConstraints)
+	})
+
+	t.Run("tolerations", func(subT *testing.T) {
+		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
+		tolerations := []corev1.Toleration{{
+			Key:      "dedicated",
+			Operator: corev1.TolerationOpEqual,
+			Value:    "authorino",
+			Effect:   corev1.TaintEffectNoSchedule,
+		}}
+		limObj.Spec.Tolerations = tolerations
+
+		deployment := Deployment(limObj, DeploymentOptions{
+			Tolerations: tolerations,
+		})
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Tolerations, tolerations)
+	})
+
+	t.Run("nodeSelector", func(subT *testing.T) {
+		limObj := newTestLimitadorObj("some-name", "some-ns", nil)
+		nodeSelector := map[string]string{"kubernetes.io/arch": "arm64"}
+		limObj.Spec.NodeSelector = nodeSelector
+
+		deployment := Deployment(limObj, DeploymentOptions{
+			NodeSelector: nodeSelector,
+		})
+		assert.DeepEqual(subT, deployment.Spec.Template.Spec.NodeSelector, nodeSelector)
+	})
+	// }
+
 }
 
 func TestPodDisruptionBudgetName(t *testing.T) {
