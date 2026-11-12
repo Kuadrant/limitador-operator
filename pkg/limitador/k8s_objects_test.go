@@ -234,9 +234,7 @@ func TestDeployment(t *testing.T) {
 		}
 		limObj.Spec.Affinity = affinity
 
-		deployment := Deployment(limObj, DeploymentOptions{
-			Affinity: affinity,
-		})
+		deployment := Deployment(limObj, DeploymentOptions{})
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Affinity, affinity)
 	})
 
@@ -253,9 +251,7 @@ func TestDeployment(t *testing.T) {
 		}}
 		limObj.Spec.TopologySpreadConstraints = topologySpreadConstraints
 
-		deployment := Deployment(limObj, DeploymentOptions{
-			TopologySpreadConstraints: topologySpreadConstraints,
-		})
+		deployment := Deployment(limObj, DeploymentOptions{})
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.TopologySpreadConstraints, topologySpreadConstraints)
 	})
 
@@ -269,9 +265,7 @@ func TestDeployment(t *testing.T) {
 		}}
 		limObj.Spec.Tolerations = tolerations
 
-		deployment := Deployment(limObj, DeploymentOptions{
-			Tolerations: tolerations,
-		})
+		deployment := Deployment(limObj, DeploymentOptions{})
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.Tolerations, tolerations)
 	})
 
@@ -280,9 +274,7 @@ func TestDeployment(t *testing.T) {
 		nodeSelector := map[string]string{"kubernetes.io/arch": "arm64"}
 		limObj.Spec.NodeSelector = nodeSelector
 
-		deployment := Deployment(limObj, DeploymentOptions{
-			NodeSelector: nodeSelector,
-		})
+		deployment := Deployment(limObj, DeploymentOptions{})
 		assert.DeepEqual(subT, deployment.Spec.Template.Spec.NodeSelector, nodeSelector)
 	})
 	// }
