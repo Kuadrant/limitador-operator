@@ -5,8 +5,8 @@ name: Documentation Link Check (Weekly)
 
 on:
   schedule:
-    # Monday at 06:57 UTC
-    - cron: '57 6 * * 1'
+    # Monday at 07:17 UTC
+    - cron: '17 7 * * 1'
   workflow_dispatch:
 
 concurrency:
