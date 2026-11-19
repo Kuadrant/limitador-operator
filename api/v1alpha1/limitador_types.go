@@ -66,6 +66,7 @@ type LimitadorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Affinity rules to apply to the pods.
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
@@ -123,6 +124,16 @@ type LimitadorSpec struct {
 	// (the Reserve/Commit gRPC RPCs).
 	// +optional
 	Reservations *Reservations `json:"reservations,omitempty"`
+
+	// Tolerations to apply to the pods
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// NodeSelector to apply to the pods
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// TopologySpreadConstraints to apply to the pods
+	// +optional
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 }
 
 //+kubebuilder:object:root=true
