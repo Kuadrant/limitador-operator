@@ -1,0 +1,9 @@
+{
+	"skip": [
+		"https://github.com/Kuadrant/limitador-operator/compare/compare/v0.4.0...HEAD",
+		"https://kubernetes.slack.com/archives/C05J0D0V525"
+	],
+	"recurse": true,
+	"directoryListing": true,
+	"markdown": true
+}
