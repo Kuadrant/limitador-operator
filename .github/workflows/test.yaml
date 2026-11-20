@@ -33,6 +33,8 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3
     defaults:
       run:
         shell: bash
@@ -41,8 +43,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
         id: go
       - name: Run make test-unit
         run: |
@@ -59,6 +60,8 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3
     defaults:
       run:
         shell: bash
@@ -68,8 +71,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@94729529f85113b88f4f819c17ce61382e6d8478 # ratchet:helm/kind-action@v1.2.0
         with:
@@ -95,13 +97,14 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3+auto
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
         id: go
       - name: Verify manifests
         run: make verify-manifests
@@ -110,14 +113,15 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3+auto
     steps:
       - name: Check out code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Run make verify-bundle
         run: |
           make verify-bundle
@@ -126,14 +130,15 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3
     steps:
       - name: Check out code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Run make verify-fmt
         run: |
           make verify-fmt
@@ -142,14 +147,15 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3
     steps:
       - name: Check out code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Run go mod tidy
         run: |
           go mod tidy
@@ -161,14 +167,15 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3
     steps:
       - name: Check out code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Go Lint
         run: make run-lint
   verify-generate:
@@ -176,14 +183,15 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3+auto
     steps:
       - name: Check out code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Verify generate command
         run: |
           make verify-generate
@@ -192,14 +200,15 @@ jobs:
     if: ${{ github.event_name == 'schedule' || needs.pre-job.outputs.should_skip != 'true' }}
     needs: pre-job
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.27.3
     steps:
       - name: Check out code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Verify generate command
         run: |
           make verify-go-mod
@@ -214,8 +223,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Run make verify-helm-charts
         run: |
           make verify-helm-charts
@@ -230,8 +238,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # ratchet:actions/setup-go@v6
         with:
-          go-version: '1.26'
-          check-latest: true
+          go-version-file: go.mod
       - name: Run make verify-ratchet
         run: |
           make verify-ratchet
