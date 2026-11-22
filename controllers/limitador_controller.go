@@ -213,12 +213,14 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 
 	if len(podList.Items) == 0 {
 		span.SetStatus(codes.Ok, "")
+		//nolint:staticcheck // Requeue preserves exponential backoff; RequeueAfter would force fixed delay
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Replicas won't change if spec.Replicas goes from value to nil
 	if limitadorObj.Spec.Replicas != nil && len(podList.Items) != int(limitadorObj.GetReplicas()) {
 		span.SetStatus(codes.Ok, "")
+		//nolint:staticcheck // Requeue preserves exponential backoff; RequeueAfter would force fixed delay
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -227,6 +229,7 @@ func (r *LimitadorReconciler) reconcilePodLimitsHashAnnotation(ctx context.Conte
 	if err := r.Client().Get(ctx, types.NamespacedName{Name: limitador.LimitsConfigMapName(limitadorObj), Namespace: limitadorObj.Namespace}, cm); err != nil {
 		if apierrors.IsNotFound(err) {
 			span.SetStatus(codes.Ok, "")
+			//nolint:staticcheck // Requeue preserves exponential backoff; RequeueAfter would force fixed delay
 			return ctrl.Result{Requeue: true}, nil
 		}
 		observability.RecordError(span, err, "failed to get limits ConfigMap")
