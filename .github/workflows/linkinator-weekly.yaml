@@ -32,7 +32,7 @@ jobs:
       - name: Extract summary stats
         if: steps.linkinator.outcome == 'failure'
         id: stats
-        env: 
+        env:
           LINKINATOR_RESULTS: ${{ steps.linkinator.outputs.results }}
         run: |
           echo "$LINKINATOR_RESULTS" | node -e "
